@@ -36,7 +36,7 @@ class CoffeeImageViewModel(app: Application) : AndroidViewModel(app) {
             Request.Method.GET, RANDOM_COFFEE_API_URL, null,
             { json ->
                 // Lyckad förfrågan → spara bildens URL
-                imageUrl.value = json.optString("file", null)
+                imageUrl.value = json.optString("file")
                 loading.value = false
             },
             { err ->
