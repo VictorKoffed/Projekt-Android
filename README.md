@@ -3,11 +3,11 @@
 A mobile app built in **Kotlin** using **Jetpack Compose**.  
 The app lets coffee enthusiasts record and visualize their brews with a simple and modern interface.
 
-## ✨ Features (Planned)
+## ✨ Features (Planned) (Done ✅)
 
 - Connect to the **Bookoo smart scale** via Bluetooth for real-time weight data *(if supported)*
 - Capture and save photos of brews using **CameraX**
-- Fetch random coffee images via the **Coffee API** using **Volley**
+- Fetch random coffee images via the **Coffee API** using **Volley** ✅
 - Display images with **Coil** in Jetpack Compose
 - Store brew history locally with **Room (SQLite)**
 - Clean and responsive UI design inspired by modern coffee apps
