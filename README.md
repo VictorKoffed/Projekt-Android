@@ -37,7 +37,7 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 **Victor Koffed** – 2025  
 Student project for **Course SUM200**
 
-## 👤 License
+##    License
 
 MIT License
 
