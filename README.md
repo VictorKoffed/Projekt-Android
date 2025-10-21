@@ -32,6 +32,10 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 3. Sync Gradle and run on an emulator or Android device
 4. *(Optional)* Enable Bluetooth permissions to test smart scale features
 
+##  Known issue (Bugs to fix)
+
+1.
+
 ## 👤 Author
 
 **Victor Koffed** – 2025  
