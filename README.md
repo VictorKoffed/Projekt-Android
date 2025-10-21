@@ -8,11 +8,14 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 **Done ✅**
 - Fetch random coffee images via the **Coffee API** using **Volley** 
 - Display images with **Coil** in Jetpack Compose 
+- Connect to the **Bookoo smart scale** via Bluetooth for real-time weight data
 
 **Planned**
-- Connect to the **Bookoo smart scale** via Bluetooth for real-time weight data *(if supported)*
+- see weight and flow in a chart of the brew from the **Bookoo smart scale** via Bluetooth for real-time brew data
 - Capture and save photos of brews using **CameraX**
 - Store brew history locally with **Room (SQLite)**
+- Create a working Homescreen that follows the mockup **Homescreen**
+- Create a working Graphscreen that follows the mockup **Graphscreen**
 - Clean and responsive UI design inspired by modern coffee apps
 
 ## 🧩 Technology Stack
