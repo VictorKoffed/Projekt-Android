@@ -7,7 +7,7 @@ import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.victorkoffed.projektandroid.data.viewmodel.CoffeeImageViewModel
-import com.victorkoffed.projektandroid.ui.screens.CoffeeImageScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.coffe.CoffeeImageScreen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 
 /**

@@ -1,4 +1,4 @@
-package com.victorkoffed.projektandroid.ui.screens
+package com.victorkoffed.projektandroid.ui.viewmodel.coffe
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
