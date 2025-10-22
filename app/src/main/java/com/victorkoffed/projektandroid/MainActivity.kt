@@ -68,21 +68,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProjektAndroidTheme {
-                // Behåll state för vilken skärm som visas
-                var currentScreen by remember { mutableStateOf("grinder") } // Starta på grinder
+                var currentScreen by remember { mutableStateOf("grinder") }
 
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Box(modifier = Modifier.fillMaxSize()) {
-
-                        // Huvudinnehåll (växlar mellan skärmarna)
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(bottom = 80.dp), // Lämna plats för knappar
+                                .padding(bottom = 80.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
                             AnimatedContent(
                                 targetState = currentScreen,
                                 transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -99,18 +95,20 @@ class MainActivity : ComponentActivity() {
                                         val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                         val time by scaleVm.recordingTimeMillis.collectAsState()
                                         val isRecording by scaleVm.isRecording.collectAsState()
-                                        val isPaused by scaleVm.isPaused.collectAsState() // <-- NYTT STATE
-                                        val currentMeasurement by scaleVm.measurement.collectAsState() // <-- NYTT STATE
+                                        val isPaused by scaleVm.isPaused.collectAsState()
+                                        val currentMeasurement by scaleVm.measurement.collectAsState()
+                                        val weightAtPause by scaleVm.weightAtPause.collectAsState() // <-- HÄMTA PAUSAD VIKT
 
                                         LiveBrewScreen(
                                             samples = samples,
-                                            currentMeasurement = currentMeasurement, // <-- Skicka in aktuell vikt
+                                            currentMeasurement = currentMeasurement,
                                             currentTimeMillis = time,
                                             isRecording = isRecording,
-                                            isPaused = isPaused, // <-- Skicka in paus-status
+                                            isPaused = isPaused,
+                                            weightAtPause = weightAtPause, // <-- SKICKA IN PAUSAD VIKT
                                             onStartClick = { scaleVm.startRecording() },
-                                            onPauseClick = { scaleVm.pauseRecording() }, // <-- Koppla paus
-                                            onResumeClick = { scaleVm.resumeRecording() }, // <-- Koppla återuppta
+                                            onPauseClick = { scaleVm.pauseRecording() },
+                                            onResumeClick = { scaleVm.resumeRecording() },
                                             onStopAndSaveClick = {
                                                 scaleVm.stopRecordingAndSave(beanIdToUse = 1L, doseGramsToUse = 20.0) // Placeholder
                                                 currentScreen = "grinder" // Gå tillbaka
@@ -122,8 +120,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-
-                        // Navigationsknappar längst ned (Oförändrade)
+                        // Navigationsknappar (Oförändrade)
                         Row(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -147,7 +144,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** En återanvändbar Composable för nav-knapparna (Oförändrad) */
+// NavigationButton Composable (Oförändrad)
 @Composable
 private fun NavigationButton(
     text: String,

@@ -13,8 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect // För streckade linjer
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.nativeCanvas // För text på Canvas
+import androidx.compose.ui.platform.LocalDensity // För textstorlek
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,7 +23,7 @@ import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import kotlinx.coroutines.delay
-import kotlin.math.max
+import kotlin.math.max // För max-beräkningar
 import kotlin.math.ceil // För att avrunda uppåt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +34,7 @@ fun LiveBrewScreen(
     currentTimeMillis: Long,
     isRecording: Boolean,
     isPaused: Boolean,
+    weightAtPause: Float?, // Vikt sparad vid paus
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -65,7 +66,7 @@ fun LiveBrewScreen(
         ) {
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
-                currentWeightGrams = currentMeasurement.weightGrams,
+                currentWeightGrams = if (isPaused) weightAtPause ?: 0f else currentMeasurement.weightGrams,
                 isRecording = isRecording,
                 isPaused = isPaused
             )
@@ -137,7 +138,7 @@ fun BrewGraph(
         android.graphics.Paint().apply {
             color = android.graphics.Color.DKGRAY
             textAlign = android.graphics.Paint.Align.CENTER
-            textSize = 12.sp.value * density.density
+            textSize = 10.sp.value * density.density // Mindre text för 10g intervall
         }
     }
     val axisLabelPaint = remember {
@@ -148,13 +149,13 @@ fun BrewGraph(
             isFakeBoldText = true
         }
     }
-    val gridLinePaint = remember { // Paint för rutnätet
+    val gridLinePaint = remember { // Nu en DrawStyle, inte bara Stroke
         Stroke(
             width = 1f, // Tunna linjer
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f) // Streckade linjer
         )
     }
-    val gridLineColor = Color.LightGray // Ljusgrå färg för rutnätet
+    val gridLineColor = Color.LightGray
 
     Canvas(modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)) {
         val axisPadding = 0f
@@ -164,80 +165,67 @@ fun BrewGraph(
         val graphWidth = size.width - yLabelPadding - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
 
-        // Skalning (med marginaler)
+        // Skalning
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
-        // Avrunda maxMass uppåt till närmsta 10-tal för snyggare rutnät
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
-        val maxMass = max(100f, ceil(actualMaxMass / 10f) * 10f) * 1.1f
+        val maxMass = max(50f, ceil(actualMaxMass / 10f) * 10f) * 1.1f // Minst 50g nu
 
-
-        // Axlar start/slut punkter
+        // Axlar start/slut
         val xAxisY = size.height - xLabelPadding
         val yAxisX = yLabelPadding
 
-        // --- RITA RUTNÄT ---
-        // Horisontella linjer (Vikt, var 10:e gram)
-        val massGridInterval = 10f
-        var currentMassGrid = massGridInterval
-        while (currentMassGrid < maxMass / 1.1f) { // Rita upp till faktiska max
-            val y = xAxisY - (currentMassGrid / maxMass) * graphHeight
-            drawLine(
-                color = gridLineColor,
-                start = Offset(yAxisX, y),
-                end = Offset(size.width, y), // Rita över hela bredden
-                strokeWidth = gridLinePaint.width,
-                pathEffect = gridLinePaint.pathEffect
-            )
-            currentMassGrid += massGridInterval
-        }
-        // Vertikala linjer (Tid, var 30:e sekund) - kan läggas till om önskvärt
-        val timeGridInterval = 30000f
-        var currentTimeGrid = timeGridInterval
-        while (currentTimeGrid < maxTime / 1.05f) {
-            val x = yAxisX + (currentTimeGrid / maxTime) * graphWidth
-            drawLine(
-                color = gridLineColor,
-                start = Offset(x, axisPadding), // Starta från toppen
-                end = Offset(x, xAxisY),       // Sluta vid x-axeln
-                strokeWidth = gridLinePaint.width,
-                pathEffect = gridLinePaint.pathEffect
-            )
-            currentTimeGrid += timeGridInterval
-        }
-        // --- SLUT RUTNÄT ---
+        // --- RITA RUTNÄT och AXEL-ETIKETTER ---
+        drawContext.canvas.nativeCanvas.apply {
+            // Horisontella linjer & ETIKETTER (Vikt, var 10:e gram)
+            val massGridInterval = 10f
+            var currentMassGrid = massGridInterval
+            while (currentMassGrid < maxMass / 1.1f) {
+                val y = xAxisY - (currentMassGrid / maxMass) * graphHeight
+                // Rita rutnätslinje - KORRIGERING: Använd namngivna argument
+                drawLine(
+                    color = gridLineColor,
+                    start = Offset(yAxisX, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = gridLinePaint.width, // Använd bredden från Stroke-objektet
+                    pathEffect = gridLinePaint.pathEffect // Använd pathEffect från Stroke-objektet
+                )
+                // Rita etikett
+                drawText("${currentMassGrid.toInt()}g", yLabelPadding / 2, y + textPaint.textSize / 3, textPaint.apply { textAlign = android.graphics.Paint.Align.CENTER })
+                currentMassGrid += massGridInterval
+            }
 
+            // Vertikala linjer & ETIKETTER (Tid, var 30:e sekund)
+            val timeGridInterval = 30000f
+            var currentTimeGrid = timeGridInterval
+            while (currentTimeGrid < maxTime / 1.05f) {
+                val x = yAxisX + (currentTimeGrid / maxTime) * graphWidth
+                // Rita rutnätslinje - KORRIGERING: Använd namngivna argument
+                drawLine(
+                    color = gridLineColor,
+                    start = Offset(x, axisPadding),
+                    end = Offset(x, xAxisY),
+                    strokeWidth = gridLinePaint.width,
+                    pathEffect = gridLinePaint.pathEffect
+                )
+                // Rita etikett
+                val timeSec = (currentTimeGrid / 1000).toInt()
+                drawText("${timeSec}s", x, size.height, textPaint)
+                currentTimeGrid += timeGridInterval
+            }
+
+            // Rita Axelnamn
+            drawText("Tid", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
+            save(); rotate(-90f)
+            drawText("Vikt", -size.height / 2, yLabelPadding / 2 - axisLabelPaint.descent(), axisLabelPaint)
+            restore()
+        }
+        // --- SLUT RUTNÄT OCH ETIKETTER ---
 
         // Rita axlar (ovanpå rutnätet)
         drawLine(Color.Gray, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY)) // Y
         drawLine(Color.Gray, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY)) // X
 
-        // Rita axel-etiketter (Text)
-        drawContext.canvas.nativeCanvas.apply {
-            // X-axel (Tid) - Etiketter var 30:e sekund
-            val timeLabelInterval = 30000f
-            var currentTimeLabel = timeLabelInterval
-            while (currentTimeLabel <= maxTime / 1.05f) {
-                val xPos = yAxisX + (currentTimeLabel / maxTime) * graphWidth
-                val timeSec = (currentTimeLabel / 1000).toInt()
-                drawText("${timeSec}s", xPos, size.height, textPaint)
-                currentTimeLabel += timeLabelInterval
-            }
-            drawText("Tid", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
-
-            // Y-axel (Vikt) - Etiketter var 100:e gram (färre etiketter nu när vi har rutnät)
-            val massLabelInterval = 100f
-            var currentMassLabel = massLabelInterval
-            while (currentMassLabel <= maxMass / 1.1f) {
-                val yPos = xAxisY - (currentMassLabel / maxMass) * graphHeight
-                drawText("${currentMassLabel.toInt()}g", yLabelPadding / 2 , yPos + textPaint.textSize / 3, textPaint.apply{textAlign = android.graphics.Paint.Align.CENTER})
-                currentMassLabel += massLabelInterval
-            }
-            save(); rotate(-90f)
-            drawText("Vikt", -size.height / 2, yLabelPadding / 2 - axisLabelPaint.descent(), axisLabelPaint)
-            restore()
-        }
-
-        // Rita graf-linjen (ovanpå rutnät och axlar)
+        // Rita graf-linjen (ovanpå allt annat)
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
@@ -253,6 +241,7 @@ fun BrewGraph(
 }
 
 
+// BrewControls (Oförändrad)
 @Composable
 fun BrewControls(
     isRecording: Boolean,
@@ -299,7 +288,7 @@ fun BrewControls(
     }
 }
 
-// Preview (behålls för testning)
+// Preview (Oförändrad)
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
@@ -318,6 +307,7 @@ fun LiveBrewScreenPreview() {
         var isPaused by remember { mutableStateOf(false) }
         var time by remember { mutableStateOf(158000L) }
         val currentWeight = ScaleMeasurement(previewSamples.lastOrNull()?.massGrams?.toFloat() ?: 0f)
+        val weightAtPausePreview = remember(isPaused, currentWeight) { if (isPaused) currentWeight.weightGrams else null }
 
         LaunchedEffect(isRec, isPaused) {
             while(isRec && !isPaused) {
@@ -332,6 +322,7 @@ fun LiveBrewScreenPreview() {
             currentTimeMillis = time,
             isRecording = isRec,
             isPaused = isPaused,
+            weightAtPause = weightAtPausePreview,
             onStartClick = { isRec = true; isPaused = false },
             onPauseClick = { isPaused = true },
             onResumeClick = { isPaused = false },
