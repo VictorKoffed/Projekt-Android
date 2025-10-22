@@ -2,40 +2,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Lägger till tillåtelse för internet --> <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Rättigheter för Bluetooth och Internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Steg 1: Rättigheter för Bluetooth (Android 12 / API 31 och högre) -->
-    <!-- Krävs för att kunna skanna efter BLE-enheter. -->
-    <!-- "neverForLocation" är viktig om du INTE använder BLE för att avgöra -->
-    <!-- användarens plats. Det visar användaren att appen inte spårar dem. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
-    <!-- Krävs för att ansluta till redan ihopparade enheter eller nya enheter. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-
     <!-- Steg 2: Rättigheter för Bluetooth (Äldre än Android 12 / API 30 och lägre) -->
-    <!-- Generell rättighet för att använda Bluetooth. -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
-    <!-- Krävs för att starta/stoppa scanning och andra administrativa uppgifter. -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-
     <!-- Steg 3: Rättighet för plats (Äldre än Android 12 / API 30 och lägre) -->
-    <!-- Före Android 12 var BLE-skanning kopplat till platstjänster. Denna är -->
-    <!-- OBLIGATORISK för att skanning ska fungera på dessa enheter. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30"/>
 
-
-    <!-- Steg 4 (Valfritt men rekommenderat): Deklarera att appen använder BLE -->
+    <!-- Steg 4: Deklarera att appen använder BLE -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
 
-
     <application
+        android:name=".CoffeeJournalApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -43,19 +33,18 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LabKotlinApi"
+        android:theme="@style/Theme.ProjektAndroid"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.LabKotlinApi">
+            android:theme="@style/Theme.ProjektAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
 
 </manifest>
+

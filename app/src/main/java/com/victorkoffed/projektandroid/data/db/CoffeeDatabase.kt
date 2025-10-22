@@ -1,0 +1,94 @@
+package com.victorkoffed.projektandroid.data.db
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+/**
+ * Huvuddatabas-klassen för appen.
+ * Definierar alla entities (tabeller) och vyer.
+ */
+@Database(
+    entities = [
+        Grinder::class,
+        Method::class,
+        Bean::class,
+        Brew::class,
+        BrewSample::class
+    ],
+    views = [BrewMetrics::class],
+    version = 1,
+    exportSchema = false // Kan sättas till true för produktionsappar
+)
+@TypeConverters(Converters::class) // Används för att konvertera t.ex. Date till Long (Epoch)
+abstract class CoffeeDatabase : RoomDatabase() {
+
+    abstract fun coffeeDao(): CoffeeDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: CoffeeDatabase? = null
+
+        // Byt namn till getInstance för att matcha CoffeeJournalApplication
+        fun getInstance(context: Context): CoffeeDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    CoffeeDatabase::class.java,
+                    "coffee_journal.db" // Byt namn för konsekvens
+                )
+                    .addCallback(DatabaseCallback) // Lägger till våra Triggers
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+
+        /**
+         * Callback för att lägga till data och triggers när databasen skapas.
+         */
+        private val DatabaseCallback = object : Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                // Kör all din PRAGMA och TRIGGER SQL här
+                db.execSQL("PRAGMA foreign_keys = ON;")
+
+                // För-populera med V60
+                db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
+                db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');") // Passar på att lägga till en till
+
+                // Trigger för att minska lager vid ny bryggning
+                db.execSQL("""
+                    CREATE TRIGGER IF NOT EXISTS trg_Brew_insert_decrement_stock
+                    AFTER INSERT ON Brew
+                    FOR EACH ROW
+                    BEGIN
+                        UPDATE Bean
+                        SET remaining_weight_g = remaining_weight_g - NEW.dose_g
+                        WHERE bean_id = NEW.bean_id;
+                        
+                        UPDATE Bean
+                        SET remaining_weight_g = 0
+                        WHERE bean_id = NEW.bean_id AND remaining_weight_g < 0;
+                    END;
+                """)
+
+                // Trigger för att återställa lager vid raderad bryggning
+                db.execSQL("""
+                    CREATE TRIGGER IF NOT EXISTS trg_Brew_delete_restore_stock
+                    AFTER DELETE ON Brew
+                    FOR EACH ROW
+                    BEGIN
+                        UPDATE Bean
+                        SET remaining_weight_g = remaining_weight_g + OLD.dose_g
+                        WHERE bean_id = OLD.bean_id;
+                    END;
+                """)
+            }
+        }
+    }
+}
+
