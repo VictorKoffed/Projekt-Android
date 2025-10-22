@@ -1,11 +1,11 @@
 package com.victorkoffed.projektandroid.ui.screens.grinder
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clickable // NY IMPORT
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.Icons // NY IMPORT
+import androidx.compose.material.icons.filled.Delete // NY IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,108 +14,203 @@ import androidx.compose.ui.unit.dp
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 
-/**
- * En skärm för att visa, lägga till och ta bort kvarnar (Grinders).
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GrinderScreen(vm: GrinderViewModel) {
-    // Hämta listan på kvarnar från ViewModel
     val grinders by vm.allGrinders.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var grinderToEdit by remember { mutableStateOf<Grinder?>(null) } // State för redigering
+    var grinderToDelete by remember { mutableStateOf<Grinder?>(null) } // State för borttagning
 
-    // State för textfälten
-    var name by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Kvarnar") }) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(onClick = { showAddDialog = true }) {
+                Text("Lägg till ny kvarn")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Hantera kvarnar", style = MaterialTheme.typography.headlineSmall)
-
-        // Formulär för att lägga till ny kvarn
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Kvarn-namn (t.ex. DF83)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Anteckningar (t.ex. SSP HU-malskivor)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Button(
-                onClick = {
-                    vm.addGrinder(name, notes)
-                    // Rensa fälten
-                    name = ""
-                    notes = ""
-                },
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Lägg till")
+            if (grinders.isEmpty()) {
+                Text("Inga kvarnar tillagda än.")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(grinders) { grinder ->
+                        GrinderCard(
+                            grinder = grinder,
+                            onClick = { grinderToEdit = grinder }, // Öppna redigering
+                            onDeleteClick = { grinderToDelete = grinder } // Visa bekräftelse
+                        )
+                    }
+                }
             }
         }
 
-        HorizontalDivider()
+        // Dialog för att lägga till (oförändrad)
+        if (showAddDialog) {
+            AddGrinderDialog(
+                onDismiss = { showAddDialog = false },
+                onAddGrinder = { name, notes ->
+                    vm.addGrinder(name, notes)
+                    showAddDialog = false
+                }
+            )
+        }
 
-        // Lista över befintliga kvarnar
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (grinders.isEmpty()) {
-                item {
-                    Text(
-                        "Inga kvarnar tillagda.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp)
-                    )
+        // Dialog för att redigera
+        grinderToEdit?.let { currentGrinder ->
+            EditGrinderDialog(
+                grinder = currentGrinder,
+                onDismiss = { grinderToEdit = null },
+                onSaveGrinder = { updatedGrinder ->
+                    vm.updateGrinder(updatedGrinder)
+                    grinderToEdit = null
                 }
-            } else {
-                items(grinders) { grinder ->
-                    GrinderCard(
-                        grinder = grinder,
-                        onDelete = { vm.deleteGrinder(grinder) }
-                    )
-                }
-            }
+            )
+        }
+
+        // Dialog för att bekräfta borttagning
+        grinderToDelete?.let { currentGrinder ->
+            DeleteGrinderConfirmationDialog(
+                grinderName = currentGrinder.name,
+                onConfirm = {
+                    vm.deleteGrinder(currentGrinder)
+                    grinderToDelete = null
+                },
+                onDismiss = { grinderToDelete = null }
+            )
         }
     }
 }
 
 @Composable
-private fun GrinderCard(grinder: Grinder, onDelete: () -> Unit) {
+fun GrinderCard(
+    grinder: Grinder,
+    onClick: () -> Unit, // Callback för klick
+    onDeleteClick: () -> Unit // Callback för delete-ikon
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick), // Gör kortet klickbart
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(Modifier.weight(1f)) {
                 Text(grinder.name, style = MaterialTheme.typography.titleMedium)
-                if (grinder.notes != null) {
-                    Text(grinder.notes, style = MaterialTheme.typography.bodySmall)
-                }
+                grinder.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
-            IconButton(onClick = onDelete) {
+            // Delete-ikon knapp
+            IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Ta bort kvarn",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error // Röd färg
                 )
             }
         }
     }
 }
+
+// Dialog för att lägga till (oförändrad)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddGrinderDialog(
+    onDismiss: () -> Unit,
+    onAddGrinder: (name: String, notes: String?) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Lägg till ny kvarn") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar (t.ex. burrs)") })
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (name.isNotBlank()) onAddGrinder(name, notes.takeIf { it.isNotBlank() }) },
+                enabled = name.isNotBlank()
+            ) { Text("Lägg till") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+    )
+}
+
+// NY DIALOG: För att redigera kvarn
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditGrinderDialog(
+    grinder: Grinder, // Tar emot kvarnen som ska redigeras
+    onDismiss: () -> Unit,
+    onSaveGrinder: (updatedGrinder: Grinder) -> Unit
+) {
+    // Förfyll fälten
+    var name by remember { mutableStateOf(grinder.name) }
+    var notes by remember { mutableStateOf(grinder.notes ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Redigera kvarn") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar") })
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        // Skapa kopia med uppdaterad data, behåll ID
+                        val updatedGrinder = grinder.copy(
+                            name = name,
+                            notes = notes.takeIf { it.isNotBlank() }
+                        )
+                        onSaveGrinder(updatedGrinder)
+                    }
+                },
+                enabled = name.isNotBlank()
+            ) { Text("Spara") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+    )
+}
+
+// NY DIALOG: För att bekräfta borttagning av kvarn
+@Composable
+fun DeleteGrinderConfirmationDialog(
+    grinderName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ta bort kvarn?") },
+        text = { Text("Är du säker på att du vill ta bort '$grinderName'? Bryggningar som använde denna kvarn kommer att förlora kopplingen.") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text("Ta bort") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+    )
+}
+

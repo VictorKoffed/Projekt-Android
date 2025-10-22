@@ -7,20 +7,35 @@ interface CoffeeRepository {
     // --- Grinder ---
     fun getAllGrinders(): Flow<List<Grinder>>
     suspend fun addGrinder(grinder: Grinder)
+    suspend fun updateGrinder(grinder: Grinder)
     suspend fun deleteGrinder(grinder: Grinder)
 
     // --- Method ---
     fun getAllMethods(): Flow<List<Method>>
     suspend fun addMethod(method: Method)
+    suspend fun updateMethod(method: Method)
+    suspend fun deleteMethod(method: Method)
 
     // --- Bean ---
     fun getAllBeans(): Flow<List<Bean>>
     suspend fun addBean(bean: Bean)
     suspend fun updateBean(bean: Bean)
     suspend fun getBeanById(id: Long): Bean?
+    suspend fun deleteBean(bean: Bean)
 
     // --- Brew ---
-    suspend fun addBrew(brew: Brew): Long
-    suspend fun addBrewSamples(samples: List<BrewSample>)
+    fun getAllBrews(): Flow<List<Brew>>
+    suspend fun getBrewById(id: Long): Brew?
+    suspend fun addBrew(brew: Brew): Long // Behåll för enkelhet
+    suspend fun updateBrew(brew: Brew)
+    suspend fun deleteBrew(brew: Brew)
+    suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long // <-- NY RAD
+
+    // --- BrewSample ---
+    fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
+    suspend fun addBrewSamples(samples: List<BrewSample>) // Behåll för enkelhet
+
+    // --- BrewMetrics (View) ---
     fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?>
 }
+

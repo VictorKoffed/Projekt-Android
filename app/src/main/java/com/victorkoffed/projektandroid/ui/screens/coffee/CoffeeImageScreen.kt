@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.victorkoffed.projektandroid.data.viewmodel.CoffeeImageViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 
 /**
  * Compose-skärm som visar en knapp för att hämta bild och renderar resultatet.

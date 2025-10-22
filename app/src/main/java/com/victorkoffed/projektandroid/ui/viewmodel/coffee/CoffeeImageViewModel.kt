@@ -1,4 +1,4 @@
-package com.victorkoffed.projektandroid.data.viewmodel
+package com.victorkoffed.projektandroid.ui.viewmodel.coffee
 
 import android.app.Application
 import androidx.compose.runtime.mutableStateOf
@@ -19,7 +19,7 @@ class CoffeeImageViewModel(app: Application) : AndroidViewModel(app) {
     val error = mutableStateOf<String?>(null)
 
     // Skapar en referens till vår gemensamma nätverkskö (Singleton)
-    private val queue = NetworkRequestQueue.getInstance(app).queue
+    private val queue = NetworkRequestQueue.Companion.getInstance(app).queue
 
     companion object {
         private const val RANDOM_COFFEE_API_URL = "https://coffee.alexflipnote.dev/random.json"

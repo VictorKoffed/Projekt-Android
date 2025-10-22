@@ -37,7 +37,7 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 
 ##  Known issue (Bugs to fix)
 
-1.
+1. When live brew is paused the weight does not stay locked as the time.
 
 ## 👤 Author
 

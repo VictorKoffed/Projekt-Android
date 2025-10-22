@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
     // Exponerar en Flow av alla kvarnar från databasen.
-    // Den uppdateras automatiskt när databasen ändras.
     val allGrinders: StateFlow<List<Grinder>> = repository.getAllGrinders()
         .stateIn(
             scope = viewModelScope,
@@ -26,19 +25,30 @@ class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
     /**
      * Lägger till en ny kvarn i databasen.
      */
-    fun addGrinder(name: String, notes: String) {
+    fun addGrinder(name: String, notes: String?) { // Ändrade notes till nullable för att matcha Grinder data class
         // Kör på en bakgrundstråd
         viewModelScope.launch {
             if (name.isNotBlank()) {
                 repository.addGrinder(
                     Grinder(
                         name = name,
-                        notes = notes.ifBlank { null } // Spara null om anteckningar är tomma
+                        notes = notes // Använd notes direkt (kan vara null)
                     )
                 )
             }
         }
     }
+
+    /**
+     * Uppdaterar en befintlig kvarn i databasen.
+     * Denna funktion lades till för att stödja redigering.
+     */
+    fun updateGrinder(grinder: Grinder) { // DENNA FUNKTION LADES TILL
+        viewModelScope.launch {
+            repository.updateGrinder(grinder)
+        }
+    }
+
 
     /**
      * Raderar en kvarn från databasen.
@@ -49,3 +59,4 @@ class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 }
+
