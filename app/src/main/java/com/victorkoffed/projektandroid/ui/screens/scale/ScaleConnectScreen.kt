@@ -5,8 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons // <-- NY IMPORT
-import androidx.compose.material.icons.filled.ArrowBack // <-- NY IMPORT
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,22 +58,30 @@ fun ScaleConnectScreen(
                         onTare = { vm.tareScale() }
                     )
                 }
-                else -> {
+                // --- ÄNDRING: Hanterar nu Disconnected, Connecting och Error här ---
+                else -> { // Handles Disconnected, Connecting, Error
                     val devices by vm.devices.collectAsState()
                     val isScanning by vm.isScanning.collectAsState()
-                    val error by vm.error.collectAsState()
+                    val error by vm.error.collectAsState() // Detta state används inte längre direkt för att visa fel, men kan vara bra för loggning
                     val requestPermissions = rememberBluetoothPermissionLauncher { granted ->
                         if (granted) vm.startScan()
                     }
                     ScanningView(
                         devices = devices,
                         isScanning = isScanning,
-                        connectionState = state,
-                        error = error,
+                        connectionState = state, // Skicka med hela state (Disconnected, Connecting eller Error)
+                        // Om state är Error, använd dess meddelande, annars null
+                        error = (state as? BleConnectionState.Error)?.message,
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
-                        onDeviceClick = { vm.connect(it) }
+                        onDeviceClick = {
+                            // --- NYTT: Tillåt bara connect om state är Disconnected eller Error ---
+                            if (state is BleConnectionState.Disconnected || state is BleConnectionState.Error) {
+                                vm.connect(it)
+                            }
+                        }
                     )
                 }
+                // --- SLUT ÄNDRING ---
             }
         }
     }
@@ -121,8 +129,8 @@ private fun ConnectedView(
 private fun ScanningView(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
-    connectionState: BleConnectionState,
-    error: String?,
+    connectionState: BleConnectionState, // Tar nu emot hela state (Disconnected, Connecting, Error)
+    error: String?, // Felmeddelande (kan vara null)
     onToggleScan: () -> Unit,
     onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
@@ -134,10 +142,11 @@ private fun ScanningView(
     ) {
         ScanControls(
             isScanning = isScanning,
-            connectionState = connectionState,
+            connectionState = connectionState, // Skicka med hela state
             onToggleScan = onToggleScan
         )
 
+        // Visa felmeddelande om det finns (från connectionState.Error)
         error?.let {
             Text(
                 text = "Fel: $it",
@@ -146,7 +155,9 @@ private fun ScanningView(
             )
         }
         Divider()
-        DeviceList(devices, isScanning, onDeviceClick)
+        // --- ÄNDRING: Skicka med connectionState till DeviceList ---
+        DeviceList(devices, isScanning, connectionState, onDeviceClick)
+        // --- SLUT ÄNDRING ---
     }
 }
 
@@ -157,7 +168,13 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Button(onClick = onToggleScan, enabled = connectionState == BleConnectionState.Disconnected) {
+        // --- ÄNDRING: Uppdaterat enabled-villkor ---
+        Button(
+            onClick = onToggleScan,
+            // Aktivera om state är Disconnected ELLER Error
+            enabled = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
+        ) {
+            // --- SLUT ÄNDRING ---
             when {
                 connectionState is BleConnectionState.Connecting -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
@@ -169,19 +186,29 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
                     Spacer(Modifier.width(8.dp))
                     Text("Stoppa skanning")
                 }
+                // Visa "Starta skanning" för både Disconnected och Error
                 else -> Text("Starta skanning")
             }
         }
     }
 }
 
+// --- ÄNDRING: Lade till connectionState som parameter ---
 @Composable
-private fun DeviceList(devices: List<DiscoveredDevice>, isScanning: Boolean, onDeviceClick: (DiscoveredDevice) -> Unit) {
+private fun DeviceList(
+    devices: List<DiscoveredDevice>,
+    isScanning: Boolean,
+    connectionState: BleConnectionState, // <-- NY PARAMETER
+    onDeviceClick: (DiscoveredDevice) -> Unit
+) {
+// --- SLUT ÄNDRING ---
     if (isScanning && devices.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Letar efter enheter...")
         }
-    } else if (!isScanning && devices.isEmpty()) {
+        // --- ÄNDRING: Använder den nya parametern här ---
+    } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) { // Visa bara om inget fel visas
+        // --- SLUT ÄNDRING ---
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Inga enheter hittades.")
         }
@@ -199,7 +226,7 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick) // Klickbarheten är kvar
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(

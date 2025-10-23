@@ -1,5 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
+import android.util.Log // <-- NY IMPORT FÖR PREVIEW
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape // <-- NY IMPORT (om du vill ha rund knapp)
@@ -44,21 +45,27 @@ fun LiveBrewScreen(
     onResumeClick: () -> Unit,
     onStopAndSaveClick: () -> Unit,
     onTareClick: () -> Unit,
-    onNavigateBack: () -> Unit,
-    onResetRecording: () -> Unit
+    onNavigateBack: () -> Unit, // Denna går nu till scale-skärmen
+    onResetRecording: () -> Unit,
+    navigateTo: (String) -> Unit // <-- NY PARAMETER FÖR NAVIGATION
 ) {
     var showFlowInfo by remember { mutableStateOf(true) }
     // --- NYTT STATE FÖR ALERT ---
     var showDisconnectedAlert by remember { mutableStateOf(false) }
+    var alertMessage by remember { mutableStateOf("Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats.") } // För att hantera Error-meddelanden
 
     // --- NY LaunchedEffect FÖR ATT UPPTÄCKA FRÅNKOPPLING ---
     LaunchedEffect(connectionState, isRecording) {
         // Om vi spelar in OCH anslutningen bryts (Disconnected eller Error)
         if (isRecording && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
-            // Stoppa inspelningen direkt (nollställer timer etc. i ViewModel)
-            onResetRecording()
-            // Visa sedan dialogrutan
-            showDisconnectedAlert = true
+            // Spara eventuellt felmeddelande
+            if (connectionState is BleConnectionState.Error) {
+                alertMessage = "Fel vid anslutning till vågen: ${connectionState.message}. Inspelningen har stoppats."
+            } else {
+                alertMessage = "Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats."
+            }
+            onResetRecording() // Stoppa inspelningen direkt
+            showDisconnectedAlert = true // Visa sedan dialogrutan
         }
     }
     // --- SLUT NY LaunchedEffect ---
@@ -131,20 +138,28 @@ fun LiveBrewScreen(
             )
         }
 
-        // --- NY ALERT DIALOG ---
+        // --- UPPDATERAD ALERT DIALOG ---
         if (showDisconnectedAlert) {
             AlertDialog(
-                onDismissRequest = { showDisconnectedAlert = false }, // Tillåt att stänga genom att klicka utanför
+                onDismissRequest = {
+                    showDisconnectedAlert = false
+                    // Navigera tillbaka till scale-skärmen när dialogen stängs
+                    navigateTo("scale") // Använd den nya parametern
+                },
                 title = { Text("Anslutning bruten") },
-                text = { Text("Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats.") },
+                text = { Text(alertMessage) }, // Använd state för meddelande
                 confirmButton = {
-                    TextButton(onClick = { showDisconnectedAlert = false }) {
+                    TextButton(onClick = {
+                        showDisconnectedAlert = false
+                        // Navigera tillbaka till scale-skärmen när användaren klickar OK
+                        navigateTo("scale") // Använd den nya parametern
+                    }) {
                         Text("OK")
                     }
                 }
             )
         }
-        // --- SLUT ALERT DIALOG ---
+        // --- SLUT UPPDATERAD ALERT DIALOG ---
     }
 }
 
@@ -391,7 +406,7 @@ fun BrewControls(
 // --- SLUT PÅ UPPDATERING ---
 
 
-// Preview (Uppdaterad med connectionState)
+// Preview (Uppdaterad med connectionState och navigateTo)
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
@@ -441,8 +456,9 @@ fun LiveBrewScreenPreview() {
             onResumeClick = { isPaused = false },
             onStopAndSaveClick = { isRec = false; isPaused = false },
             onTareClick = {},
-            onNavigateBack = {},
-            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut */ }
+            onNavigateBack = { Log.d("Preview", "Navigate Back to Scale") }, // Går till scale
+            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut */ },
+            navigateTo = { screen -> Log.d("Preview", "Navigate to $screen") } // Lägg till dummy navigateTo
         )
     }
 }

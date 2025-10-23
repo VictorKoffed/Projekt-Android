@@ -196,12 +196,15 @@ class MainActivity : ComponentActivity() {
                                                 Log.d("MainActivity", "Saving brew with setup: $currentSetup")
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
                                                 lastBrewId = savedBrewId
-                                                currentScreen = "brew_setup"
+                                                currentScreen = "brew_setup" // Gå tillbaka till setup efter spara
                                             }
                                         },
                                         onTareClick = { scaleVm.tareScale() },
-                                        onNavigateBack = { currentScreen = "brew_setup" },
-                                        onResetRecording = { scaleVm.stopRecording() } // Anropa funktionen vi gjorde public
+                                        // --- ÄNDRAD RAD: Navigera till 'scale' för återanslutning ---
+                                        onNavigateBack = { navigateToScreen("scale") }, // Gå till scale-skärmen
+                                        onResetRecording = { scaleVm.stopRecording() },
+                                        // --- NY RAD: Skicka med navigateToScreen ---
+                                        navigateTo = navigateToScreen
                                     )
                                 }
                                 "brew_detail" -> {
