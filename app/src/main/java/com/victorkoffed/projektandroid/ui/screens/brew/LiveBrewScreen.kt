@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.victorkoffed.projektandroid.data.db.BrewSample
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- NY IMPORT
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import kotlinx.coroutines.delay
@@ -37,6 +38,7 @@ fun LiveBrewScreen(
     isRecording: Boolean,
     isPaused: Boolean,
     weightAtPause: Float?,
+    connectionState: BleConnectionState, // <-- NY PARAMETER
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -46,6 +48,20 @@ fun LiveBrewScreen(
     onResetRecording: () -> Unit
 ) {
     var showFlowInfo by remember { mutableStateOf(true) }
+    // --- NYTT STATE FÖR ALERT ---
+    var showDisconnectedAlert by remember { mutableStateOf(false) }
+
+    // --- NY LaunchedEffect FÖR ATT UPPTÄCKA FRÅNKOPPLING ---
+    LaunchedEffect(connectionState, isRecording) {
+        // Om vi spelar in OCH anslutningen bryts (Disconnected eller Error)
+        if (isRecording && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
+            // Stoppa inspelningen direkt (nollställer timer etc. i ViewModel)
+            onResetRecording()
+            // Visa sedan dialogrutan
+            showDisconnectedAlert = true
+        }
+    }
+    // --- SLUT NY LaunchedEffect ---
 
     Scaffold(
         topBar = {
@@ -59,6 +75,8 @@ fun LiveBrewScreen(
                 actions = {
                     TextButton(
                         onClick = onStopAndSaveClick,
+                        // Notera: Enabled baseras fortfarande på om inspelning *har* startat (isRecording || isPaused)
+                        // Även om anslutningen bryts kan man vilja spara det som spelats in hittills.
                         enabled = isRecording || isPaused
                     ) {
                         Text("Klar")
@@ -82,7 +100,7 @@ fun LiveBrewScreen(
                 showFlow = showFlowInfo
             )
             Spacer(Modifier.height(16.dp))
-            BrewGraph(
+            BrewGraph( // Denna byts ut senare mot BrewSamplesGraph
                 samples = samples,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,6 +121,8 @@ fun LiveBrewScreen(
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
+                // --- NY PARAMETER: Inaktivera kontroller om inte ansluten ---
+                isConnected = connectionState is BleConnectionState.Connected,
                 onStartClick = onStartClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
@@ -110,6 +130,21 @@ fun LiveBrewScreen(
                 onResetClick = onResetRecording
             )
         }
+
+        // --- NY ALERT DIALOG ---
+        if (showDisconnectedAlert) {
+            AlertDialog(
+                onDismissRequest = { showDisconnectedAlert = false }, // Tillåt att stänga genom att klicka utanför
+                title = { Text("Anslutning bruten") },
+                text = { Text("Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats.") },
+                confirmButton = {
+                    TextButton(onClick = { showDisconnectedAlert = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        // --- SLUT ALERT DIALOG ---
     }
 }
 
@@ -277,11 +312,12 @@ fun BrewGraph(
 }
 
 
-// --- UPPDATERAD BrewControls med "T"-knapp ---
+// --- UPPDATERAD BrewControls med "T"-knapp och isConnected ---
 @Composable
 fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
+    isConnected: Boolean, // <-- NY PARAMETER
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -297,7 +333,7 @@ fun BrewControls(
         IconButton(
             onClick = onResetClick,
             // Inaktivera om inspelning *inte* pågår (för att undvika återställning av misstag)
-            enabled = isRecording || isPaused
+            enabled = (isRecording || isPaused) // Behöver inte kolla isConnected här, man ska kunna återställa även om anslutningen bröts
         ) {
             Icon(
                 imageVector = Icons.Default.Replay, // Rund pil ikon
@@ -316,7 +352,9 @@ fun BrewControls(
             },
             modifier = Modifier.size(72.dp), // Gör den lite större
             // Centrera innehållet perfekt
-            contentPadding = PaddingValues(0.dp)
+            contentPadding = PaddingValues(0.dp),
+            // --- NYTT: Inaktivera om inte ansluten ---
+            enabled = isConnected
         ) {
             Icon(
                 imageVector = when {
@@ -333,10 +371,11 @@ fun BrewControls(
             )
         }
 
-        // --- KNAPP 3: Tare (Nu en OutlinedButton med text "T") ---
+        // Knapp 3: Tare (Nu en OutlinedButton med text "T")
         OutlinedButton(
             onClick = onTareClick,
-            enabled = !isRecording && !isPaused,
+            // --- NYTT: Inaktivera om inte ansluten ELLER om inspelning pågår ---
+            enabled = isConnected && !isRecording && !isPaused,
             // Gör den fyrkantig och lika stor som IconButton ungefär
             modifier = Modifier.size(48.dp), // Standardstorlek för IconButton är 48dp
             shape = CircleShape, // Gör den rund om du vill, annars ta bort för rektangel
@@ -347,13 +386,12 @@ fun BrewControls(
                 style = MaterialTheme.typography.titleLarge // Gör T lite större
             )
         }
-        // --- SLUT PÅ ÄNDRING ---
     }
 }
 // --- SLUT PÅ UPPDATERING ---
 
 
-// Preview (Oförändrad)
+// Preview (Uppdaterad med connectionState)
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
@@ -371,6 +409,7 @@ fun LiveBrewScreenPreview() {
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
         var time by remember { mutableStateOf(158000L) }
+        var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Våg")) } // Starta som ansluten
 
         val currentWeight = ScaleMeasurement(
             weightGrams = previewSamples.lastOrNull()?.massGrams?.toFloat() ?: 0f,
@@ -382,6 +421,10 @@ fun LiveBrewScreenPreview() {
             while(isRec && !isPaused) {
                 delay(100)
                 time += 100
+                // Simulera frånkoppling efter 165 sekunder i preview
+                if (time > 165000L && connectionState is BleConnectionState.Connected) {
+                    connectionState = BleConnectionState.Disconnected
+                }
             }
         }
 
@@ -392,13 +435,14 @@ fun LiveBrewScreenPreview() {
             isRecording = isRec,
             isPaused = isPaused,
             weightAtPause = weightAtPausePreview,
-            onStartClick = { isRec = true; isPaused = false },
+            connectionState = connectionState, // Skicka med state
+            onStartClick = { isRec = true; isPaused = false; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut i preview */ },
             onPauseClick = { isPaused = true },
             onResumeClick = { isPaused = false },
             onStopAndSaveClick = { isRec = false; isPaused = false },
             onTareClick = {},
             onNavigateBack = {},
-            onResetRecording = { isRec = false; isPaused = false; time = 0L }
+            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut */ }
         )
     }
 }

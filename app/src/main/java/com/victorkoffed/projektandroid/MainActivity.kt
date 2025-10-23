@@ -115,11 +115,8 @@ class MainActivity : ComponentActivity() {
                 // --- Definiera navigationsalternativen ---
                 val navItems = listOf(
                     NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
-                    // Använder Icons.Filled.Coffee / Icons.Outlined.Coffee (du måste importera 'filled' och 'outlined')
                     NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
-                    // Använder Icons.Filled.Science / Icons.Outlined.Science
                     NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
-                    // Använder Icons.Filled.Settings / Icons.Outlined.Settings (eller annan ikon du föredrar)
                     NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
                 // --- SLUT ---
@@ -151,12 +148,10 @@ class MainActivity : ComponentActivity() {
                                     availableBeans = availableBeans,
                                     availableMethods = availableMethods
                                 )
-                                // --- UPPDATERAT ANROP ---
                                 "scale" -> ScaleConnectScreen(
                                     vm = scaleVm,
                                     onNavigateBack = { navigateToScreen("home") } // Gå till home
                                 )
-                                // --- SLUT ---
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
                                 "method" -> MethodScreen(methodVm)
@@ -171,7 +166,6 @@ class MainActivity : ComponentActivity() {
                                     onClearResult = {
                                         lastBrewId = null
                                     },
-                                    // --- TILLAGD RAD ---
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
                                 "live_brew" -> {
@@ -181,6 +175,8 @@ class MainActivity : ComponentActivity() {
                                     val isPaused by scaleVm.isPaused.collectAsState()
                                     val currentMeasurement by scaleVm.measurement.collectAsState()
                                     val weightAtPause by scaleVm.weightAtPause.collectAsState()
+                                    // --- NY RAD: Hämta connection state ---
+                                    val scaleConnectionState by scaleVm.connectionState.collectAsState()
 
                                     LiveBrewScreen(
                                         samples = samples,
@@ -189,6 +185,8 @@ class MainActivity : ComponentActivity() {
                                         isRecording = isRecording,
                                         isPaused = isPaused,
                                         weightAtPause = weightAtPause,
+                                        // --- NY PARAMETER: Skicka med state ---
+                                        connectionState = scaleConnectionState,
                                         onStartClick = { scaleVm.startRecording() },
                                         onPauseClick = { scaleVm.pauseRecording() },
                                         onResumeClick = { scaleVm.resumeRecording() },
@@ -253,9 +251,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// NavigationButton Composable - KAN TAS BORT HELT NU
-/*
-@Composable
-private fun NavigationButton( ... ) { ... }
-*/

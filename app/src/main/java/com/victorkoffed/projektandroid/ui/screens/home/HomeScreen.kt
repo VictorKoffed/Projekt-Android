@@ -5,12 +5,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape // <-- NY IMPORT
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bluetooth // <-- NY IMPORT
-import androidx.compose.material.icons.filled.BluetoothConnected // <-- NY IMPORT
-import androidx.compose.material.icons.filled.BluetoothDisabled // <-- NY IMPORT
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BluetoothConnected
+import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -18,24 +19,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+// import androidx.compose.ui.draw.shadow // Behövs ej
+import androidx.compose.ui.graphics.Color // <-- NY IMPORT
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign // <-- NY IMPORT
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.R
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- NY IMPORT
-// --- NYA IMPORTER ---
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
-// --- SLUT ---
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.RecentBrewItem
-import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel // <-- NY IMPORT
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,6 +76,10 @@ fun HomeScreen(
     val scaleConnectionState by scaleVm.connectionState.collectAsState()
     // --- SLUT ---
 
+    // --- NYTT STATE FÖR VARNINGSDIALOG ---
+    var showSetupWarningDialog by remember { mutableStateOf(false) }
+    // --- SLUT ---
+
     // Effekt för att hämta slumpmässig bild
     LaunchedEffect(Unit) {
         if (imageUrl == null) {
@@ -92,6 +96,8 @@ fun HomeScreen(
     }
 
     Scaffold(
+        // --- ÄNDRING: Ljusgrå bakgrundsfärg för Scaffold ---
+        containerColor = Color(0xFFF0F0F0), // Ljusgrå bakgrund
         topBar = {
             TopAppBar(
                 title = { Text("Home") },
@@ -101,17 +107,44 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // --- UPPDATERAD KNAPP ---
+                    // --- HELA DENNA DEL ÄR ÄNDRAD ---
                     val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
+                    val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
+                    val iconColor = Color.Black // Svart ikonfärg för kontrast
 
-                    IconButton(
-                        onClick = onNavigateToBrewSetup,
-                        enabled = isBrewSetupEnabled // <-- ÄNDRINGEN ÄR HÄR
+                    // Använd Surface för att få en klickbar yta med färg och form
+                    Surface(
+                        modifier = Modifier
+                            .padding(end = 8.dp) // Lite marginal från kanten
+                            .size(40.dp) // Ungefärlig storlek för knappen
+                            .clip(CircleShape) // Gör den rund
+                            .clickable(
+                                onClick = {
+                                    if (isBrewSetupEnabled) {
+                                        onNavigateToBrewSetup()
+                                    } else {
+                                        showSetupWarningDialog = true
+                                    }
+                                }
+                            ),
+                        color = buttonColor, // Sätt bakgrundsfärgen
+                        shape = CircleShape // Definiera formen igen (bra för tydlighet)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Ny bryggning")
+                        // Box för att centrera ikonen
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Ny bryggning",
+                                tint = iconColor // Sätt ikonfärgen
+                            )
+                        }
                     }
-                    // --- SLUT PÅ UPPDATERING ---
-                }
+                    // --- SLUT PÅ ÄNDRING ---
+                },
+                // --- ÄNDRING: Vit bakgrundsfärg för TopAppBar ---
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface // Vit bakgrund
+                )
             )
         }
     ) { paddingValues ->
@@ -120,7 +153,9 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            // --- ÄNDRING: Justerat avstånd ---
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            // --- SLUT ÄNDRING ---
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
         ) {
             item {
@@ -132,7 +167,7 @@ fun HomeScreen(
                     imageUrl = imageUrl,
                     imageLoading = imageLoading,
                     imageError = imageError,
-                    timeSinceLastCoffee = timeSinceLastCoffee ?: "Ingen bryggning",
+                    timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState, // <-- Skicka med state
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
                     onScaleCardClick = { navigateToScreen("scale") } // <-- Skicka med klick-hanterare
@@ -142,7 +177,8 @@ fun HomeScreen(
                 Text(
                     "Last brews",
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(top = 8.dp)
+                    // --- ÄNDRING: Lade till padding för att matcha rutnätet ---
+                    modifier = Modifier.padding(top = 8.dp) // Lite extra luft ovanför "Last brews"
                 )
             }
             if (recentBrews.isEmpty()) {
@@ -157,6 +193,21 @@ fun HomeScreen(
             }
         }
     }
+
+    // --- NY DIALOGRUTA ---
+    if (showSetupWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showSetupWarningDialog = false },
+            title = { Text("Kan inte starta bryggning") },
+            text = { Text("Du måste först lägga till minst en böna (under 'Bean') och en bryggmetod (under 'Method') innan du kan starta en ny bryggning.") },
+            confirmButton = {
+                TextButton(onClick = { showSetupWarningDialog = false }) {
+                    Text("Förstått")
+                }
+            }
+        )
+    }
+    // --- SLUT PÅ NY DIALOG ---
 }
 
 // Rutnät för infokorten - Uppdaterad med flyttat kort och connection state
@@ -177,9 +228,11 @@ fun InfoGrid(
     val firstRowHeight = 160.dp
     val otherRowHeight = 100.dp
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // --- ÄNDRING: Ökat avstånd från 8.dp till 12.dp ---
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // --- Första raden ---
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // --- SLUT ÄNDRING ---
             // Kort 1: Slumpmässig bild (som tidigare)
             InfoCard(modifier = Modifier.weight(1f).height(firstRowHeight)) {
                 Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
@@ -217,14 +270,18 @@ fun InfoGrid(
         }
 
         // --- Andra raden ---
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // --- ÄNDRING: Ökat avstånd från 8.dp till 12.dp ---
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // --- SLUT ÄNDRING ---
             // Kort 3: Antal bryggningar
             InfoCard(title = totalBrews.toString(), subtitle = "Brews", modifier = Modifier.weight(1f).height(otherRowHeight))
             // Kort 4: Tid sedan senaste kaffet (Flyttad HIT)
             InfoCard(title = timeSinceLastCoffee, subtitle = "Since last coffee", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
         // --- Tredje raden ---
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // --- ÄNDRING: Ökat avstånd från 8.dp till 12.dp ---
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // --- SLUT ÄNDRING ---
             // Kort 5: Antal bönor
             InfoCard(title = uniqueBeans.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
             // Kort 6: Tillgänglig vikt
@@ -233,7 +290,7 @@ fun InfoGrid(
     }
 }
 
-// --- NY Composable för Vågstatus-kortet ---
+// --- Composable för Vågstatus-kortet ---
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
@@ -260,24 +317,28 @@ fun ScaleStatusCard(
             subtitle = "Var god vänta"
             iconColor = LocalContentColor.current.copy(alpha = 0.6f)
         }
-        is BleConnectionState.Disconnected -> {
-            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
-            title = "Våg frånkopplad"
-            subtitle = "Tryck för att ansluta"
-            iconColor = LocalContentColor.current.copy(alpha = 0.6f)
-        }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Fel", tint = MaterialTheme.colorScheme.error) }
             title = "Anslutningsfel"
             subtitle = connectionState.message // Visa felmeddelandet
             iconColor = MaterialTheme.colorScheme.error
         }
+        BleConnectionState.Disconnected -> { // Explicit hantera Disconnected
+            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
+            title = "Våg frånkopplad"
+            subtitle = "Tryck för att ansluta"
+            iconColor = LocalContentColor.current.copy(alpha = 0.6f)
+        }
     }
 
-    // Återanvänd InfoCard men gör den klickbar och lägg till ikon
     Card(
         modifier = modifier.clickable(onClick = onClick), // Gör kortet klickbart
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp), // Standardskugga
+        shape = RoundedCornerShape(12.dp), // Matchar InfoCard
+        // --- ÄNDRING: Explicit vit bakgrund för kortet ---
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface // Vit bakgrund
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -298,7 +359,7 @@ fun ScaleStatusCard(
 }
 
 
-// InfoCard (Tidigare isConnected borttagen, text centrerad)
+// InfoCard
 @Composable
 fun InfoCard(
     modifier: Modifier = Modifier,
@@ -306,7 +367,15 @@ fun InfoCard(
     subtitle: String? = null,
     content: @Composable (ColumnScope.() -> Unit)? = null
 ) {
-    Card(modifier = modifier, elevation = CardDefaults.cardElevation(2.dp)) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = RoundedCornerShape(12.dp), // Ökad hörnradie för att matcha mockup
+        // --- ÄNDRING: Explicit vit bakgrund för kortet ---
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface // Vit bakgrund
+        )
+    ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.Center,
@@ -322,7 +391,7 @@ fun InfoCard(
 }
 
 
-// RecentBrewCard (Oförändrad)
+// RecentBrewCard
 @Composable
 fun RecentBrewCard(
     brewItem: RecentBrewItem,
@@ -331,7 +400,17 @@ fun RecentBrewCard(
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), elevation = CardDefaults.cardElevation(1.dp)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp), // Mindre skugga
+        shape = RoundedCornerShape(12.dp), // Ökad hörnradie
+        // --- ÄNDRING: Explicit vit bakgrund för kortet ---
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface // Vit bakgrund
+        )
+    ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
@@ -340,10 +419,13 @@ fun RecentBrewCard(
             }
             Spacer(Modifier.width(12.dp))
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground), // Bättre placeholder?
+                painter = painterResource(id = R.mipmap.ic_launcher_foreground), // Använd mipmap (kaffebönan)
                 contentDescription = "Bryggbild",
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)), // Behåller 64dp
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                // Ingen extra skugga på bilden inuti kortet
             )
         }
     }
