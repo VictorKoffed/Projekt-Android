@@ -50,13 +50,13 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
    Göra grafen snyggare eller mer interaktiv. 
 2. Lägga till flow i grafen.
 3. Fixa så att man kan arkivera bönor som är slut så att "beans explored" fungerar.
-3. Förbättra HomeScreen:
+4. Förbättra HomeScreen:
    Byta ut placeholder-infokorten mot riktig data (t.ex. vågens anslutningsstatus, tid sedan senaste kaffet).
    Byta ut placeholder-bilderna i "Last brews"-listan.
-4. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+5. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
-5. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-6. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+6. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+7. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 
