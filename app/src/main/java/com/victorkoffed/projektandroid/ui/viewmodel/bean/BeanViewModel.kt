@@ -8,11 +8,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-// Ta bort onödiga importer för sträng-parsning
-// import java.text.ParseException
-// import java.text.SimpleDateFormat
+import java.text.ParseException // För datum-parsning
+import java.text.SimpleDateFormat
 import java.util.Date
-// import java.util.Locale
+import java.util.Locale
 
 /**
  * ViewModel for managing Coffee Beans.
@@ -27,30 +26,36 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    // Ta bort parseDateString - behövs inte längre
-    // private fun parseDateString(dateString: String?): Date? { ... }
+    // Hjälpfunktion för att försöka parsa datumsträng (yyyy-MM-dd)
+    private fun parseDateString(dateString: String?): Date? {
+        if (dateString.isNullOrBlank()) return null
+        return try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
+        } catch (e: ParseException) {
+            null // Returnera null om formatet är fel
+        }
+    }
 
     /**
      * Adds a new bean to the database.
-     * Tar nu emot Date? och Double? direkt.
+     * Tar nu emot roastDateString och initialWeightString.
      */
     fun addBean(
         name: String,
         roaster: String?,
-        // --- ÄNDRADE PARAMETRAR ---
-        roastDate: Date?,        // Tar emot Date?
-        initialWeight: Double?,  // Tar emot Double?
-        // --- SLUT PÅ ÄNDRING ---
+        roastDateString: String?, // NY: Datum som sträng
+        initialWeightString: String?, // NY: Vikt som sträng
         remainingWeight: Double,
         notes: String?
     ) {
-        // Ingen konvertering behövs här längre
+        val roastDate = parseDateString(roastDateString) // Konvertera sträng till Date
+        val initialWeight = initialWeightString?.toDoubleOrNull() // Konvertera sträng till Double
 
         val newBean = Bean(
             name = name,
             roaster = roaster,
-            roastDate = roastDate, // Använd direkt
-            initialWeightGrams = initialWeight, // Använd direkt
+            roastDate = roastDate, // Spara Date-objektet
+            initialWeightGrams = initialWeight, // Spara Double-värdet
             remainingWeightGrams = remainingWeight,
             notes = notes
         )
@@ -60,36 +65,28 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
     }
 
     /**
-     * Updates an existing bean using a Bean object.
-     * (Förenklad version som tar emot ett uppdaterat Bean-objekt)
+     * Updates an existing bean.
+     * Tar nu emot roastDateString och initialWeightString.
      */
-    fun updateBean(updatedBean: Bean) { // Tar bara emot det uppdaterade objektet
-        viewModelScope.launch {
-            // Se till att ID är korrekt (borde vara det från copy())
-            // Ingen mer konvertering behövs här
-            repository.updateBean(updatedBean)
-        }
-    }
-
-    // Alternativ updateBean om du föredrar att skicka separata värden (behåll den gamla logiken med nya typer)
-    /*
     fun updateBean(
         bean: Bean, // Tar emot det gamla objektet
+        // Tar emot de nya värdena som strängar
         name: String,
         roaster: String?,
-        roastDate: Date?,        // Tar emot Date?
-        initialWeight: Double?,  // Tar emot Double?
+        roastDateString: String?,
+        initialWeightString: String?,
         remainingWeight: Double,
         notes: String?
     ) {
-        // Ingen konvertering behövs här längre
+        val roastDate = parseDateString(roastDateString)
+        val initialWeight = initialWeightString?.toDoubleOrNull()
 
         // Skapa en kopia av det gamla objektet med uppdaterade värden
         val updatedBean = bean.copy(
             name = name,
             roaster = roaster,
-            roastDate = roastDate, // Använd direkt
-            initialWeightGrams = initialWeight, // Använd direkt
+            roastDate = roastDate,
+            initialWeightGrams = initialWeight,
             remainingWeightGrams = remainingWeight,
             notes = notes
         )
@@ -97,8 +94,6 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
             repository.updateBean(updatedBean)
         }
     }
-    */
-
 
     /** Deletes a bean from the database. */
     fun deleteBean(bean: Bean) {

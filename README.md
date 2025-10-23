@@ -39,13 +39,12 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 3. Sync Gradle and run on an emulator or Android device
 4. *(Optional)* Enable Bluetooth permissions to test smart scale features
 
-##  Known issue (Bugs to fix)
+##  Known issue (And todo)
 
-1. Fix back button to homescreen: BrewScreen
-2. Translate app to english
-3. Fix  banner to Bean, Method och grinder with a fitting background
-4. Fix shadows to homescreen boxes 
-5. Fix buttons and some text have the app brown color
+1. Translate app to english
+2. Fix  banner to Bean, Method och grinder with a fitting background
+3. Fix shadows to homescreen boxes 
+4. Fix buttons and some text have the app brown color
 
 ##  ToDo List
 
