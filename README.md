@@ -48,10 +48,9 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Förbättra HomeScreen:
-   Byta ut placeholder-infokorten mot riktig data (t.ex. vågens anslutningsstatus, tid sedan senaste kaffet).
+1. Lägga till kamerafunktion
+2. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
-2. Lägga till kamera funktion.
 3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
 4. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
