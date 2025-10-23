@@ -3,23 +3,20 @@ package com.victorkoffed.projektandroid.data.repository
 import com.victorkoffed.projektandroid.data.db.*
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Implementation av CoffeeRepository som använder Room (CoffeeDao).
- * Denna version inkluderar alla CRUD-funktioner från interfacet.
- */
 class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {
-
     // --- Grinder ---
     override fun getAllGrinders(): Flow<List<Grinder>> = dao.getAllGrinders()
     override suspend fun addGrinder(grinder: Grinder) = dao.insertGrinder(grinder)
-    override suspend fun updateGrinder(grinder: Grinder) = dao.updateGrinder(grinder) // Anropar (snart) DAO
+    override suspend fun updateGrinder(grinder: Grinder) = dao.updateGrinder(grinder)
     override suspend fun deleteGrinder(grinder: Grinder) = dao.deleteGrinder(grinder)
+    override suspend fun getGrinderById(id: Long): Grinder? = dao.getGrinderById(id) // <-- NY IMPLEMENTATION
 
     // --- Method ---
     override fun getAllMethods(): Flow<List<Method>> = dao.getAllMethods()
     override suspend fun addMethod(method: Method) = dao.insertMethod(method)
-    override suspend fun updateMethod(method: Method) = dao.updateMethod(method) // Anropar (snart) DAO
-    override suspend fun deleteMethod(method: Method) = dao.deleteMethod(method) // Anropar (snart) DAO
+    override suspend fun updateMethod(method: Method) = dao.updateMethod(method)
+    override suspend fun deleteMethod(method: Method) = dao.deleteMethod(method)
+    override suspend fun getMethodById(id: Long): Method? = dao.getMethodById(id) // <-- NY IMPLEMENTATION
 
     // --- Bean ---
     override fun getAllBeans(): Flow<List<Bean>> = dao.getAllBeans()
@@ -29,16 +26,15 @@ class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {
     override suspend fun deleteBean(bean: Bean) = dao.deleteBean(bean)
 
     // --- Brew ---
-    override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews() // Anropar (snart) DAO
-    override suspend fun getBrewById(id: Long): Brew? = dao.getBrewById(id) // Anropar (snart) DAO
+    override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews()
+    override suspend fun getBrewById(id: Long): Brew? = dao.getBrewById(id)
     override suspend fun addBrew(brew: Brew): Long = dao.insertBrew(brew)
-    override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew) // Anropar (snart) DAO
-    override suspend fun deleteBrew(brew: Brew) = dao.deleteBrew(brew) // Anropar (snart) DAO
-    override suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long =
-        dao.addBrewWithSamples(brew, samples)
+    override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew)
+    override suspend fun deleteBrew(brew: Brew) = dao.deleteBrew(brew)
+    override suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long = dao.addBrewWithSamples(brew, samples)
 
     // --- BrewSample ---
-    override fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>> = dao.getSamplesForBrew(brewId) // Anropar (snart) DAO
+    override fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>> = dao.getSamplesForBrew(brewId)
     override suspend fun addBrewSamples(samples: List<BrewSample>) = dao.insertBrewSamples(samples)
 
     // --- BrewMetrics (View) ---

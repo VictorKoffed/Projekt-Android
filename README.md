@@ -28,6 +28,9 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 - **Volley** – HTTP requests
 - **Coil** – Image loading
 
+## 🚀 Wireframe/Mockups
+https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mobila-applikationer-II-HT25-LP1-SUM200?node-id=1-2&p=f&t=pV9HWQnQhHwXVO8U-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=1%3A2
+
 ## 🚀 Setup
 
 1. Clone the repository
@@ -37,7 +40,20 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 
 ##  Known issue (Bugs to fix)
 
-1. 
+1.
+
+##  ToDo List
+
+1. Förbättra BrewDetailScreen:
+   Visa Total bryggtid (kan beräknas från samples).
+   Göra grafen snyggare eller mer interaktiv.
+2. Förbättra HomeScreen:
+   Byta ut placeholder-infokorten mot riktig data (t.ex. vågens anslutningsstatus, tid sedan senaste kaffet).
+   Byta ut placeholder-bilderna i "Last brews"-listan.
+3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+   Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
+4. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+5. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 

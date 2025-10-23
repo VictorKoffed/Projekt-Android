@@ -11,12 +11,14 @@ import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // <-- Korrekt import
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Date
-import java.util.Locale // Importera Locale för String.format
+import java.util.Locale
 
 class ScaleViewModel(
     app: Application,
@@ -141,8 +143,15 @@ class ScaleViewModel(
     }
 
 
-    fun stopRecordingAndSave(beanIdToUse: Long, doseGramsToUse: Double) {
-        if (!_isRecording.value && !_isPaused.value) return
+    /**
+     * Stoppar inspelningen och sparar Brew + Samples.
+     * Tar nu emot hela BrewSetupState för att spara alla detaljer.
+     * @return id för nyskapad Brew, eller null om inget sparades / fel inträffade.
+     */
+    suspend fun stopRecordingAndSave(
+        setupState: BrewSetupState // Tar emot hela setupen
+    ): Long? {
+        if (!_isRecording.value && !_isPaused.value) return null
         _isRecording.value = false
         _isPaused.value = false
         _weightAtPause.value = null
@@ -150,38 +159,51 @@ class ScaleViewModel(
 
         if (_recordedSamplesFlow.value.isEmpty()) {
             _recordingTimeMillis.value = 0L
-            return
+            return null
         }
 
         val actualStartTimeMillis = System.currentTimeMillis() - (SystemClock.elapsedRealtime() - recordingStartTime)
 
-        // KORRIGERING: Skapa Brew-objektet med namngivna argument
+        // Hämta nödvändig data från setupState
+        val beanId = setupState.selectedBean?.id
+        val doseGrams = setupState.doseGrams.toDoubleOrNull()
+
+        if (beanId == null || doseGrams == null) {
+            _error.value = "Saknar böna eller dos för att spara."
+            _recordedSamplesFlow.value = emptyList() // Rensa ändå?
+            _recordingTimeMillis.value = 0L
+            return null
+        }
+
+        // KORRIGERING: Skapa Brew-objektet med ALL data från setupState
         val newBrew = Brew(
-            beanId = beanIdToUse,
-            doseGrams = doseGramsToUse,
+            beanId = beanId,
+            doseGrams = doseGrams,
             startedAt = Date(actualStartTimeMillis),
-            // Sätt resten till null som placeholders
-            grinderId = null,
-            methodId = null,
-            grindSetting = null,
-            grindSpeedRpm = null,
-            brewTempCelsius = null,
-            notes = "Inspelad från våg ${Date()}"
+            // Hämta resten från setupState, konvertera vid behov
+            grinderId = setupState.selectedGrinder?.id, // Använd grinderId från setup
+            methodId = setupState.selectedMethod?.id, // Använd methodId från setup
+            grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() }, // Använd grindSetting från setup
+            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(), // Använd RPM från setup
+            brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(), // Använd Temp från setup
+            notes = "Inspelad från våg ${Date()}" // TODO: Hämta noter från setup?
         )
 
-        viewModelScope.launch {
+        val result = viewModelScope.async {
             try {
-                coffeeRepo.addBrewWithSamples(newBrew, _recordedSamplesFlow.value)
+                val newId = coffeeRepo.addBrewWithSamples(newBrew, _recordedSamplesFlow.value)
                 _recordedSamplesFlow.value = emptyList()
                 _error.value = null
                 _recordingTimeMillis.value = 0L
-                // TODO: Navigera bort eller visa success
+                newId
             } catch (e: Exception) {
                 _error.value = "Kunde inte spara bryggning: ${e.message}"
                 _recordedSamplesFlow.value = emptyList()
                 _recordingTimeMillis.value = 0L
+                null
             }
         }
+        return result.await()
     }
 
     // --- Helper functions ---
@@ -205,15 +227,15 @@ class ScaleViewModel(
     }
 
     private fun addSamplePoint(massGrams: Double) {
-        if (!_isPaused.value) {
-            val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime
-            val newSample = BrewSample(
-                brewId = 0, // Sätts korrekt i addBrewWithSamples
-                timeMillis = elapsedTimeMs,
-                massGrams = String.format(Locale.US, "%.1f", massGrams).toDouble() // Avrunda?
-            )
-            _recordedSamplesFlow.value = _recordedSamplesFlow.value + newSample
-        }
+        if (_isPaused.value) return
+
+        val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime
+        val newSample = BrewSample(
+            brewId = 0, // sätts korrekt av repository när Brew har skapats
+            timeMillis = elapsedTimeMs,
+            massGrams = String.format(Locale.US, "%.1f", massGrams).toDouble()
+        )
+        _recordedSamplesFlow.value = _recordedSamplesFlow.value + newSample
     }
     // --- End Recording Functions ---
 }
