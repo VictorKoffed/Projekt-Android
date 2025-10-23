@@ -4,25 +4,27 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-// import androidx.activity.viewModels // Behövs ej om CoffeeVm tas bort
+import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.* // Importera alla filled ikoner
+import androidx.compose.material.icons.outlined.* // Importera alla outlined ikoner för ovalda state
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector // <-- NY IMPORT
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+// import androidx.compose.ui.unit.sp // Behövs ej för NavigationBarItem label
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-// import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel // Ta bort om ej används
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
-// import com.victorkoffed.projektandroid.ui.screens.coffee.CoffeeImageScreen // Ta bort om ej används
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
@@ -46,22 +48,35 @@ import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
 
+// --- NY DATA CLASS för navigationsalternativ ---
+data class NavItem(
+    val label: String,
+    val screenRoute: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+// --- SLUT ---
+
 class MainActivity : ComponentActivity() {
 
-    // ... (ViewModels som tidigare) ...
+    // --- ViewModels ---
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
     private lateinit var methodVm: MethodViewModel
     private lateinit var brewVm: BrewViewModel
     private lateinit var homeVm: HomeViewModel
+    private val coffeeImageVm: CoffeeImageViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // ... (Skapa ViewModels som tidigare) ...
+
+        // Hämta repositories och skapa ViewModels
         val app = application as CoffeeJournalApplication
         val coffeeRepository = app.coffeeRepository
         val scaleRepository = BookooScaleRepositoryImpl(this)
+
+        // Instansiera ViewModels via Factories
         val scaleViewModelFactory = ScaleViewModelFactory(app, scaleRepository, coffeeRepository)
         scaleVm = ViewModelProvider(this, scaleViewModelFactory)[ScaleViewModel::class.java]
         val grinderViewModelFactory = GrinderViewModelFactory(coffeeRepository)
@@ -77,9 +92,25 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProjektAndroidTheme {
+                // State för navigering och dataöverföring
                 var currentScreen by remember { mutableStateOf("home") }
                 var lastBrewId by remember { mutableStateOf<Long?>(null) }
                 var selectedBrewId by remember { mutableStateOf<Long?>(null) }
+
+                // Funktion för att byta skärm
+                val navigateToScreen: (String) -> Unit = { screenName ->
+                    currentScreen = screenName
+                }
+
+                // --- Definiera navigationsalternativen ---
+                val navItems = listOf(
+                    NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
+                    NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee), // Kaffe-ikon för bönor?
+                    NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science), // Labb-ikon för metod?
+                    NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings) // Kugghjul för kvarn?
+                    // Lade till outlined versioner för ovalt state
+                )
+                // --- SLUT ---
 
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -87,11 +118,15 @@ class MainActivity : ComponentActivity() {
                             targetState = currentScreen,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                             label = "screenSwitch",
-                            modifier = Modifier.fillMaxSize()
+                            // Lägg till padding för bottom bar här
+                            modifier = Modifier.fillMaxSize().padding(bottom = if (currentScreen != "live_brew" && currentScreen != "brew_detail") 80.dp else 0.dp) // Cirka höjden på NavigationBar
                         ) { screen ->
                             when (screen) {
                                 "home" -> HomeScreen(
-                                    vm = homeVm,
+                                    homeVm = homeVm,
+                                    coffeeImageVm = coffeeImageVm,
+                                    scaleVm = scaleVm,
+                                    navigateToScreen = navigateToScreen,
                                     onNavigateToBrewSetup = {
                                         lastBrewId = null; brewVm.clearBrewResults()
                                         currentScreen = "brew_setup"
@@ -101,7 +136,7 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = "brew_detail"
                                     }
                                 )
-                                "scale" -> ScaleConnectScreen(scaleVm)
+                                "scale" -> ScaleConnectScreen(scaleVm) // Finns fortfarande kvar, bara inte i nav bar
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
                                 "method" -> MethodScreen(methodVm)
@@ -139,57 +174,60 @@ class MainActivity : ComponentActivity() {
                                             lifecycleScope.launch {
                                                 val currentSetup = brewVm.getCurrentSetup()
                                                 Log.d("MainActivity", "Saving brew with setup: $currentSetup")
-
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
-
                                                 lastBrewId = savedBrewId
                                                 currentScreen = "brew_setup"
                                             }
                                         },
                                         onTareClick = { scaleVm.tareScale() },
-                                        onNavigateBack = { currentScreen = "brew_setup" }
+                                        onNavigateBack = { currentScreen = "brew_setup" },
+                                        // --- NY RAD HÄR ---
+                                        onResetRecording = { scaleVm.stopRecording() } // Anropa funktionen vi gjorde public
                                     )
                                 }
                                 "brew_detail" -> {
-                                    // Skapa en lokal kopia av ID:t FÖRST
-                                    val idToShow = selectedBrewId
-                                    if (idToShow != null) { // Kolla mot den lokala kopian
+                                    if (selectedBrewId != null) {
                                         BrewDetailScreen(
-                                            brewId = idToShow, // Använd den lokala kopian
+                                            brewId = selectedBrewId!!,
                                             onNavigateBack = {
-                                                // Gör state-uppdateringarna så enkla som möjligt
                                                 selectedBrewId = null
                                                 currentScreen = "home"
                                             }
                                         )
                                     } else {
-                                        // Fallback
                                         Text("Error: Brew ID missing")
                                         LaunchedEffect(Unit) { currentScreen = "home" }
                                     }
                                 }
                             }
                         }
-                        // Navigationsrad
+
+                        // --- UPPDATERAD NAVIGATIONSRAD ---
+                        // Visas inte på live_brew eller brew_detail
                         if (currentScreen != "live_brew" && currentScreen != "brew_detail") {
-                            Row(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    .height(IntrinsicSize.Min)
-                                    .navigationBarsPadding(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            NavigationBar(
+                                modifier = Modifier.align(Alignment.BottomCenter)
+                                // Lägger till .navigationBarsPadding() här om det behövs för systemets nav bar
                             ) {
-                                NavigationButton(text = "🏠 Home", isSelected = currentScreen == "home", onClick = { currentScreen = "home" }, modifier = Modifier.weight(1f))
-                                NavigationButton(text = "⚖️ Scale", isSelected = currentScreen == "scale", onClick = { currentScreen = "scale" }, modifier = Modifier.weight(1f))
-                                NavigationButton(text = "➕ Brew", isSelected = currentScreen == "brew_setup", onClick = { currentScreen = "brew_setup" }, modifier = Modifier.weight(1f))
-                                NavigationButton(text = "⚙️ Grinder", isSelected = currentScreen == "grinder", onClick = { currentScreen = "grinder" }, modifier = Modifier.weight(1f))
-                                NavigationButton(text = "🫘 Bean", isSelected = currentScreen == "bean", onClick = { currentScreen = "bean" }, modifier = Modifier.weight(1f))
-                                NavigationButton(text = "🧪 Method", isSelected = currentScreen == "method", onClick = { currentScreen = "method" }, modifier = Modifier.weight(1f))
+                                navItems.forEach { item ->
+                                    val isSelected = currentScreen == item.screenRoute
+                                    NavigationBarItem(
+                                        icon = {
+                                            Icon(
+                                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                                contentDescription = item.label
+                                            )
+                                        },
+                                        label = { Text(item.label) },
+                                        selected = isSelected,
+                                        onClick = { navigateToScreen(item.screenRoute) },
+                                        // Optional: Justera färger om du vill
+                                        // colors = NavigationBarItemDefaults.colors(...)
+                                    )
+                                }
                             }
                         }
+                        // --- SLUT PÅ UPPDATERING ---
                     }
                 }
             }
@@ -197,28 +235,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// NavigationButton Composable (Oförändrad)
+// NavigationButton Composable - KAN TAS BORT HELT NU
+/*
 @Composable
-private fun NavigationButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.fillMaxHeight(),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSecondaryContainer
-        )
-    ) {
-        Text(text, fontSize = 11.sp, maxLines = 1)
-    }
-}
-
-// BrewDetailPlaceholderScreen kan tas bort
-
+private fun NavigationButton( ... ) { ... }
+*/

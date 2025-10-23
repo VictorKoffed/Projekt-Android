@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.Date // <-- NY IMPORT
 
 // Data class för att hålla data som behövs för en bryggning i listan
 data class RecentBrewItem(
@@ -37,20 +38,30 @@ class HomeViewModel(private val repository: CoffeeRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    // Placeholder för antal bryggningar (kan hämtas mer effektivt senare)
+    // Antal bryggningar totalt
     val totalBrewCount: StateFlow<Int> = repository.getAllBrews()
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Placeholder för antal unika bönor (kan hämtas mer effektivt senare)
+    // Antal unika bönor
     val uniqueBeanCount: StateFlow<Int> = repository.getAllBeans()
         .map { beans -> beans.distinctBy { it.name }.size } // Räkna unika namn
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Placeholder för total vikt av tillgängliga bönor
+    // Total vikt av tillgängliga bönor
     val totalAvailableBeanWeight: StateFlow<Double> = repository.getAllBeans()
         .map { beans -> beans.sumOf { it.remainingWeightGrams } } // Summera kvarvarande vikt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // TODO: Hämta data för "Time without coffee" och "Connected status"
+    // --- NYTT StateFlow för senaste bryggtiden ---
+    val lastBrewTime: StateFlow<Date?> = repository.getAllBrews()
+        .map { brews -> brews.firstOrNull()?.startedAt } // Hämta 'startedAt' från den första (senaste)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null // Börja med null
+        )
+    // --- SLUT PÅ NYTT ---
+
+    // TODO: Hämta data för "Connected status"
 }

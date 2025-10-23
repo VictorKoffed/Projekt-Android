@@ -217,7 +217,7 @@ class ScaleViewModel(
     }
 
     // --- Helper functions ---
-    private fun stopRecording() {
+    fun stopRecording() {
         _isRecording.value = false
         _isPaused.value = false
         _weightAtPause.value = null

@@ -2,6 +2,7 @@ package com.victorkoffed.projektandroid.ui.screens.brew
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape // <-- NY IMPORT (om du vill ha rund knapp)
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,28 +25,27 @@ import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import kotlinx.coroutines.delay
-import kotlin.math.max // För max-beräkningar
-import kotlin.math.ceil // För att avrunda uppåt
+import kotlin.math.ceil
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveBrewScreen(
     samples: List<BrewSample>,
-    currentMeasurement: ScaleMeasurement, // Innehåller nu både vikt och flöde
+    currentMeasurement: ScaleMeasurement,
     currentTimeMillis: Long,
     isRecording: Boolean,
     isPaused: Boolean,
-    weightAtPause: Float?, // Vikt sparad vid paus
+    weightAtPause: Float?,
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
     onStopAndSaveClick: () -> Unit,
     onTareClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onResetRecording: () -> Unit
 ) {
-    // --- NYTT STATE FÖR FLÖDES-TOGGLE ---
     var showFlowInfo by remember { mutableStateOf(true) }
-    // --- SLUT ---
 
     Scaffold(
         topBar = {
@@ -74,15 +74,13 @@ fun LiveBrewScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- UPPDATERAT ANROP ---
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
-                showFlow = showFlowInfo // Skicka med state
+                showFlow = showFlowInfo
             )
-            // --- SLUT ---
             Spacer(Modifier.height(16.dp))
             BrewGraph(
                 samples = samples,
@@ -91,9 +89,7 @@ fun LiveBrewScreen(
                     .weight(1f)
                     .padding(vertical = 8.dp)
             )
-            Spacer(Modifier.height(8.dp)) // Lite mindre space här
-
-            // --- NY KNAPP FÖR ATT VÄXLA FLÖDE ---
+            Spacer(Modifier.height(8.dp))
             FilterChip(
                 selected = showFlowInfo,
                 onClick = { showFlowInfo = !showFlowInfo },
@@ -102,8 +98,7 @@ fun LiveBrewScreen(
                     if (showFlowInfo) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                 }
             )
-            Spacer(Modifier.height(8.dp)) // Lite mer space här
-            // --- SLUT ---
+            Spacer(Modifier.height(16.dp)) // Mer space före kontrollerna
 
             BrewControls(
                 isRecording = isRecording,
@@ -111,22 +106,23 @@ fun LiveBrewScreen(
                 onStartClick = onStartClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
-                onTareClick = onTareClick
+                onTareClick = onTareClick,
+                onResetClick = onResetRecording
             )
         }
     }
 }
 
-// --- UPPDATERAD StatusDisplay ---
+// StatusDisplay (Oförändrad)
 @Composable
 fun StatusDisplay(
     currentTimeMillis: Long,
-    currentMeasurement: ScaleMeasurement, // Tar emot hela objektet
+    currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
-    showFlow: Boolean // Ny parameter
+    showFlow: Boolean
 ) {
-    // Tid (som tidigare)
+    // Tid
     val minutes = (currentTimeMillis / 1000 / 60).toInt()
     val seconds = (currentTimeMillis / 1000 % 60).toInt()
     val timeString = remember(minutes, seconds) { String.format("%02d:%02d", minutes, seconds) }
@@ -149,23 +145,17 @@ fun StatusDisplay(
             modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Tid (som tidigare)
             Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
             Spacer(Modifier.height(8.dp))
-
-            // Vikt och Flöde sida vid sida
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                // Centrera om bara vikt visas
                 horizontalArrangement = if (showFlow) Arrangement.SpaceEvenly else Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Vikt-kolumn
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Vikt", style = MaterialTheme.typography.labelMedium)
                     Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                 }
-                // Flöde-kolumn (visas bara om showFlow är true)
                 if (showFlow) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Flöde", style = MaterialTheme.typography.labelMedium)
@@ -173,8 +163,6 @@ fun StatusDisplay(
                     }
                 }
             }
-
-            // Pausad-indikator (som tidigare)
             if (isPaused) {
                 Spacer(Modifier.height(4.dp))
                 Text("Pausad", fontSize = 14.sp)
@@ -182,13 +170,12 @@ fun StatusDisplay(
         }
     }
 }
-// --- SLUT PÅ UPPDATERING ---
 
-// BrewGraph (oförändrad, visar bara vikt)
+// BrewGraph (Oförändrad, visar bara vikt)
 @Composable
-fun BrewGraph( /* ... som tidigare ... */
-               samples: List<BrewSample>,
-               modifier: Modifier = Modifier
+fun BrewGraph(
+    samples: List<BrewSample>,
+    modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val textPaint = remember {
@@ -206,10 +193,10 @@ fun BrewGraph( /* ... som tidigare ... */
             isFakeBoldText = true
         }
     }
-    val gridLinePaint = remember { // Nu en DrawStyle, inte bara Stroke
+    val gridLinePaint = remember {
         Stroke(
-            width = 1f, // Tunna linjer
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f) // Streckade linjer
+            width = 1f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
         )
     }
     val gridLineColor = Color.LightGray
@@ -222,7 +209,7 @@ fun BrewGraph( /* ... som tidigare ... */
         val graphWidth = size.width - yLabelPadding - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
 
-        // Skalning (med 50g intervall fix)
+        // Skalning
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
@@ -231,7 +218,7 @@ fun BrewGraph( /* ... som tidigare ... */
         val xAxisY = size.height - xLabelPadding
         val yAxisX = yLabelPadding
 
-        // Rita rutnät och etiketter (med 50g intervall fix)
+        // Rita rutnät och etiketter
         drawContext.canvas.nativeCanvas.apply {
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
@@ -290,23 +277,35 @@ fun BrewGraph( /* ... som tidigare ... */
 }
 
 
-// BrewControls (Oförändrad)
+// --- UPPDATERAD BrewControls med "T"-knapp ---
 @Composable
-fun BrewControls( /* ... som tidigare ... */
-                  isRecording: Boolean,
-                  isPaused: Boolean,
-                  onStartClick: () -> Unit,
-                  onPauseClick: () -> Unit,
-                  onResumeClick: () -> Unit,
-                  onTareClick: () -> Unit
+fun BrewControls(
+    isRecording: Boolean,
+    isPaused: Boolean,
+    onStartClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
+    onTareClick: () -> Unit,
+    onResetClick: () -> Unit // Ny parameter för återställning
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceEvenly, // Fördelar knapparna jämnt
+        verticalAlignment = Alignment.CenterVertically // Centrerar vertikalt
     ) {
-        OutlinedButton(onClick = onTareClick, enabled = !isRecording && !isPaused) {
-            Icon(Icons.Default.Refresh, contentDescription = "Nollställ (Tare)")
+        // Knapp 1: Återställ (Reset) - IconButton
+        IconButton(
+            onClick = onResetClick,
+            // Inaktivera om inspelning *inte* pågår (för att undvika återställning av misstag)
+            enabled = isRecording || isPaused
+        ) {
+            Icon(
+                imageVector = Icons.Default.Replay, // Rund pil ikon
+                contentDescription = "Återställ inspelning"
+            )
         }
+
+        // Knapp 2: Play/Pause/Resume (Större knapp i mitten) - Button
         Button(
             onClick = {
                 when {
@@ -315,10 +314,12 @@ fun BrewControls( /* ... som tidigare ... */
                     else -> onStartClick()
                 }
             },
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(72.dp), // Gör den lite större
+            // Centrera innehållet perfekt
+            contentPadding = PaddingValues(0.dp)
         ) {
             Icon(
-                when {
+                imageVector = when {
                     isPaused -> Icons.Default.PlayArrow
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
@@ -328,19 +329,34 @@ fun BrewControls( /* ... som tidigare ... */
                     isRecording -> "Pausa"
                     else -> "Starta"
                 },
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(40.dp) // Större ikon
             )
         }
-        OutlinedButton(onClick = { /* TODO */ }) {
-            Icon(Icons.Default.Timer, contentDescription = "Timer Funktion?")
+
+        // --- KNAPP 3: Tare (Nu en OutlinedButton med text "T") ---
+        OutlinedButton(
+            onClick = onTareClick,
+            enabled = !isRecording && !isPaused,
+            // Gör den fyrkantig och lika stor som IconButton ungefär
+            modifier = Modifier.size(48.dp), // Standardstorlek för IconButton är 48dp
+            shape = CircleShape, // Gör den rund om du vill, annars ta bort för rektangel
+            contentPadding = PaddingValues(0.dp) // Ta bort padding för att centrera texten
+        ) {
+            Text(
+                text = "T",
+                style = MaterialTheme.typography.titleLarge // Gör T lite större
+            )
         }
+        // --- SLUT PÅ ÄNDRING ---
     }
 }
+// --- SLUT PÅ UPPDATERING ---
 
-// Preview (Inga ändringar här, använder fortfarande den fixade testdatan)
+
+// Preview (Oförändrad)
 @Preview(showBackground = true, heightDp = 600)
 @Composable
-fun LiveBrewScreenPreview() { /* ... som tidigare ... */
+fun LiveBrewScreenPreview() {
     ProjektAndroidTheme {
         val previewSamples = remember {
             listOf(
@@ -381,7 +397,8 @@ fun LiveBrewScreenPreview() { /* ... som tidigare ... */
             onResumeClick = { isPaused = false },
             onStopAndSaveClick = { isRec = false; isPaused = false },
             onTareClick = {},
-            onNavigateBack = {} // Lade till en tom lambda för den nya knappen
+            onNavigateBack = {},
+            onResetRecording = { isRec = false; isPaused = false; time = 0L }
         )
     }
 }
