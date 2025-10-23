@@ -105,11 +105,8 @@ class MainActivity : ComponentActivity() {
                 // --- Definiera navigationsalternativen ---
                 val navItems = listOf(
                     NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
-                    // Använder Icons.Filled.Coffee / Icons.Outlined.Coffee (du måste importera 'filled' och 'outlined')
                     NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
-                    // Använder Icons.Filled.Science / Icons.Outlined.Science
                     NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
-                    // Använder Icons.Filled.Settings / Icons.Outlined.Settings (eller annan ikon du föredrar)
                     NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
                 // --- SLUT ---
@@ -131,22 +128,21 @@ class MainActivity : ComponentActivity() {
                                     navigateToScreen = navigateToScreen,
                                     onNavigateToBrewSetup = {
                                         lastBrewId = null; brewVm.clearBrewResults()
-                                        currentScreen = "brew_setup"
+                                        currentScreen = "brew_setup" // Använd inte navigateToScreen här om logik behövs före
                                     },
                                     onBrewClick = { brewId ->
                                         selectedBrewId = brewId
-                                        currentScreen = "brew_detail"
+                                        currentScreen = "brew_detail" // Använd inte navigateToScreen här om logik behövs före
                                     }
                                 )
-                                // --- UPPDATERAT ANROP ---
                                 "scale" -> ScaleConnectScreen(
                                     vm = scaleVm,
                                     onNavigateBack = { navigateToScreen("home") } // Gå till home
                                 )
-                                // --- SLUT ---
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
                                 "method" -> MethodScreen(methodVm)
+                                // --- UPPDATERAT ANROP TILL BrewScreen ---
                                 "brew_setup" -> BrewScreen(
                                     vm = brewVm,
                                     completedBrewId = lastBrewId,
@@ -157,8 +153,10 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onClearResult = {
                                         lastBrewId = null
-                                    }
+                                    },
+                                    onNavigateBack = { navigateToScreen("home") } // Navigera till home
                                 )
+                                // --- SLUT PÅ UPPDATERING ---
                                 "live_brew" -> {
                                     val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                     val time by scaleVm.recordingTimeMillis.collectAsState()
@@ -188,7 +186,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onTareClick = { scaleVm.tareScale() },
                                         onNavigateBack = { currentScreen = "brew_setup" },
-                                        onResetRecording = { scaleVm.stopRecording() } // Anropa funktionen vi gjorde public
+                                        onResetRecording = { scaleVm.stopRecording() }
                                     )
                                 }
                                 "brew_detail" -> {

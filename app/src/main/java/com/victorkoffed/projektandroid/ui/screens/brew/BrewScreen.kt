@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons // <-- NY IMPORT
+import androidx.compose.material.icons.filled.ArrowBack // <-- NY IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +18,7 @@ import com.victorkoffed.projektandroid.data.db.*
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 // Importera grafen från sin plats (om den ligger i brew-mappen)
-import com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph
+// import com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph // Används ej direkt här längre
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,7 +26,8 @@ fun BrewScreen(
     vm: BrewViewModel,
     completedBrewId: Long?, // ID för den bryggning vars resultat ska visas
     onStartBrewClick: (setup: BrewSetupState) -> Unit,
-    onClearResult: () -> Unit // Callback för att nollställa completedBrewId
+    onClearResult: () -> Unit, // Callback för att nollställa completedBrewId
+    onNavigateBack: () -> Unit // <-- NY PARAMETER
 ) {
     // Hämta listor och states från ViewModel
     val availableBeans by vm.availableBeans.collectAsState()
@@ -42,7 +45,18 @@ fun BrewScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Bryggning") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Bryggning") },
+                // --- NY NAVIGATION ICON ---
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka till Home")
+                    }
+                }
+                // --- SLUT ---
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -53,11 +67,10 @@ fun BrewScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // --- "BEFORE BREW" SEKTION ---
-            // Visas bara om vi INTE tittar på ett resultat
             if (metrics == null) {
                 Text("Innan bryggning", style = MaterialTheme.typography.headlineSmall)
 
-                DropdownSelector(
+                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
                     label = "Böna *",
                     options = availableBeans,
                     selectedOption = setupState.selectedBean,
@@ -68,11 +81,11 @@ fun BrewScreen(
                     value = setupState.doseGrams,
                     onValueChange = { vm.onDoseChange(it) },
                     label = { Text("Dos (g) *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // Korrekt typ
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                DropdownSelector(
+                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
                     label = "Kvarn",
                     options = availableGrinders,
                     selectedOption = setupState.selectedGrinder,
@@ -93,7 +106,7 @@ fun BrewScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                DropdownSelector(
+                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
                     label = "Metod *",
                     options = availableMethods,
                     selectedOption = setupState.selectedMethod,
@@ -104,12 +117,11 @@ fun BrewScreen(
                     value = setupState.brewTempCelsius,
                     onValueChange = { vm.onBrewTempChange(it) },
                     label = { Text("Vattentemperatur (°C)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // Korrekt typ
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
 
-                // Knapp för att starta inspelning
                 Button(
                     onClick = {
                         onStartBrewClick(vm.getCurrentSetup())
@@ -126,14 +138,13 @@ fun BrewScreen(
                 Text("Efter bryggning", style = MaterialTheme.typography.headlineSmall)
 
                 // Visa Ratio och Vattenmängd
-                ResultMetrics(metrics = metrics!!) // !! är ok här pga if-satsen
+                ResultMetrics(metrics = metrics!!) // <-- DENNA FUNKTION BEHÖVER FINNAS
 
                 Spacer(Modifier.height(16.dp))
 
-                // Visa den sparade grafen
                 Text("Bryggförlopp", style = MaterialTheme.typography.titleMedium)
-                // Återanvänd BrewGraph från LiveBrewScreen (se till att den är public/internal)
-                BrewGraph(
+                // Använd BrewGraph från LiveBrewScreen (se till att den är i rätt package eller flytta den)
+                com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph( // <-- Fullständig sökväg om den är i samma package
                     samples = samples,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -143,7 +154,6 @@ fun BrewScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Knapp för att rensa resultat och börja ny setup
                 OutlinedButton(
                     onClick = {
                         vm.clearBrewResults() // Rensa ViewModel state
@@ -158,6 +168,7 @@ fun BrewScreen(
     }
 }
 
+// --- ÅTERSTÄLLD KOD ---
 // Composable för att visa resultatmätvärden (Ratio, Vatten, Dos)
 @Composable
 fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
@@ -202,7 +213,6 @@ fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
     }
 }
 
-
 // DropdownSelector (Den korrekta definitionen)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -244,4 +254,4 @@ fun <T> DropdownSelector(
         }
     }
 }
-
+// --- SLUT PÅ ÅTERSTÄLLD KOD ---
