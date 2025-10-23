@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas // För text på Canvas
 import androidx.compose.ui.platform.LocalDensity // För textstorlek
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign // <-- NY IMPORT
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,11 +43,15 @@ fun LiveBrewScreen(
     onTareClick: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    // --- NYTT STATE FÖR FLÖDES-TOGGLE ---
+    var showFlowInfo by remember { mutableStateOf(true) }
+    // --- SLUT ---
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Live Brew") },
-                navigationIcon = { // <-- NYTT: Tillbakaknapp
+                navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka")
                     }
@@ -73,10 +77,10 @@ fun LiveBrewScreen(
             // --- UPPDATERAT ANROP ---
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
-                // Skicka hela mätningen
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
-                isPaused = isPaused
+                isPaused = isPaused,
+                showFlow = showFlowInfo // Skicka med state
             )
             // --- SLUT ---
             Spacer(Modifier.height(16.dp))
@@ -87,7 +91,20 @@ fun LiveBrewScreen(
                     .weight(1f)
                     .padding(vertical = 8.dp)
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp)) // Lite mindre space här
+
+            // --- NY KNAPP FÖR ATT VÄXLA FLÖDE ---
+            FilterChip(
+                selected = showFlowInfo,
+                onClick = { showFlowInfo = !showFlowInfo },
+                label = { Text("Visa Flöde") },
+                leadingIcon = {
+                    if (showFlowInfo) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
+                }
+            )
+            Spacer(Modifier.height(8.dp)) // Lite mer space här
+            // --- SLUT ---
+
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
@@ -106,7 +123,8 @@ fun StatusDisplay(
     currentTimeMillis: Long,
     currentMeasurement: ScaleMeasurement, // Tar emot hela objektet
     isRecording: Boolean,
-    isPaused: Boolean
+    isPaused: Boolean,
+    showFlow: Boolean // Ny parameter
 ) {
     // Tid (som tidigare)
     val minutes = (currentTimeMillis / 1000 / 60).toInt()
@@ -138,7 +156,8 @@ fun StatusDisplay(
             // Vikt och Flöde sida vid sida
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly, // Fördelar utrymmet
+                // Centrera om bara vikt visas
+                horizontalArrangement = if (showFlow) Arrangement.SpaceEvenly else Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Vikt-kolumn
@@ -146,10 +165,12 @@ fun StatusDisplay(
                     Text("Vikt", style = MaterialTheme.typography.labelMedium)
                     Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                 }
-                // Flöde-kolumn
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Flöde", style = MaterialTheme.typography.labelMedium)
-                    Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                // Flöde-kolumn (visas bara om showFlow är true)
+                if (showFlow) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Flöde", style = MaterialTheme.typography.labelMedium)
+                        Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                    }
                 }
             }
 
@@ -163,10 +184,11 @@ fun StatusDisplay(
 }
 // --- SLUT PÅ UPPDATERING ---
 
+// BrewGraph (oförändrad, visar bara vikt)
 @Composable
-fun BrewGraph(
-    samples: List<BrewSample>,
-    modifier: Modifier = Modifier
+fun BrewGraph( /* ... som tidigare ... */
+               samples: List<BrewSample>,
+               modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
     val textPaint = remember {
@@ -268,14 +290,15 @@ fun BrewGraph(
 }
 
 
+// BrewControls (Oförändrad)
 @Composable
-fun BrewControls(
-    isRecording: Boolean,
-    isPaused: Boolean,
-    onStartClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onTareClick: () -> Unit
+fun BrewControls( /* ... som tidigare ... */
+                  isRecording: Boolean,
+                  isPaused: Boolean,
+                  onStartClick: () -> Unit,
+                  onPauseClick: () -> Unit,
+                  onResumeClick: () -> Unit,
+                  onTareClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -317,7 +340,7 @@ fun BrewControls(
 // Preview (Inga ändringar här, använder fortfarande den fixade testdatan)
 @Preview(showBackground = true, heightDp = 600)
 @Composable
-fun LiveBrewScreenPreview() {
+fun LiveBrewScreenPreview() { /* ... som tidigare ... */
     ProjektAndroidTheme {
         val previewSamples = remember {
             listOf(
