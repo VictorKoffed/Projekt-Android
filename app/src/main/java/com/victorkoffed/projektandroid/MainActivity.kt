@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 // import androidx.compose.ui.unit.sp // Behövs ej för NavigationBarItem label
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- NY IMPORT
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
@@ -105,10 +105,12 @@ class MainActivity : ComponentActivity() {
                 // --- Definiera navigationsalternativen ---
                 val navItems = listOf(
                     NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
-                    NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee), // Kaffe-ikon för bönor?
-                    NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science), // Labb-ikon för metod?
-                    NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings) // Kugghjul för kvarn?
-                    // Lade till outlined versioner för ovalt state
+                    // Använder Icons.Filled.Coffee / Icons.Outlined.Coffee (du måste importera 'filled' och 'outlined')
+                    NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
+                    // Använder Icons.Filled.Science / Icons.Outlined.Science
+                    NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
+                    // Använder Icons.Filled.Settings / Icons.Outlined.Settings (eller annan ikon du föredrar)
+                    NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
                 // --- SLUT ---
 
@@ -118,8 +120,8 @@ class MainActivity : ComponentActivity() {
                             targetState = currentScreen,
                             transitionSpec = { fadeIn() togetherWith fadeOut() },
                             label = "screenSwitch",
-                            // Lägg till padding för bottom bar här
-                            modifier = Modifier.fillMaxSize().padding(bottom = if (currentScreen != "live_brew" && currentScreen != "brew_detail") 80.dp else 0.dp) // Cirka höjden på NavigationBar
+                            // Lägg till padding för bottom bar här om skärmen KAN ha nav bar
+                            modifier = Modifier.fillMaxSize().padding(bottom = if (navItems.any { it.screenRoute == currentScreen }) 80.dp else 0.dp) // Cirka höjden på NavigationBar
                         ) { screen ->
                             when (screen) {
                                 "home" -> HomeScreen(
@@ -136,7 +138,12 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = "brew_detail"
                                     }
                                 )
-                                "scale" -> ScaleConnectScreen(scaleVm) // Finns fortfarande kvar, bara inte i nav bar
+                                // --- UPPDATERAT ANROP ---
+                                "scale" -> ScaleConnectScreen(
+                                    vm = scaleVm,
+                                    onNavigateBack = { navigateToScreen("home") } // Gå till home
+                                )
+                                // --- SLUT ---
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
                                 "method" -> MethodScreen(methodVm)
@@ -181,7 +188,6 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onTareClick = { scaleVm.tareScale() },
                                         onNavigateBack = { currentScreen = "brew_setup" },
-                                        // --- NY RAD HÄR ---
                                         onResetRecording = { scaleVm.stopRecording() } // Anropa funktionen vi gjorde public
                                     )
                                 }
@@ -203,11 +209,11 @@ class MainActivity : ComponentActivity() {
                         }
 
                         // --- UPPDATERAD NAVIGATIONSRAD ---
-                        // Visas inte på live_brew eller brew_detail
-                        if (currentScreen != "live_brew" && currentScreen != "brew_detail") {
+                        // Visas endast på skärmar som finns i navItems
+                        if (navItems.any { it.screenRoute == currentScreen }) {
                             NavigationBar(
                                 modifier = Modifier.align(Alignment.BottomCenter)
-                                // Lägger till .navigationBarsPadding() här om det behövs för systemets nav bar
+                                // .navigationBarsPadding() // Kan behövas beroende på system-UI
                             ) {
                                 navItems.forEach { item ->
                                     val isSelected = currentScreen == item.screenRoute
@@ -221,8 +227,6 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(item.label) },
                                         selected = isSelected,
                                         onClick = { navigateToScreen(item.screenRoute) },
-                                        // Optional: Justera färger om du vill
-                                        // colors = NavigationBarItemDefaults.colors(...)
                                     )
                                 }
                             }

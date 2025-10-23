@@ -41,7 +41,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (Bugs to fix)
 
-1.
+1. Fix back button to homescreen: BrewScreen
+2. Translate app to english
+3. Fix  banner to Bean, Method och grinder with a fitting background
+4. Fix shadows to homescreen boxes 
 
 ##  ToDo List
 

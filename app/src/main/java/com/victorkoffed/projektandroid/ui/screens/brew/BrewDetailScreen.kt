@@ -11,8 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Check // <-- NY IMPORT
-import androidx.compose.material.icons.filled.Close // <-- NY IMPORT
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,10 +70,8 @@ fun BrewDetailScreen(
     val availableGrinders by viewModel.availableGrinders.collectAsState()
     val availableMethods by viewModel.availableMethods.collectAsState()
 
-    // --- NYTT STATE FÖR TOGGLES ---
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
-    // --- SLUT PÅ NYTT STATE ---
 
     Scaffold(
         topBar = {
@@ -123,7 +122,6 @@ fun BrewDetailScreen(
                 }
             }
             else -> {
-                // Make brew non-null within this block
                 state.brew?.let { currentBrew ->
                     Column(
                         modifier = Modifier
@@ -151,7 +149,6 @@ fun BrewDetailScreen(
 
                         Text("Bryggförlopp", style = MaterialTheme.typography.titleMedium)
 
-                        // --- NY KOD (TOGGLES) ---
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = showWeightLine,
@@ -170,15 +167,12 @@ fun BrewDetailScreen(
                                 }
                             )
                         }
-                        // --- SLUT PÅ NY KOD ---
 
                         if (state.samples.isNotEmpty()) {
                             BrewSamplesGraph(
                                 samples = state.samples,
-                                // --- NYA PARAMETRAR ---
                                 showWeightLine = showWeightLine,
                                 showFlowLine = showFlowLine,
-                                // --- SLUT ---
                                 modifier = Modifier.fillMaxWidth().height(300.dp)
                             )
                         } else {
@@ -203,7 +197,7 @@ fun BrewDetailScreen(
             }
         }
 
-        // Delete confirm dialog (must pass all params)
+        // Delete confirm dialog
         val brewToDelete = state.brew
         if (showDeleteConfirmDialog && brewToDelete != null) {
             AlertDialog(
@@ -231,16 +225,13 @@ fun BrewDetailScreen(
     }
 }
 
-// ---------- Summary & rows ----------
+// ---------- Summary & rows (Oförändrad) ----------
 @Composable
 fun BrewSummaryCard(state: BrewDetailState) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-
-    // --- Beräkna total tid ---
     val totalTimeMillis = state.samples.lastOrNull()?.timeMillis ?: 0L
     val minutes = (totalTimeMillis / 1000 / 60).toInt()
     val seconds = (totalTimeMillis / 1000 % 60).toInt()
-    // Formatera till "MM:SS"
     val timeString = remember(minutes, seconds) {
         String.format("%02d:%02d", minutes, seconds)
     }
@@ -269,26 +260,23 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-// ---------- Edit card ----------
+// ---------- Edit card (Oförändrad) ----------
 @Composable
 fun BrewEditCard(
     viewModel: BrewDetailViewModel,
     availableGrinders: List<Grinder>,
     availableMethods: List<Method>
 ) {
-    val state = viewModel.brewDetailState.value
+    val state = viewModel.brewDetailState.collectAsState().value
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Redigera detaljer", style = MaterialTheme.typography.titleLarge)
-
             DetailRow("Böna:", state.bean?.name ?: "-")
             DetailRow("Datum:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
             DetailRow("Dos:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
-
             Divider(Modifier.padding(vertical = 8.dp))
-
             EditDropdownSelector(
                 label = "Kvarn",
                 options = availableGrinders,
@@ -327,7 +315,7 @@ fun BrewEditCard(
     }
 }
 
-// ---------- Reusable UI ----------
+// ---------- Reusable UI (Oförändrad) ----------
 @Composable
 fun BrewMetricsCard(metrics: BrewMetrics) {
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
@@ -360,43 +348,39 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
     }
 }
 
-/**
- * UPPDATERAD GRAF:
- * Visar nu både Massa (Vänster Y-axel, Svart) och Flöde (Höger Y-axel, Blå).
- * Tar emot showWeightLine och showFlowLine för att växla synlighet.
- * Försöker minska röran genom att inte rita linjesegment för noll-flöde.
- */
+
+// --- UPPDATERAD GRAF med justerad axeltitel-padding ---
 @Composable
 fun BrewSamplesGraph(
     samples: List<BrewSample>,
-    showWeightLine: Boolean, // <-- NY PARAMETER
-    showFlowLine: Boolean,   // <-- NY PARAMETER
+    showWeightLine: Boolean,
+    showFlowLine: Boolean,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
 
-    // --- Färger och Penslar (inga ändringar här) ---
+    // Färger och Penslar (inga ändringar)
     val massColor = Color.Black
-    val flowColor = Color(0xFF007BFF) // En tydlig blå färg
+    val flowColor = Color(0xFF007BFF)
     val gridLineColor = Color.LightGray
     val gridLinePaint = remember {
         Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
     }
-    val textPaintLeft = remember { /* ... som tidigare ... */
+    val numericLabelPaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.DKGRAY
             textAlign = android.graphics.Paint.Align.CENTER
             textSize = 10.sp.value * density.density
         }
     }
-    val textPaintRight = remember { /* ... som tidigare ... */
+    val numericLabelPaintRight = remember {
         android.graphics.Paint().apply {
-            color = flowColor.hashCode() // Använd flödets färg
-            textAlign = android.graphics.Paint.Align.LEFT // Justera vänster för höger axel
+            color = flowColor.hashCode()
+            textAlign = android.graphics.Paint.Align.LEFT
             textSize = 10.sp.value * density.density
         }
     }
-    val axisLabelPaint = remember { /* ... som tidigare ... */
+    val axisTitlePaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.BLACK
             textAlign = android.graphics.Paint.Align.CENTER
@@ -404,7 +388,7 @@ fun BrewSamplesGraph(
             isFakeBoldText = true
         }
     }
-    val axisLabelPaintFlow = remember { /* ... som tidigare ... */
+    val axisTitlePaintFlow = remember {
         android.graphics.Paint().apply {
             color = flowColor.hashCode()
             textAlign = android.graphics.Paint.Align.CENTER
@@ -413,119 +397,150 @@ fun BrewSamplesGraph(
         }
     }
 
-    // --- Kontrollera om vi har flödesdata (inga ändringar här) ---
     val hasFlowData = remember(samples) {
         samples.any { it.flowRateGramsPerSecond != null && it.flowRateGramsPerSecond!! > 0 }
     }
 
-    Canvas(modifier = modifier.padding(start = 32.dp, end = 32.dp, top = 16.dp, bottom = 32.dp)) {
-        // --- Utrymme för axlar (inga ändringar här) ---
-        val xLabelPadding = 24.dp.toPx()
-        val yLabelPaddingLeft = 24.dp.toPx()
-        val yLabelPaddingRight = 24.dp.toPx()
-        val graphWidth = size.width - yLabelPaddingLeft - yLabelPaddingRight
-        val graphHeight = size.height - xLabelPadding
-        val yAxisLeftX = yLabelPaddingLeft
-        val yAxisRightX = size.width - yLabelPaddingRight
-        val xAxisY = size.height - xLabelPadding
+    Canvas(modifier = modifier) {
 
-        // --- Skalning (inga ändringar här) ---
-        val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.1f
+        // --- ÖKAD PADDING FÖR TITLAR ---
+        // Utrymme för axeltitlar (längst ut) - Öka dessa värden
+        val titlePaddingBottom = 60.dp.toPx() // Tidigare 20
+        val titlePaddingStart = 60.dp.toPx()  // Tidigare 20
+        val titlePaddingEnd = 60.dp.toPx()    // Tidigare 20
+        // --- SLUT PÅ ÄNDRING ---
+
+        // Utrymme för sifferetiketter (innanför titlarna) - Behåll dessa
+        val numericLabelPaddingBottom = 16.dp.toPx()
+        val numericLabelPaddingStart = 28.dp.toPx()
+        val numericLabelPaddingEnd = 28.dp.toPx()
+
+        // Totalt utrymme reserverat på varje sida
+        val totalPaddingBottom = titlePaddingBottom + numericLabelPaddingBottom
+        val totalPaddingStart = titlePaddingStart + numericLabelPaddingStart
+        val totalPaddingEnd = titlePaddingEnd + numericLabelPaddingEnd
+
+        // Beräkna det faktiska grafområdet
+        val graphStartX = totalPaddingStart
+        val graphEndX = size.width - totalPaddingEnd
+        val graphStartY = 0f
+        val graphEndY = size.height - totalPaddingBottom
+        val graphWidth = graphEndX - graphStartX
+        val graphHeight = graphEndY - graphStartY
+
+        if (graphWidth <= 0 || graphHeight <= 0) return@Canvas // Undvik ritning om området är ogiltigt
+
+        // Skalning (inga ändringar)
+        val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
         val actualMaxFlow = samples.maxOfOrNull { it.flowRateGramsPerSecond ?: 0.0 }?.toFloat() ?: 1f
-        val maxFlow = max(5f, ceil(actualMaxFlow / 2f) * 2f) * 1.1f
+        val roundedMaxFlow = ceil(actualMaxFlow / 2f) * 2f
+        val maxFlow = max(5f, roundedMaxFlow) * 1.1f
 
-        // --- Rutnät och Etiketter (inga ändringar här) ---
+        // --- Rita Rutnät och Etiketter (Inga ändringar här) ---
         drawContext.canvas.nativeCanvas.apply {
             // 1. Vänster Y-axel (Vikt)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
-                val y = xAxisY - (currentMassGrid / maxMass) * graphHeight
-                drawLine(gridLineColor, Offset(yAxisLeftX, y), Offset(yAxisRightX, y),
+                val y = graphEndY - (currentMassGrid / maxMass) * graphHeight
+                drawLine(gridLineColor, Offset(graphStartX, y), Offset(graphEndX, y),
                     strokeWidth = gridLinePaint.width, pathEffect = gridLinePaint.pathEffect)
-                drawText("${currentMassGrid.toInt()}g", yLabelPaddingLeft / 2, y + textPaintLeft.textSize / 3, textPaintLeft)
+                drawText("${currentMassGrid.toInt()}g", graphStartX - numericLabelPaddingStart / 2, y + numericLabelPaint.textSize / 3, numericLabelPaint)
                 currentMassGrid += massGridInterval
+            }
+
+            // 2. Höger Y-axel (Flöde) - Rita färre etiketter
+            if (hasFlowData) {
+                val yMax = graphEndY - (roundedMaxFlow / maxFlow) * graphHeight
+                drawText("${roundedMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yMax + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
+                val halfMaxFlow = roundedMaxFlow / 2f
+                if (halfMaxFlow > 2f) {
+                    val yHalf = graphEndY - (halfMaxFlow / maxFlow) * graphHeight
+                    drawText("${halfMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yHalf + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
+                }
+                if (roundedMaxFlow > 4f) {
+                    val yLow = graphEndY - (2f / maxFlow) * graphHeight
+                    drawText("2 g/s", graphEndX + 4.dp.toPx(), yLow + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
+                }
             }
 
             // 3. X-axel (Tid)
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
-                val x = yAxisLeftX + (currentTimeGrid / maxTime) * graphWidth
-                drawLine(gridLineColor, Offset(x, 0f), Offset(x, xAxisY),
+                val x = graphStartX + (currentTimeGrid / maxTime) * graphWidth
+                drawLine(gridLineColor, Offset(x, graphStartY), Offset(x, graphEndY),
                     strokeWidth = gridLinePaint.width, pathEffect = gridLinePaint.pathEffect)
                 val timeSec = (currentTimeGrid / 1000).toInt()
-                drawText("${timeSec}s", x, size.height, textPaintLeft)
+                drawText("${timeSec}s", x, graphEndY + numericLabelPaddingBottom / 2 + numericLabelPaint.textSize / 2, numericLabelPaint)
                 currentTimeGrid += timeGridInterval
             }
-            // 4. Axeltitlar
-            drawText("Tid", yAxisLeftX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
-            save(); rotate(-90f)
-            drawText("Vikt (g)", -size.height / 2, yLabelPaddingLeft / 2 - axisLabelPaint.descent(), axisLabelPaint)
-            if (hasFlowData) {
-                drawText("Flöde (g/s)", -size.height / 2, yAxisRightX + yLabelPaddingRight / 1.5f, axisLabelPaintFlow)
-            }
-            restore()
-        }
+        } // Slut på apply för rutnät/etiketter
 
-        // --- Axlar (inga ändringar här) ---
-        drawLine(massColor, Offset(yAxisLeftX, 0f), Offset(yAxisLeftX, xAxisY)) // Vänster Y
-        drawLine(Color.Gray, Offset(yAxisLeftX, xAxisY), Offset(yAxisRightX, xAxisY)) // X
+        // --- Rita Axlar (Inga ändringar här) ---
+        drawLine(massColor, Offset(graphStartX, graphStartY), Offset(graphStartX, graphEndY)) // Vänster Y
+        drawLine(Color.Gray, Offset(graphStartX, graphEndY), Offset(graphEndX, graphEndY)) // X
         if (hasFlowData) {
-            drawLine(flowColor, Offset(yAxisRightX, 0f), Offset(yAxisRightX, xAxisY)) // Höger Y
+            drawLine(flowColor, Offset(graphEndX, graphStartY), Offset(graphEndX, graphEndY)) // Höger Y
         }
 
-        // --- Linjer ---
+        // --- Rita Linjer (Inga ändringar här) ---
         if (samples.size > 1) {
             val massPath = Path()
             val flowPath = Path()
-            var flowPathStarted = false // Flagga för att hantera null-värden i början
-
+            var flowPathStarted = false
             samples.forEachIndexed { index, s ->
-                val x = yAxisLeftX + (s.timeMillis.toFloat() / maxTime) * graphWidth
-                val yMass = xAxisY - (s.massGrams.toFloat() / maxMass) * graphHeight
-                val cx = x.coerceIn(yAxisLeftX, yAxisRightX)
-                val cyMass = yMass.coerceIn(0f, xAxisY)
-
-                // Alltid lägg till punkt för massPath om den ska visas
+                val x = graphStartX + (s.timeMillis.toFloat() / maxTime) * graphWidth
+                val yMass = graphEndY - (s.massGrams.toFloat() / maxMass) * graphHeight
+                val cx = x.coerceIn(graphStartX, graphEndX)
+                val cyMass = yMass.coerceIn(graphStartY, graphEndY)
                 if (showWeightLine) {
                     if (index == 0) massPath.moveTo(cx, cyMass) else massPath.lineTo(cx, cyMass)
                 }
-
-                // --- JUSTERAD LOGIK FÖR FLÖDE ---
-                // Lägg bara till punkt för flowPath om flödet ska visas, finns, OCH är positivt
                 if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null && s.flowRateGramsPerSecond > 0.0) {
-                    val yFlow = xAxisY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
-                    val cyFlow = yFlow.coerceIn(0f, xAxisY)
+                    val yFlow = graphEndY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
+                    val cyFlow = yFlow.coerceIn(graphStartY, graphEndY)
                     if (!flowPathStarted) {
-                        flowPath.moveTo(cx, cyFlow) // Starta en ny linje här
+                        flowPath.moveTo(cx, cyFlow)
                         flowPathStarted = true
                     } else {
-                        flowPath.lineTo(cx, cyFlow) // Fortsätt nuvarande linje
+                        flowPath.lineTo(cx, cyFlow)
                     }
                 } else {
-                    // Om flödet är null eller 0, återställ flaggan.
-                    // Nästa gång vi får ett positivt flöde kommer det starta en ny linje ('moveTo').
                     flowPathStarted = false
                 }
-                // --- SLUT PÅ JUSTERING ---
             }
-            // Rita Vikt-linjen (om vald)
             if (showWeightLine) {
                 drawPath(path = massPath, color = massColor, style = Stroke(width = 2.dp.toPx()))
             }
-            // Rita Flöde-linjen (om vald och data finns)
             if (showFlowLine && hasFlowData) {
                 drawPath(path = flowPath, color = flowColor, style = Stroke(width = 2.dp.toPx()))
             }
         }
+
+        // --- Rita Axeltitlar (Justerade Y-värden för roterade titlar) ---
+        drawContext.canvas.nativeCanvas.apply {
+            // Tid (Centrerad längst ner i titlePaddingBottom-området)
+            drawText("Tid", graphStartX + graphWidth / 2, size.height - titlePaddingBottom / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
+
+            save(); rotate(-90f)
+            // Vikt (Centrerad vertikalt i titlePaddingStart-området)
+            drawText("Vikt (g)", -(graphStartY + graphHeight / 2), titlePaddingStart / 2 + axisTitlePaint.textSize / 3, axisTitlePaint) // Justerad Y
+
+            if (hasFlowData) {
+                // Flöde (Centrerad vertikalt i titlePaddingEnd-området)
+                drawText("Flöde (g/s)", -(graphStartY + graphHeight / 2), size.width - titlePaddingEnd / 2 - axisTitlePaintFlow.descent(), axisTitlePaintFlow) // Justerad Y
+            }
+            restore()
+        }
+        // --- SLUT PÅ TITELRITNING ---
     }
 }
+// --- SLUT PÅ GRAFUPPDATERING ---
 
 
-/** Renamed to avoid overload ambiguity with a similarly named dropdown elsewhere. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> EditDropdownSelector(

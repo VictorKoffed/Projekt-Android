@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons // <-- NY IMPORT
+import androidx.compose.material.icons.filled.ArrowBack // <-- NY IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +22,26 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScaleConnectScreen(vm: ScaleViewModel) {
+fun ScaleConnectScreen(
+    vm: ScaleViewModel,
+    onNavigateBack: () -> Unit // <-- NY PARAMETER
+) {
     val connectionState by vm.connectionState.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Anslut till våg") }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Anslut till våg") },
+                // --- NY NAVIGATION ICON ---
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka")
+                    }
+                }
+                // --- SLUT ---
+            )
+        }
+    ) { padding ->
         AnimatedContent(
             targetState = connectionState,
             modifier = Modifier.padding(padding),
@@ -32,12 +50,12 @@ fun ScaleConnectScreen(vm: ScaleViewModel) {
         ) { state ->
             when (state) {
                 is BleConnectionState.Connected -> {
-                    val measurement by vm.measurement.collectAsState()
+                    val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f)) // Lägg till initialValue
                     ConnectedView(
                         deviceName = state.deviceName,
                         measurement = measurement,
                         onDisconnect = { vm.disconnect() },
-                        onTare = { vm.tareScale() } // Koppla knappen till ViewModel
+                        onTare = { vm.tareScale() }
                     )
                 }
                 else -> {
@@ -67,7 +85,7 @@ private fun ConnectedView(
     deviceName: String,
     measurement: ScaleMeasurement,
     onDisconnect: () -> Unit,
-    onTare: () -> Unit // Tar emot en lambda för tare-knappen
+    onTare: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -88,7 +106,6 @@ private fun ConnectedView(
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
-        // Här är knappen!
         Button(onClick = onTare) {
             Text("Nollställ (Tare)")
         }
@@ -194,4 +211,3 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
         }
     }
 }
-

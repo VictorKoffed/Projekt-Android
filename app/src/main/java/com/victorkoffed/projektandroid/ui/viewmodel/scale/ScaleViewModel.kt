@@ -1,7 +1,9 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
+// --- KONTROLLERA ATT ALLA DESSA IMPORTER FINNS ---
 import android.app.Application
 import android.os.SystemClock
+import android.util.Log // För loggning
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
@@ -11,14 +13,17 @@ import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // <-- Korrekt import
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Date
 import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
+// --- SLUT PÅ IMPORTER ---
 
 class ScaleViewModel(
     app: Application,
@@ -35,13 +40,10 @@ class ScaleViewModel(
 
     // --- Connection and Measurement State ---
     val connectionState: StateFlow<BleConnectionState> = scaleRepo.observeConnectionState()
-
-    // --- UPPDATERAD INITIALVALUE ---
     private val _rawMeasurement = MutableStateFlow(ScaleMeasurement(0.0f, 0.0f))
     private val _tareOffset = MutableStateFlow(0.0f)
 
     val measurement: StateFlow<ScaleMeasurement> = combine(_rawMeasurement, _tareOffset) { raw, offset ->
-        // Returnera ett nytt ScaleMeasurement-objekt, uppdatera BÅDA värdena
         ScaleMeasurement(
             weightGrams = raw.weightGrams - offset,
             flowRateGramsPerSecond = raw.flowRateGramsPerSecond // Flödet påverkas inte av tarering
@@ -49,9 +51,8 @@ class ScaleViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ScaleMeasurement(0.0f, 0.0f) // UPPDATERAD
+        initialValue = ScaleMeasurement(0.0f, 0.0f)
     )
-    // --- SLUT PÅ UPPDATERING ---
 
     // --- Error State ---
     private val _error = MutableStateFlow<String?>(null)
@@ -75,21 +76,51 @@ class ScaleViewModel(
     private var timerJob: Job? = null
     // --- End Recording State ---
 
-    // --- Vanliga funktioner ---
+    // --- Funktioner ---
     fun startScan() {
         if (_isScanning.value) return
-        _devices.value = emptyList(); _error.value = null; _isScanning.value = true
+
+        _devices.value = emptyList()
+        _error.value = null
+        _isScanning.value = true
+
+        scanJob?.cancel() // Avbryt tidigare jobb
+
         scanJob = viewModelScope.launch {
-            scaleRepo.startScanDevices()
-                .catch { e -> _error.value = e.message ?: "Okänt fel" }
-                .onCompletion { _isScanning.value = false }
-                .collect { list -> _devices.value = list }
+            try {
+                withTimeoutOrNull(5.seconds) { // Timeout efter 5 sekunder
+                    scaleRepo.startScanDevices()
+                        .catch { e ->
+                            _error.value = e.message ?: "Okänt skanningsfel"
+                            _isScanning.value = false // Säkerställ att vi slutar vid fel
+                        }
+                        .collect { list ->
+                            _devices.value = list
+                        }
+                }
+            } finally {
+                // Detta körs alltid när jobbet slutar (timeout, cancel, error, complete)
+                if (_isScanning.value) { // Sätt bara till false om vi fortfarande trodde vi skannade
+                    _isScanning.value = false
+                    Log.d("ScaleViewModel", "Scanning stopped (timeout or manual).")
+                    if (_devices.value.isEmpty() && _error.value == null) {
+                        Log.d("ScaleViewModel", "No devices found during scan.")
+                    }
+                }
+            }
         }
     }
-    fun stopScan() { scanJob?.cancel(); scanJob = null; _isScanning.value = false }
+
+    fun stopScan() {
+        if (scanJob?.isActive == true) {
+            scanJob?.cancel()
+            Log.d("ScaleViewModel", "Scanning manually stopped by user.")
+            // _isScanning sätts till false i 'finally' i startScan
+        }
+    }
 
     fun connect(device: DiscoveredDevice) {
-        stopScan()
+        stopScan() // Stoppa skanning innan anslutning
         _tareOffset.value = 0.0f
         scaleRepo.connect(device.address)
         measurementJob?.cancel()
@@ -97,7 +128,6 @@ class ScaleViewModel(
             scaleRepo.observeMeasurements().collect { rawData ->
                 _rawMeasurement.value = rawData
                 if (_isRecording.value && !_isPaused.value) {
-                    // --- UPPDATERAT ANROP ---
                     addSamplePoint(measurement.value) // Skicka hela objektet
                 }
             }
@@ -105,7 +135,7 @@ class ScaleViewModel(
     }
 
     fun disconnect() {
-        stopRecording()
+        stopRecording() // Stoppa ev. inspelning vid frånkoppling
         measurementJob?.cancel(); measurementJob = null
         scaleRepo.disconnect()
         _tareOffset.value = 0.0f
@@ -113,25 +143,24 @@ class ScaleViewModel(
 
     fun tareScale() {
         scaleRepo.tareScale()
+        // Uppdatera offset baserat på den *råa* mätningen vid tareringstillfället
         _tareOffset.value = _rawMeasurement.value.weightGrams
+        // Om inspelning pågår, lägg till en punkt med det nya (nära noll) värdet
         if (_isRecording.value && !_isPaused.value) {
-            // --- UPPDATERAT ANROP ---
-            addSamplePoint(measurement.value) // Skicka hela objektet (som nu är 0)
+            addSamplePoint(measurement.value)
         }
     }
-    // --- Slut på vanliga funktioner ---
 
     // --- Recording Functions ---
     fun startRecording() {
-        if (_isRecording.value || connectionState.value !is BleConnectionState.Connected) return
+        if (_isRecording.value || connectionState.value !is BleConnectionState.Connected) return // Säkerställ att vi är anslutna
         _recordedSamplesFlow.value = emptyList()
         _recordingTimeMillis.value = 0L
         _isPaused.value = false
         _weightAtPause.value = null
-        recordingStartTime = SystemClock.elapsedRealtime()
+        recordingStartTime = SystemClock.elapsedRealtime() // Nollställ starttid
         _isRecording.value = true
-        // --- UPPDATERAT ANROP ---
-        addSamplePoint(measurement.value) // Skicka hela objektet
+        addSamplePoint(measurement.value) // Lägg till första punkten (troligen 0g)
         startTimer()
     }
 
@@ -139,118 +168,109 @@ class ScaleViewModel(
         if (!_isRecording.value || _isPaused.value) return
         _isPaused.value = true
         timePausedAt = SystemClock.elapsedRealtime()
-        _weightAtPause.value = measurement.value.weightGrams
-        timerJob?.cancel()
+        _weightAtPause.value = measurement.value.weightGrams // Spara vikten vid paus
+        timerJob?.cancel() // Stoppa timern
     }
 
     fun resumeRecording() {
         if (!_isRecording.value || !_isPaused.value) return
         val pauseDuration = SystemClock.elapsedRealtime() - timePausedAt
-        recordingStartTime += pauseDuration
+        recordingStartTime += pauseDuration // Justera starttiden för att ignorera pausen
         _isPaused.value = false
         _weightAtPause.value = null
-        startTimer()
+        startTimer() // Starta timern igen
     }
 
+    suspend fun stopRecordingAndSave(setupState: BrewSetupState): Long? {
+        if (!_isRecording.value && !_isPaused.value) return null // Kan bara spara om inspelning pågått
 
-    /**
-     * Stoppar inspelningen och sparar Brew + Samples.
-     * Tar nu emot hela BrewSetupState för att spara alla detaljer.
-     * @return id för nyskapad Brew, eller null om inget sparades / fel inträffade.
-     */
-    suspend fun stopRecordingAndSave(
-        setupState: BrewSetupState // Tar emot hela setupen
-    ): Long? {
-        if (!_isRecording.value && !_isPaused.value) return null
-        _isRecording.value = false
-        _isPaused.value = false
-        _weightAtPause.value = null
-        timerJob?.cancel()
+        // Spara aktuell tid och samples innan vi nollställer
+        val finalTimeMillis = _recordingTimeMillis.value
+        val finalSamples = _recordedSamplesFlow.value
 
-        if (_recordedSamplesFlow.value.isEmpty()) {
-            _recordingTimeMillis.value = 0L
+        // Stoppa och nollställ inspelningsstate direkt
+        stopRecording() // Detta nollställer _recordedSamplesFlow, _recordingTimeMillis etc.
+
+        if (finalSamples.isEmpty()) {
+            _error.value = "Ingen data spelades in."
             return null
         }
 
-        val actualStartTimeMillis = System.currentTimeMillis() - (SystemClock.elapsedRealtime() - recordingStartTime)
+        // Beräkna den faktiska starttiden i Realtid (System.currentTimeMillis)
+        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
 
-        // Hämta nödvändig data från setupState
+        // Validera setupState innan vi sparar
         val beanId = setupState.selectedBean?.id
         val doseGrams = setupState.doseGrams.toDoubleOrNull()
 
         if (beanId == null || doseGrams == null) {
             _error.value = "Saknar böna eller dos för att spara."
-            _recordedSamplesFlow.value = emptyList() // Rensa ändå?
-            _recordingTimeMillis.value = 0L
-            return null
+            return null // Returnera null om setup är ogiltig
         }
 
-        // KORRIGERING: Skapa Brew-objektet med ALL data från setupState
+        // Skapa Brew-objektet
         val newBrew = Brew(
             beanId = beanId,
             doseGrams = doseGrams,
-            startedAt = Date(actualStartTimeMillis),
-            // Hämta resten från setupState, konvertera vid behov
-            grinderId = setupState.selectedGrinder?.id, // Använd grinderId från setup
-            methodId = setupState.selectedMethod?.id, // Använd methodId från setup
-            grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() }, // Använd grindSetting från setup
-            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(), // Använd RPM från setup
-            brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(), // Använd Temp från setup
-            notes = "Inspelad från våg ${Date()}" // TODO: Hämta noter från setup?
+            startedAt = Date(actualStartTimeMillis), // Använd beräknad starttid
+            grinderId = setupState.selectedGrinder?.id,
+            methodId = setupState.selectedMethod?.id,
+            grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
+            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(),
+            brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
+            notes = "Inspelad från våg ${Date()}" // Enkel standardnotering
         )
 
+        // Försök spara asynkront
         val result = viewModelScope.async {
             try {
-                val newId = coffeeRepo.addBrewWithSamples(newBrew, _recordedSamplesFlow.value)
-                _recordedSamplesFlow.value = emptyList()
-                _error.value = null
-                _recordingTimeMillis.value = 0L
-                newId
+                // Spara brew och samples i en transaktion
+                val newId = coffeeRepo.addBrewWithSamples(newBrew, finalSamples)
+                _error.value = null // Rensa ev. tidigare fel
+                newId // Returnera det nya Brew ID:t
             } catch (e: Exception) {
                 _error.value = "Kunde inte spara bryggning: ${e.message}"
-                _recordedSamplesFlow.value = emptyList()
-                _recordingTimeMillis.value = 0L
-                null
+                Log.e("ScaleViewModel", "Error saving brew: ${e.message}", e)
+                null // Returnera null vid fel
             }
         }
-        return result.await()
+        return result.await() // Vänta på att async-blocket blir klart
     }
 
     // --- Helper functions ---
+    // Denna är nu public för att kunna anropas från LiveBrewScreen (Reset-knappen)
     fun stopRecording() {
         _isRecording.value = false
         _isPaused.value = false
         _weightAtPause.value = null
         timerJob?.cancel()
-        _recordedSamplesFlow.value = emptyList()
-        _recordingTimeMillis.value = 0L
+        _recordedSamplesFlow.value = emptyList() // Rensa samples
+        _recordingTimeMillis.value = 0L // Nollställ tid
     }
 
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             while (_isRecording.value && !_isPaused.value) {
+                // Uppdatera tiden baserat på SystemClock för precision
                 _recordingTimeMillis.value = SystemClock.elapsedRealtime() - recordingStartTime
-                delay(100)
+                delay(100) // Uppdatera ca 10 ggr/sekund
             }
         }
     }
 
-    // --- UPPDATERAD FUNKTION ---
-    // Ändrad signatur från (massGrams: Double) till (measurement: ScaleMeasurement)
     private fun addSamplePoint(measurement: ScaleMeasurement) {
-        if (_isPaused.value) return
+        if (!_isRecording.value || _isPaused.value) return // Lägg bara till om vi spelar in aktivt
 
         val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime
         val newSample = BrewSample(
-            brewId = 0, // sätts korrekt av repository när Brew har skapats
+            brewId = 0, // Sätts korrekt av repository/DAO vid insert
             timeMillis = elapsedTimeMs,
+            // Avrunda till en decimal för att spara utrymme och undvika flyttalsproblem
             massGrams = String.format(Locale.US, "%.1f", measurement.weightGrams).toDouble(),
-            // NY RAD: Spara flödeshastigheten
             flowRateGramsPerSecond = String.format(Locale.US, "%.1f", measurement.flowRateGramsPerSecond).toDouble()
         )
+        // Lägg till det nya samplet i listan
         _recordedSamplesFlow.value = _recordedSamplesFlow.value + newSample
     }
-    // --- SLUT PÅ UPPDATERING ---
-    // --- End Recording Functions ---
 }
