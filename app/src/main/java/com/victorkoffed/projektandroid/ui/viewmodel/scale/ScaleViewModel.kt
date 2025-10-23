@@ -11,7 +11,7 @@ import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // <-- Korrekt import
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // Korrekt import
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -26,31 +26,22 @@ class ScaleViewModel(
     private val coffeeRepo: CoffeeRepository
 ) : AndroidViewModel(app) {
 
-    // --- Scanning State ---
+    // --- States och funktioner (som tidigare) ---
+    // ... (startScan, stopScan, connect, disconnect, tareScale, startRecording, pauseRecording, resumeRecording etc.) ...
     private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
     val devices: StateFlow<List<DiscoveredDevice>> = _devices
+    // ... other states ...
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning
     private var scanJob: Job? = null
-
-    // --- Connection and Measurement State ---
     val connectionState: StateFlow<BleConnectionState> = scaleRepo.observeConnectionState()
     private val _rawMeasurement = MutableStateFlow(ScaleMeasurement(0.0f))
     private val _tareOffset = MutableStateFlow(0.0f)
-
     val measurement: StateFlow<ScaleMeasurement> = combine(_rawMeasurement, _tareOffset) { raw, offset ->
         ScaleMeasurement(weightGrams = raw.weightGrams - offset)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ScaleMeasurement(0.0f)
-    )
-
-    // --- Error State ---
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f))
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
-
-    // --- Recording State ---
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording
     private val _isPaused = MutableStateFlow(false)
@@ -61,14 +52,12 @@ class ScaleViewModel(
     val recordingTimeMillis: StateFlow<Long> = _recordingTimeMillis
     private val _weightAtPause = MutableStateFlow<Float?>(null)
     val weightAtPause: StateFlow<Float?> = _weightAtPause
-
     private var recordingStartTime: Long = 0L
     private var timePausedAt: Long = 0L
     private var measurementJob: Job? = null
     private var timerJob: Job? = null
-    // --- End Recording State ---
 
-    // --- Vanliga funktioner ---
+
     fun startScan() {
         if (_isScanning.value) return
         _devices.value = emptyList(); _error.value = null; _isScanning.value = true
@@ -110,9 +99,7 @@ class ScaleViewModel(
             addSamplePoint(0.0)
         }
     }
-    // --- Slut på vanliga funktioner ---
 
-    // --- Recording Functions ---
     fun startRecording() {
         if (_isRecording.value || connectionState.value !is BleConnectionState.Connected) return
         _recordedSamplesFlow.value = emptyList()
@@ -186,7 +173,9 @@ class ScaleViewModel(
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() }, // Använd grindSetting från setup
             grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(), // Använd RPM från setup
             brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(), // Använd Temp från setup
-            notes = "Inspelad från våg ${Date()}" // TODO: Hämta noter från setup?
+            notes = setupState.notes.takeIf { it.isNotBlank() } // ANVÄND NOTES FRÅN SETUP
+            // Om du vill kombinera inspelningsnoten med setup-noten:
+            // notes = (setupState.notes.takeIf { it.isNotBlank() }?.let { "$it\n" } ?: "") + "Inspelad från våg ${Date()}"
         )
 
         val result = viewModelScope.async {
@@ -228,10 +217,9 @@ class ScaleViewModel(
 
     private fun addSamplePoint(massGrams: Double) {
         if (_isPaused.value) return
-
         val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime
         val newSample = BrewSample(
-            brewId = 0, // sätts korrekt av repository när Brew har skapats
+            brewId = 0, // sätts korrekt av repository
             timeMillis = elapsedTimeMs,
             massGrams = String.format(Locale.US, "%.1f", massGrams).toDouble()
         )

@@ -1,22 +1,38 @@
 package com.victorkoffed.projektandroid.ui.screens.bean
 
+// --- Core Compose & Foundation ---
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions // <--- VIKTIG IMPORT
+
+// --- Material Design 3 ---
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+
+// --- Runtime State & Effects ---
 import androidx.compose.runtime.*
+
+// --- UI Helpers ---
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.KeyboardType // <--- VIKTIG IMPORT
 import androidx.compose.ui.unit.dp
+
+// --- Dina Databas Entities & Views ---
 import com.victorkoffed.projektandroid.data.db.Bean
+
+// --- Din ViewModel ---
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
+
+// --- Java Util & Text Formatting ---
 import java.text.SimpleDateFormat
 import java.util.*
+
+// Återanvändbar date formatter
+private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +52,7 @@ fun BeanScreen(vm: BeanViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(onClick = { showAddDialog = true }) {
-                Text("Lägg till ny böna")
-            }
+            Button(onClick = { showAddDialog = true }) { Text("Lägg till ny böna") }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (beans.isEmpty()) {
@@ -63,8 +77,8 @@ fun BeanScreen(vm: BeanViewModel) {
         if (showAddDialog) {
             AddBeanDialog(
                 onDismiss = { showAddDialog = false },
-                onAddBean = { name, roaster, roastDate, initialWeight, remainingWeight, notes ->
-                    vm.addBean(name, roaster, roastDate, initialWeight, remainingWeight, notes)
+                onAddBean = { name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes ->
+                    vm.addBean(name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes)
                     showAddDialog = false
                 }
             )
@@ -75,8 +89,8 @@ fun BeanScreen(vm: BeanViewModel) {
             EditBeanDialog(
                 bean = currentBean,
                 onDismiss = { beanToEdit = null },
-                onSaveBean = { updatedBean ->
-                    vm.updateBean(updatedBean)
+                onSaveBean = { name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes ->
+                    vm.updateBean(currentBean, name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes)
                     beanToEdit = null
                 }
             )
@@ -96,54 +110,44 @@ fun BeanScreen(vm: BeanViewModel) {
     }
 }
 
+// BeanCard
 @Composable
-fun BeanCard(
-    bean: Bean,
-    onClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-
+fun BeanCard(bean: Bean, onClick: () -> Unit, onDeleteClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(bean.name, style = MaterialTheme.typography.titleMedium)
                 bean.roaster?.let { Text("Rosteri: $it", style = MaterialTheme.typography.bodyMedium) }
                 bean.roastDate?.let { Text("Rostdatum: ${dateFormat.format(it)}", style = MaterialTheme.typography.bodySmall) }
-                Text(
-                    "Kvarvarande vikt: %.1f g".format(bean.remainingWeightGrams),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                bean.initialWeightGrams?.let { Text("Ursprungsvikt: %.1f g".format(it), style = MaterialTheme.typography.bodySmall) }
+                Text("Kvar: %.1f g".format(bean.remainingWeightGrams), style = MaterialTheme.typography.bodyMedium)
+                bean.initialWeightGrams?.let { Text("Ursprung: %.1f g".format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
                 bean.notes?.let { Text("Noteringar: $it", style = MaterialTheme.typography.bodySmall) }
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Ta bort böna",
-                    tint = MaterialTheme.colorScheme.error
-                )
+                Icon(Icons.Default.Delete, contentDescription = "Ta bort böna", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
 }
 
+
+// AddBeanDialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBeanDialog(
     onDismiss: () -> Unit,
-    onAddBean: (name: String, roaster: String?, roastDate: Date?, initialWeight: Double?, remainingWeight: Double, notes: String?) -> Unit
+    onAddBean: (name: String, roaster: String?, roastDateStr: String?, initialWeightStr: String?, remainingWeight: Double, notes: String?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var roaster by remember { mutableStateOf("") }
+    var roastDateStr by remember { mutableStateOf("") }
+    var initialWeightStr by remember { mutableStateOf("") }
     var remainingWeightStr by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
@@ -155,10 +159,21 @@ fun AddBeanDialog(
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
                 OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Rosteri") }, singleLine = true)
                 OutlinedTextField(
-                    value = remainingWeightStr,
-                    onValueChange = { remainingWeightStr = it },
+                    value = roastDateStr, onValueChange = { roastDateStr = it },
+                    label = { Text("Rostdatum (yyyy-mm-dd)") },
+                    placeholder = { Text("T.ex. 2025-10-23") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number) // Använder Number här
+                )
+                OutlinedTextField(
+                    value = initialWeightStr, onValueChange = { initialWeightStr = it },
+                    label = { Text("Ursprungsvikt (g)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal) // Använder Decimal här
+                )
+                OutlinedTextField(
+                    value = remainingWeightStr, onValueChange = { remainingWeightStr = it },
                     label = { Text("Nuvarande vikt (g) *") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal) // Använder Decimal här
                 )
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar") })
             }
@@ -168,7 +183,7 @@ fun AddBeanDialog(
                 onClick = {
                     val remainingWeight = remainingWeightStr.toDoubleOrNull()
                     if (name.isNotBlank() && remainingWeight != null && remainingWeight >= 0) {
-                        onAddBean(name, roaster.takeIf { it.isNotBlank() }, null, null, remainingWeight, notes.takeIf { it.isNotBlank() })
+                        onAddBean(name, roaster.takeIf { it.isNotBlank() }, roastDateStr.takeIf { it.isNotBlank() }, initialWeightStr.takeIf { it.isNotBlank() }, remainingWeight, notes.takeIf { it.isNotBlank() })
                     }
                 },
                 enabled = name.isNotBlank() && (remainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
@@ -178,15 +193,18 @@ fun AddBeanDialog(
     )
 }
 
+// EditBeanDialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditBeanDialog(
     bean: Bean,
     onDismiss: () -> Unit,
-    onSaveBean: (updatedBean: Bean) -> Unit
+    onSaveBean: (name: String, roaster: String?, roastDateStr: String?, initialWeightStr: String?, remainingWeight: Double, notes: String?) -> Unit
 ) {
     var name by remember { mutableStateOf(bean.name) }
     var roaster by remember { mutableStateOf(bean.roaster ?: "") }
+    var roastDateStr by remember { mutableStateOf(bean.roastDate?.let { dateFormat.format(it) } ?: "") }
+    var initialWeightStr by remember { mutableStateOf(bean.initialWeightGrams?.toString() ?: "") }
     var remainingWeightStr by remember { mutableStateOf(bean.remainingWeightGrams.toString()) }
     var notes by remember { mutableStateOf(bean.notes ?: "") }
 
@@ -198,8 +216,19 @@ fun EditBeanDialog(
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
                 OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Rosteri") }, singleLine = true)
                 OutlinedTextField(
-                    value = remainingWeightStr,
-                    onValueChange = { remainingWeightStr = it },
+                    value = roastDateStr, onValueChange = { roastDateStr = it },
+                    label = { Text("Rostdatum (yyyy-mm-dd)") },
+                    placeholder = { Text("T.ex. 2025-10-23") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = initialWeightStr, onValueChange = { initialWeightStr = it },
+                    label = { Text("Ursprungsvikt (g)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                OutlinedTextField(
+                    value = remainingWeightStr, onValueChange = { remainingWeightStr = it },
                     label = { Text("Nuvarande vikt (g) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
@@ -211,13 +240,7 @@ fun EditBeanDialog(
                 onClick = {
                     val remainingWeight = remainingWeightStr.toDoubleOrNull()
                     if (name.isNotBlank() && remainingWeight != null && remainingWeight >= 0) {
-                        val updatedBean = bean.copy(
-                            name = name,
-                            roaster = roaster.takeIf { it.isNotBlank() },
-                            remainingWeightGrams = remainingWeight,
-                            notes = notes.takeIf { it.isNotBlank() }
-                        )
-                        onSaveBean(updatedBean)
+                        onSaveBean(name, roaster.takeIf { it.isNotBlank() }, roastDateStr.takeIf { it.isNotBlank() }, initialWeightStr.takeIf { it.isNotBlank() }, remainingWeight, notes.takeIf { it.isNotBlank() })
                     }
                 },
                 enabled = name.isNotBlank() && (remainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
@@ -227,6 +250,7 @@ fun EditBeanDialog(
     )
 }
 
+// DeleteConfirmationDialog
 @Composable
 fun DeleteConfirmationDialog(
     beanName: String,
@@ -238,17 +262,9 @@ fun DeleteConfirmationDialog(
         title = { Text("Ta bort böna?") },
         text = { Text("Är du säker på att du vill ta bort '$beanName'? Detta går inte att ångra.") },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Ta bort")
-            }
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Ta bort") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Avbryt")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
     )
 }
+

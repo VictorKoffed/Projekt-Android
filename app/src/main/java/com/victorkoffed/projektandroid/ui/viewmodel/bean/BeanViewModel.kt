@@ -8,7 +8,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.text.ParseException // För datum-parsning
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 /**
  * ViewModel for managing Coffee Beans.
@@ -19,27 +22,41 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
     val allBeans: StateFlow<List<Bean>> = repository.getAllBeans()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000), // Keep active for 5s after last subscriber gone
-            initialValue = emptyList() // Start with an empty list
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
+
+    // Hjälpfunktion för att försöka parsa datumsträng (yyyy-MM-dd)
+    private fun parseDateString(dateString: String?): Date? {
+        if (dateString.isNullOrBlank()) return null
+        return try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
+        } catch (e: ParseException) {
+            null // Returnera null om formatet är fel
+        }
+    }
 
     /**
      * Adds a new bean to the database.
+     * Tar nu emot roastDateString och initialWeightString.
      */
     fun addBean(
         name: String,
         roaster: String?,
-        roastDate: Date?,
-        initialWeight: Double?,
-        remainingWeight: Double, // Required
+        roastDateString: String?, // NY: Datum som sträng
+        initialWeightString: String?, // NY: Vikt som sträng
+        remainingWeight: Double,
         notes: String?
     ) {
+        val roastDate = parseDateString(roastDateString) // Konvertera sträng till Date
+        val initialWeight = initialWeightString?.toDoubleOrNull() // Konvertera sträng till Double
+
         val newBean = Bean(
             name = name,
             roaster = roaster,
-            roastDate = roastDate,
-            initialWeightGrams = initialWeight,
-            remainingWeightGrams = remainingWeight, // Ensure this is set
+            roastDate = roastDate, // Spara Date-objektet
+            initialWeightGrams = initialWeight, // Spara Double-värdet
+            remainingWeightGrams = remainingWeight,
             notes = notes
         )
         viewModelScope.launch {
@@ -48,24 +65,40 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
     }
 
     /**
-     * Updates an existing bean (e.g., when a brew uses some beans).
-     * NOTE: Weight deduction is handled by DB Triggers, but this is useful for editing details.
+     * Updates an existing bean.
+     * Tar nu emot roastDateString och initialWeightString.
      */
-    fun updateBean(bean: Bean) {
+    fun updateBean(
+        bean: Bean, // Tar emot det gamla objektet
+        // Tar emot de nya värdena som strängar
+        name: String,
+        roaster: String?,
+        roastDateString: String?,
+        initialWeightString: String?,
+        remainingWeight: Double,
+        notes: String?
+    ) {
+        val roastDate = parseDateString(roastDateString)
+        val initialWeight = initialWeightString?.toDoubleOrNull()
+
+        // Skapa en kopia av det gamla objektet med uppdaterade värden
+        val updatedBean = bean.copy(
+            name = name,
+            roaster = roaster,
+            roastDate = roastDate,
+            initialWeightGrams = initialWeight,
+            remainingWeightGrams = remainingWeight,
+            notes = notes
+        )
         viewModelScope.launch {
-            repository.updateBean(bean)
+            repository.updateBean(updatedBean)
         }
     }
 
-    /**
-     * Deletes a bean from the database.
-     * OBS: Om bönan har bryggningar kopplade till sig kommer onDelete = ForeignKey.RESTRICT
-     * i Brew-tabellen att förhindra raderingen för att skydda historiken.
-     * Du kan behöva ändra detta till SET_NULL eller CASCADE om du vill tillåta radering.
-     */
+    /** Deletes a bean from the database. */
     fun deleteBean(bean: Bean) {
         viewModelScope.launch {
-            repository.deleteBean(bean) // Antag att deleteBean finns i Repository & DAO
+            repository.deleteBean(bean)
         }
     }
 }

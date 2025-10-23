@@ -1,7 +1,7 @@
 package com.victorkoffed.projektandroid
 
 import android.os.Bundle
-import android.util.Log // <-- NY IMPORT FÖR LOGGNING
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 // import androidx.activity.viewModels // Behövs ej om CoffeeVm tas bort
@@ -10,8 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons // Importera Icons
-import androidx.compose.material.icons.filled.ArrowBack // Importera ArrowBack
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,14 +43,12 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.home.HomeScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
-// NY IMPORT för den riktiga detaljskärmen
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    // private val coffeeVm: CoffeeImageViewModel by viewModels() // Borttagen?
-
+    // ... (ViewModels som tidigare) ...
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
@@ -60,8 +58,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Hämta repositories och skapa ViewModels (som tidigare)
+        // ... (Skapa ViewModels som tidigare) ...
         val app = application as CoffeeJournalApplication
         val coffeeRepository = app.coffeeRepository
         val scaleRepository = BookooScaleRepositoryImpl(this)
@@ -77,7 +74,6 @@ class MainActivity : ComponentActivity() {
         brewVm = ViewModelProvider(this, brewViewModelFactory)[BrewViewModel::class.java]
         val homeViewModelFactory = HomeViewModelFactory(coffeeRepository)
         homeVm = ViewModelProvider(this, homeViewModelFactory)[HomeViewModel::class.java]
-
 
         setContent {
             ProjektAndroidTheme {
@@ -105,7 +101,6 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = "brew_detail"
                                     }
                                 )
-                                // "coffee" -> // Borttagen?
                                 "scale" -> ScaleConnectScreen(scaleVm)
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
@@ -145,7 +140,6 @@ class MainActivity : ComponentActivity() {
                                                 val currentSetup = brewVm.getCurrentSetup()
                                                 Log.d("MainActivity", "Saving brew with setup: $currentSetup")
 
-                                                // KORRIGERING: Skicka med HELA setup-objektet
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
 
                                                 lastBrewId = savedBrewId
@@ -157,16 +151,19 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 "brew_detail" -> {
-                                    // KORRIGERING: Skicka med alla nödvändiga parametrar
-                                    if (selectedBrewId != null) {
+                                    // Skapa en lokal kopia av ID:t FÖRST
+                                    val idToShow = selectedBrewId
+                                    if (idToShow != null) { // Kolla mot den lokala kopian
                                         BrewDetailScreen(
-                                            brewId = selectedBrewId!!, // Skicka ID
-                                            onNavigateBack = { // Skicka callback
+                                            brewId = idToShow, // Använd den lokala kopian
+                                            onNavigateBack = {
+                                                // Gör state-uppdateringarna så enkla som möjligt
                                                 selectedBrewId = null
                                                 currentScreen = "home"
                                             }
                                         )
                                     } else {
+                                        // Fallback
                                         Text("Error: Brew ID missing")
                                         LaunchedEffect(Unit) { currentScreen = "home" }
                                     }
