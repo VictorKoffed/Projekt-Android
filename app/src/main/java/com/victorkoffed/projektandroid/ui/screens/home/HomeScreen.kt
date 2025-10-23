@@ -182,7 +182,7 @@ fun HomeScreen(
                 )
             }
             if (recentBrews.isEmpty()) {
-                item { Text("Inga bryggningar sparade än.", modifier = Modifier.padding(vertical = 16.dp)) }
+                item { Text("Inga bryggningar sparade än, tryck på + för att skapa en.", modifier = Modifier.padding(vertical = 16.dp)) }
             } else {
                 items(recentBrews) { brewItem ->
                     RecentBrewCard(
