@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.R
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- NY IMPORT
+// --- NYA IMPORTER ---
+import com.victorkoffed.projektandroid.data.db.Bean
+import com.victorkoffed.projektandroid.data.db.Method
+// --- SLUT ---
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.RecentBrewItem
@@ -47,8 +51,11 @@ fun HomeScreen(
     navigateToScreen: (String) -> Unit, // Ny parameter
     // --- SLUT ---
     onNavigateToBrewSetup: () -> Unit,
-    onBrewClick: (Long) -> Unit
-    // TODO: Callback för meny
+    onBrewClick: (Long) -> Unit,
+    // --- NYA PARAMETRAR FÖR ATT INAKTIVERA KNAPP ---
+    availableBeans: List<Bean>,
+    availableMethods: List<Method>
+    // --- SLUT ---
 ) {
     // Hämta states från ViewModels
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -94,9 +101,16 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToBrewSetup) {
+                    // --- UPPDATERAD KNAPP ---
+                    val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
+
+                    IconButton(
+                        onClick = onNavigateToBrewSetup,
+                        enabled = isBrewSetupEnabled // <-- ÄNDRINGEN ÄR HÄR
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = "Ny bryggning")
                     }
+                    // --- SLUT PÅ UPPDATERING ---
                 }
             )
         }
