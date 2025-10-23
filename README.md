@@ -45,6 +45,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 2. Translate app to english
 3. Fix  banner to Bean, Method och grinder with a fitting background
 4. Fix shadows to homescreen boxes 
+5. Fix buttons and some text have the app brown color
 
 ##  ToDo List
 
