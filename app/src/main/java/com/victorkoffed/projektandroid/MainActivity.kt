@@ -170,7 +170,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onClearResult = {
                                         lastBrewId = null
-                                    }
+                                    },
+                                    // --- TILLAGD RAD ---
+                                    onNavigateBack = { navigateToScreen("home") }
                                 )
                                 "live_brew" -> {
                                     val samples by scaleVm.recordedSamplesFlow.collectAsState()
