@@ -39,16 +39,17 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
     var brewSetupState by mutableStateOf(BrewSetupState())
         private set
 
-    // --- NYTT: State för att visa resultat ---
-    // Vi behöver inte exponera ID:t utåt, det hanteras internt via loadBrewResults
-    // private val _completedBrewId = MutableStateFlow<Long?>(null)
-
+    // --- State för att visa resultat (oförändrat) ---
     private val _completedBrewMetrics = MutableStateFlow<BrewMetrics?>(null)
-    val completedBrewMetrics: StateFlow<BrewMetrics?> = _completedBrewMetrics.asStateFlow() // Exponera som StateFlow
-
+    val completedBrewMetrics: StateFlow<BrewMetrics?> = _completedBrewMetrics.asStateFlow()
     private val _completedBrewSamples = MutableStateFlow<List<BrewSample>>(emptyList())
-    val completedBrewSamples: StateFlow<List<BrewSample>> = _completedBrewSamples.asStateFlow() // Exponera som StateFlow
-    // --- Slut på nytt ---
+    val completedBrewSamples: StateFlow<List<BrewSample>> = _completedBrewSamples.asStateFlow()
+
+    // --- NYTT: State för att veta om tidigare bryggningar finns ---
+    val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()
+        .map { it.isNotEmpty() } // Kolla om listan inte är tom
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false) // Startvärde false
+    // --- SLUT NYTT ---
 
     // --- Funktioner för att uppdatera setup state (oförändrade) ---
     fun selectBean(bean: Bean?) { brewSetupState = brewSetupState.copy(selectedBean = bean) }
@@ -63,7 +64,7 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
     fun isSetupValid(): Boolean { return brewSetupState.selectedBean != null && brewSetupState.doseGrams.toDoubleOrNull()?.let { it > 0 } == true && brewSetupState.selectedMethod != null }
     fun getCurrentSetup(): BrewSetupState { return brewSetupState }
 
-    // --- NY FUNKTION: Ladda resultat för en specifik bryggning ---
+    // --- FUNKTIONER FÖR RESULTAT (Oförändrade) ---
     /**
      * Anropas (t.ex. från BrewScreen via LaunchedEffect) när en bryggning är klar.
      * Hämtar metrics och samples för det givna ID:t.
@@ -95,7 +96,6 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 
-    // --- NY FUNKTION: Rensa resultat ---
     /**
      * Rensar de visade resultaten (metrics och samples).
      * Anropas t.ex. när användaren vill starta en helt ny brygg-setup.
@@ -105,4 +105,37 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
         // Överväg att även återställa setupState här om du vill att formuläret ska nollställas
         // brewSetupState = BrewSetupState()
     }
+
+
+    // --- NY FUNKTION: Ladda inställningar från senaste bryggning ---
+    fun loadLatestBrewSettings() {
+        viewModelScope.launch {
+            // Hämta alla bryggningar (sorterade fallande) och ta den första
+            val latestBrew = repository.getAllBrews().firstOrNull()?.firstOrNull()
+
+            if (latestBrew != null) {
+                // Hämta de relaterade objekten baserat på ID
+                val bean = repository.getBeanById(latestBrew.beanId) // Bean bör alltid finnas
+                val grinder = latestBrew.grinderId?.let { repository.getGrinderById(it) } // Kan vara null
+                val method = latestBrew.methodId?.let { repository.getMethodById(it) } // Kan vara null
+
+                // Uppdatera state med de hämtade värdena
+                brewSetupState = brewSetupState.copy(
+                    selectedBean = bean,
+                    doseGrams = latestBrew.doseGrams.toString(), // Konvertera till String
+                    selectedGrinder = grinder,
+                    grindSetting = latestBrew.grindSetting ?: "", // Använd tomt om null
+                    // Försök konvertera RPM till Int-String, annars tomt
+                    grindSpeedRpm = latestBrew.grindSpeedRpm?.toInt()?.toString() ?: "",
+                    selectedMethod = method,
+                    // Konvertera Temp till String, annars tomt
+                    brewTempCelsius = latestBrew.brewTempCelsius?.toString() ?: "",
+                    // Vi laddar inte gamla notes, användaren skriver nog nya
+                    notes = "" // Rensa notes-fältet
+                )
+            }
+            // Om latestBrew är null (inga bryggningar finns), gör ingenting
+        }
+    }
+    // --- SLUT NY FUNKTION ---
 }

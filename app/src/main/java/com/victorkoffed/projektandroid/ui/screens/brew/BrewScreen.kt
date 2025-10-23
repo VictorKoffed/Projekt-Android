@@ -4,12 +4,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons // <-- NY IMPORT
-import androidx.compose.material.icons.filled.ArrowBack // <-- NY IMPORT
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.History // <-- NY IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -36,10 +38,13 @@ fun BrewScreen(
     val setupState = vm.brewSetupState
     val metrics by vm.completedBrewMetrics.collectAsState() // Resultat (ratio, etc.)
     val samples by vm.completedBrewSamples.collectAsState() // Resultat (grafdata)
+    // --- NYTT STATE ---
+    val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
+    // --- SLUT NYTT ---
 
     val scrollState = rememberScrollState()
+    val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
 
-    // Ladda resultat när completedBrewId ändras (och inte är null)
     LaunchedEffect(completedBrewId) {
         vm.loadBrewResults(completedBrewId)
     }
@@ -48,13 +53,11 @@ fun BrewScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Bryggning") },
-                // --- NY NAVIGATION ICON ---
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka till Home")
                     }
                 }
-                // --- SLUT ---
             )
         }
     ) { paddingValues ->
@@ -68,9 +71,33 @@ fun BrewScreen(
         ) {
             // --- "BEFORE BREW" SEKTION ---
             if (metrics == null) {
-                Text("Innan bryggning", style = MaterialTheme.typography.headlineSmall)
+                Row( // Använd en Row för att placera titel och knapp
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween, // Fördelar utrymmet
+                    verticalAlignment = Alignment.CenterVertically // Centrerar vertikalt
+                ) {
+                    Text("Innan bryggning", style = MaterialTheme.typography.headlineSmall)
 
-                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
+                    // --- NY KNAPP ---
+                    TextButton(
+                        onClick = { vm.loadLatestBrewSettings() },
+                        enabled = hasPreviousBrews // Aktivera bara om det finns bryggningar
+                    ) {
+                        Icon(
+                            Icons.Default.History, // Klock-ikon
+                            contentDescription = null, // Beskrivande text inte nödvändig här
+                            modifier = Modifier.size(ButtonDefaults.IconSize) // Standard ikonstorlek
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing)) // Standard avstånd
+                        Text("Ladda senaste")
+                    }
+                    // --- SLUT NY KNAPP ---
+                }
+                // --- Lägg till lite extra luft under knappen ---
+                Spacer(Modifier.height(8.dp))
+
+                // --- Resten av formuläret ---
+                DropdownSelector(
                     label = "Böna *",
                     options = availableBeans,
                     selectedOption = setupState.selectedBean,
@@ -85,7 +112,7 @@ fun BrewScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
+                DropdownSelector(
                     label = "Kvarn",
                     options = availableGrinders,
                     selectedOption = setupState.selectedGrinder,
@@ -106,7 +133,7 @@ fun BrewScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                DropdownSelector( // <-- DENNA FUNKTION BEHÖVER FINNAS
+                DropdownSelector(
                     label = "Metod *",
                     options = availableMethods,
                     selectedOption = setupState.selectedMethod,
@@ -127,7 +154,10 @@ fun BrewScreen(
                         onStartBrewClick(vm.getCurrentSetup())
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    enabled = vm.isSetupValid()
+                    enabled = vm.isSetupValid(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = buttonColor
+                    )
                 ) {
                     Text("Starta bryggning")
                 }
@@ -168,10 +198,9 @@ fun BrewScreen(
     }
 }
 
-// --- ÅTERSTÄLLD KOD ---
-// Composable för att visa resultatmätvärden (Ratio, Vatten, Dos)
+// ResultMetrics (Oförändrad)
 @Composable
-fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
+fun ResultMetrics(metrics: BrewMetrics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -185,7 +214,6 @@ fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Ratio", style = MaterialTheme.typography.labelMedium)
                 Text(
-                    // Använder metrics.ratio korrekt
                     text = metrics.ratio?.let { "1:%.1f".format(it) } ?: "-",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
@@ -194,7 +222,6 @@ fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Vatten", style = MaterialTheme.typography.labelMedium)
                 Text(
-                    // Använder metrics.waterUsedGrams korrekt
                     text = "%.1f g".format(metrics.waterUsedGrams),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
@@ -203,7 +230,6 @@ fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Dos", style = MaterialTheme.typography.labelMedium)
                 Text(
-                    // Använder metrics.doseGrams korrekt
                     text = "%.1f g".format(metrics.doseGrams),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
@@ -213,7 +239,7 @@ fun ResultMetrics(metrics: BrewMetrics) { // Använder BrewMetrics korrekt
     }
 }
 
-// DropdownSelector (Den korrekta definitionen)
+// DropdownSelector (Oförändrad)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> DropdownSelector(
@@ -254,4 +280,3 @@ fun <T> DropdownSelector(
         }
     }
 }
-// --- SLUT PÅ ÅTERSTÄLLD KOD ---
