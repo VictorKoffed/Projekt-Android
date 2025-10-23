@@ -138,37 +138,58 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
+    // --- UPPDATERAD FUNKTION ---
     /**
-     * Tolkar bytedatan från vågen. Denna metod är den slutgiltiga versionen
-     * baserad på empiriska tester som visar ett 256x fel med 3-bytes läsning.
-     * 1. Läser 2 bytes (16 bitar) för att få rätt skala.
-     * 2. Använder en fast divisor på 100.0f som specificerat.
+     * Tolkar bytedatan från vågen.
+     * 1. Läser vikt (byte 7-10)
+     * 2. Läser flödeshastighet (byte 11-13) om datan finns.
      */
     private fun parseMeasurement(data: ByteArray): ScaleMeasurement? {
-        // Vi behöver åtminstone upp till index 9 och rätt header
+        // Vi behöver åtminstone upp till index 9 (BYTE 10) och rätt header
         if (data.size < 10 || data[0] != 0x03.toByte() || data[1] != 0x0B.toByte()) {
             Log.w("BookooBleClient", "Ogiltigt paket: ${data.toHexString()}")
             return null
         }
 
+        // --- Parse Weight (som tidigare) ---
         // Teckenbyte enligt spec: ASCII '+' (0x2B) eller '-' (0x2D)
-        val signByte = data[6].toInt() and 0xFF
+        val signByte = data[6].toInt() and 0xFF // BYTE 7
         val isNegative = (signByte == 0x2D) // '-'
 
-        // Vikt ligger i gram*100 som 24-bit BIG-endian: High (byte7), Mid (byte8), Low (byte9)
-        val wH = data[7].toInt() and 0xFF
-        val wM = data[8].toInt() and 0xFF
-        val wL = data[9].toInt() and 0xFF
-        var raw = (wH shl 16) or (wM shl 8) or wL
+        // Vikt ligger i gram*100 som 24-bit BIG-endian: High (byte 8), Mid (byte 9), Low (byte 10)
+        val wH = data[7].toInt() and 0xFF // BYTE 8
+        val wM = data[8].toInt() and 0xFF // BYTE 9
+        val wL = data[9].toInt() and 0xFF // BYTE 10
+        var rawWeight = (wH shl 16) or (wM shl 8) or wL
 
-        // Om negativt: neguera värdet
-        if (isNegative) raw = -raw
+        if (isNegative) rawWeight = -rawWeight
+        val grams = rawWeight / 100f // Omvandling gram*100 -> gram
 
-        // Omvandling gram*100 -> gram
-        val grams = raw / 100f
+        // --- NY KOD: Parse Flow Rate ---
+        var flowRate = 0.0f // Default-värde om data saknas
 
-        return ScaleMeasurement(grams)
+        // Kolla om paketet är tillräckligt långt för flödesdata (vi behöver upp till index 12 / BYTE 13)
+        if (data.size >= 13) {
+            // Enligt skärmdump: BYTE 11 (data[10]) är +/- symbol för flöde
+            val flowSignByte = data[10].toInt() and 0xFF
+            val isFlowNegative = (flowSignByte == 0x2D)
+
+            // Enligt skärmdump: BYTE 12 (data[11]) & BYTE 13 (data[12]) är "Flow rate*100"
+            val fH = data[11].toInt() and 0xFF // High byte
+            val fL = data[12].toInt() and 0xFF // Low byte
+            var rawFlow = (fH shl 8) or fL
+
+            if (isFlowNegative) {
+                rawFlow = -rawFlow
+            }
+            // Dela med 100.0f för att få g/s
+            flowRate = rawFlow / 100.0f
+        }
+
+        // Returnera den nya uppdaterade modellen
+        return ScaleMeasurement(grams, flowRate)
     }
+    // --- SLUT PÅ UPPDATERAD FUNKTION ---
 
     private fun ByteArray.toHexString(): String = joinToString(separator = " ") { "%02x".format(it) }
 
@@ -178,4 +199,3 @@ class BookooBleClient(private val context: Context) {
         val COMMAND_CHARACTERISTIC_UUID: UUID = UUID.fromString("0000FF12-0000-1000-8000-00805f9b34fb")
     }
 }
-

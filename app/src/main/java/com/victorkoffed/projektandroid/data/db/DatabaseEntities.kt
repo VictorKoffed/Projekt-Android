@@ -167,7 +167,12 @@ data class BrewSample(
     val timeMillis: Long, // Millisekunder från start
 
     @ColumnInfo(name = "mass_g")
-    val massGrams: Double // Kumulativ massa
+    val massGrams: Double, // Kumulativ massa
+
+    // --- UPPDATERAD DEL ---
+    @ColumnInfo(name = "flow_rate_gs")
+    val flowRateGramsPerSecond: Double?
+    // --- SLUT PÅ UPPDATERING ---
 )
 
 /**
