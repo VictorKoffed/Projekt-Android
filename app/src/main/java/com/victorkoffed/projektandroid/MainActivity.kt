@@ -33,6 +33,9 @@ import com.victorkoffed.projektandroid.ui.screens.grinder.GrinderScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
+// --- NYA IMPORTER ---
+import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
+// --- SLUT NYA IMPORTER ---
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
@@ -100,8 +103,9 @@ class MainActivity : ComponentActivity() {
             ProjektAndroidTheme {
                 // --- State för navigering och dataöverföring ---
                 var currentScreen by remember { mutableStateOf("home") }
-                var lastBrewId by remember { mutableStateOf<Long?>(null) } // Används inte längre för navigering, men kan behållas
-                var selectedBrewId by remember { mutableStateOf<Long?>(null) } // Används för BrewDetailScreen
+                var lastBrewId by remember { mutableStateOf<Long?>(null) }
+                var selectedBrewId by remember { mutableStateOf<Long?>(null) }
+                var selectedBeanId by remember { mutableStateOf<Long?>(null) } // <-- NYTT STATE
 
                 // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
@@ -140,9 +144,8 @@ class MainActivity : ComponentActivity() {
                                     scaleVm = scaleVm,
                                     navigateToScreen = navigateToScreen,
                                     onNavigateToBrewSetup = {
-                                        // Rensa gamla resultat när man går till en ny bryggning
                                         brewVm.clearBrewResults()
-                                        lastBrewId = null // Nollställ ev. gammalt ID
+                                        lastBrewId = null
                                         currentScreen = "brew_setup"
                                     },
                                     onBrewClick = { brewId ->
@@ -157,16 +160,25 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
                                 "grinder" -> GrinderScreen(grinderVm)
-                                "bean" -> BeanScreen(beanVm)
+
+                                // --- UPPDATERAT "bean" CASE ---
+                                "bean" -> BeanScreen(
+                                    vm = beanVm,
+                                    onBeanClick = { beanId ->
+                                        selectedBeanId = beanId // Spara ID
+                                        currentScreen = "bean_detail" // Navigera
+                                    }
+                                )
+                                // --- SLUT UPPDATERING ---
+
                                 "method" -> MethodScreen(methodVm)
 
                                 "brew_setup" -> BrewScreen(
                                     vm = brewVm,
-                                    completedBrewId = null, // Vi visar inte längre "After brew" här
+                                    completedBrewId = null,
                                     scaleConnectionState = scaleConnectionState,
                                     onStartBrewClick = { setupState ->
-                                        // Gå bara vidare om vågen är ansluten (annars visas dialog)
-                                        brewVm.clearBrewResults() // Rensa ev. gamla resultat
+                                        brewVm.clearBrewResults()
                                         currentScreen = "live_brew"
                                     },
                                     onSaveWithoutGraph = {
@@ -174,21 +186,19 @@ class MainActivity : ComponentActivity() {
                                             val newBrewId = brewVm.saveBrewWithoutSamples()
                                             if (newBrewId != null) {
                                                 selectedBrewId = newBrewId
-                                                currentScreen = "brew_detail" // Gå till detalj efter spara
+                                                currentScreen = "brew_detail"
                                             } else {
                                                 Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
-                                                // TODO: Visa felmeddelande för användaren?
                                             }
                                         }
                                     },
                                     onNavigateToScale = {
                                         navigateToScreen("scale")
                                     },
-                                    onClearResult = { /* Behövs inte längre här */ },
+                                    onClearResult = { },
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
 
-                                // --- START PÅ UPPDATERAT BLOCK ---
                                 "live_brew" -> {
                                     val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                     val time by scaleVm.recordingTimeMillis.collectAsState()
@@ -196,7 +206,6 @@ class MainActivity : ComponentActivity() {
                                     val isPaused by scaleVm.isPaused.collectAsState()
                                     val currentMeasurement by scaleVm.measurement.collectAsState()
                                     val weightAtPause by scaleVm.weightAtPause.collectAsState()
-                                    // Hämta det nya countdown-värdet
                                     val countdown by scaleVm.countdown.collectAsState()
 
                                     LiveBrewScreen(
@@ -207,51 +216,65 @@ class MainActivity : ComponentActivity() {
                                         isPaused = isPaused,
                                         weightAtPause = weightAtPause,
                                         connectionState = scaleConnectionState,
-                                        countdown = countdown, // <-- Skicka med det nya värdet
+                                        countdown = countdown,
                                         onStartClick = { scaleVm.startRecording() },
                                         onPauseClick = { scaleVm.pauseRecording() },
                                         onResumeClick = { scaleVm.resumeRecording() },
-
                                         onStopAndSaveClick = {
                                             lifecycleScope.launch {
                                                 val currentSetup = brewVm.getCurrentSetup()
-                                                Log.d("MainActivity", "Saving brew with setup: $currentSetup")
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
-
                                                 if (savedBrewId != null) {
-                                                    selectedBrewId = savedBrewId // Spara det nya ID:t
-                                                    currentScreen = "brew_detail" // Gå till detaljskärmen
+                                                    selectedBrewId = savedBrewId
+                                                    currentScreen = "brew_detail"
                                                 } else {
-                                                    // Om något gick fel ELLER om nedräkningen avbröts
                                                     Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
                                                     currentScreen = "brew_setup"
                                                 }
                                             }
                                         },
-
                                         onTareClick = { scaleVm.tareScale() },
                                         onNavigateBack = { navigateToScreen("scale") },
                                         onResetRecording = { scaleVm.stopRecording() },
                                         navigateTo = navigateToScreen
                                     )
                                 }
-                                // --- SLUT PÅ UPPDATERAT BLOCK ---
-
                                 "brew_detail" -> {
                                     if (selectedBrewId != null) {
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
-                                                selectedBrewId = null // Nollställ ID när man backar
-                                                currentScreen = "home" // Gå till home
+                                                selectedBrewId = null
+                                                currentScreen = "home"
                                             }
                                         )
                                     } else {
-                                        // Fallback om ID saknas
                                         Text("Error: Brew ID missing")
                                         LaunchedEffect(Unit) { currentScreen = "home" }
                                     }
                                 }
+
+                                // --- NYTT "bean_detail" CASE ---
+                                "bean_detail" -> {
+                                    if (selectedBeanId != null) {
+                                        BeanDetailScreen(
+                                            beanId = selectedBeanId!!,
+                                            onNavigateBack = {
+                                                selectedBeanId = null // Nollställ
+                                                currentScreen = "bean" // Gå tillbaka till listan
+                                            },
+                                            onBrewClick = { brewId ->
+                                                selectedBrewId = brewId // Sätt brew ID
+                                                currentScreen = "brew_detail" // Gå till brygg-detalj
+                                            }
+                                        )
+                                    } else {
+                                        // Fallback om ID saknas
+                                        Text("Error: Bean ID missing")
+                                        LaunchedEffect(Unit) { currentScreen = "bean" }
+                                    }
+                                }
+                                // --- SLUT NYTT CASE ---
                             }
                         }
 

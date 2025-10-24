@@ -9,14 +9,14 @@ interface CoffeeRepository {
     suspend fun addGrinder(grinder: Grinder)
     suspend fun updateGrinder(grinder: Grinder)
     suspend fun deleteGrinder(grinder: Grinder)
-    suspend fun getGrinderById(id: Long): Grinder? // <-- NY RAD
+    suspend fun getGrinderById(id: Long): Grinder?
 
     // --- Method ---
     fun getAllMethods(): Flow<List<Method>>
     suspend fun addMethod(method: Method)
     suspend fun updateMethod(method: Method)
     suspend fun deleteMethod(method: Method)
-    suspend fun getMethodById(id: Long): Method? // <-- NY RAD
+    suspend fun getMethodById(id: Long): Method?
 
     // --- Bean ---
     fun getAllBeans(): Flow<List<Bean>>
@@ -33,6 +33,10 @@ interface CoffeeRepository {
     suspend fun deleteBrew(brew: Brew)
     suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long
 
+    // --- NY FUNKTION ---
+    fun getBrewsForBean(beanId: Long): Flow<List<Brew>>
+    // --- SLUT NY FUNKTION ---
+
     // --- BrewSample ---
     fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
     suspend fun addBrewSamples(samples: List<BrewSample>)
@@ -40,4 +44,3 @@ interface CoffeeRepository {
     // --- BrewMetrics (View) ---
     fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?>
 }
-

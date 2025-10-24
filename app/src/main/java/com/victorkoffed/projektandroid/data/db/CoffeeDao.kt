@@ -10,14 +10,14 @@ interface CoffeeDao {
     @Update suspend fun updateGrinder(grinder: Grinder)
     @Delete suspend fun deleteGrinder(grinder: Grinder)
     @Query("SELECT * FROM Grinder ORDER BY name ASC") fun getAllGrinders(): Flow<List<Grinder>>
-    @Query("SELECT * FROM Grinder WHERE grinder_id = :id") suspend fun getGrinderById(id: Long): Grinder? // <-- NY RAD
+    @Query("SELECT * FROM Grinder WHERE grinder_id = :id") suspend fun getGrinderById(id: Long): Grinder?
 
     // --- Method ---
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertMethod(method: Method)
     @Update suspend fun updateMethod(method: Method)
     @Delete suspend fun deleteMethod(method: Method)
     @Query("SELECT * FROM Method ORDER BY name ASC") fun getAllMethods(): Flow<List<Method>>
-    @Query("SELECT * FROM Method WHERE method_id = :id") suspend fun getMethodById(id: Long): Method? // <-- NY RAD
+    @Query("SELECT * FROM Method WHERE method_id = :id") suspend fun getMethodById(id: Long): Method?
 
     // --- Bean ---
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertBean(bean: Bean)
@@ -32,6 +32,11 @@ interface CoffeeDao {
     @Delete suspend fun deleteBrew(brew: Brew)
     @Query("SELECT * FROM Brew WHERE brew_id = :id") suspend fun getBrewById(id: Long): Brew?
     @Query("SELECT * FROM Brew ORDER BY started_at DESC") fun getAllBrews(): Flow<List<Brew>>
+
+    // --- NY QUERY ---
+    @Query("SELECT * FROM Brew WHERE bean_id = :beanId ORDER BY started_at DESC")
+    fun getBrewsForBean(beanId: Long): Flow<List<Brew>>
+    // --- SLUT NY QUERY ---
 
     // --- BrewSample ---
     @Insert suspend fun insertBrewSamples(samples: List<BrewSample>)
@@ -48,4 +53,3 @@ interface CoffeeDao {
         return brewId
     }
 }
-

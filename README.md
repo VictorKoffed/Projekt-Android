@@ -45,7 +45,6 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Fixa så att första gången man trycker på playknappen i livebrew så tare vågen sig automatiskt och det dyker upp en timer på 3 sek?
 2. Lägga till i böna att trycka fram alla brews som är skapade utav denna böna?
 3. Lägga till kamerafunktion
 4. Förbättra HomeScreen:

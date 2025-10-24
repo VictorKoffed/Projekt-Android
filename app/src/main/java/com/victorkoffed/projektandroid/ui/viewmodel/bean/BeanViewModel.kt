@@ -64,41 +64,8 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 
-    /**
-     * Updates an existing bean.
-     * Tar nu emot roastDateString och initialWeightString.
-     */
-    fun updateBean(
-        bean: Bean, // Tar emot det gamla objektet
-        // Tar emot de nya värdena som strängar
-        name: String,
-        roaster: String?,
-        roastDateString: String?,
-        initialWeightString: String?,
-        remainingWeight: Double,
-        notes: String?
-    ) {
-        val roastDate = parseDateString(roastDateString)
-        val initialWeight = initialWeightString?.toDoubleOrNull()
-
-        // Skapa en kopia av det gamla objektet med uppdaterade värden
-        val updatedBean = bean.copy(
-            name = name,
-            roaster = roaster,
-            roastDate = roastDate,
-            initialWeightGrams = initialWeight,
-            remainingWeightGrams = remainingWeight,
-            notes = notes
-        )
-        viewModelScope.launch {
-            repository.updateBean(updatedBean)
-        }
-    }
-
-    /** Deletes a bean from the database. */
-    fun deleteBean(bean: Bean) {
-        viewModelScope.launch {
-            repository.deleteBean(bean)
-        }
-    }
+    // --- BORTTAGET ---
+    // updateBean (Flyttad till BeanDetailViewModel)
+    // deleteBean (Flyttad till BeanDetailViewModel)
+    // --- SLUT BORTTAGET ---
 }
