@@ -55,8 +55,6 @@ import com.victorkoffed.projektandroid.data.db.Method
 // --- NYA IMPORTER FÖR KAMERA ---
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
-// --- NY IMPORT FÖR HELSKÄRMSBILD ---
-import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // --- SLUT NYA IMPORTER ---
@@ -124,16 +122,15 @@ class MainActivity : ComponentActivity() {
                 var tempCapturedImageUri by remember { mutableStateOf<String?>(null) }
                 // --- SLUT NYTT STATE ---
 
-                // --- ÄNDRING 1: NYTT STATE FÖR HELSKÄRMSBILD ---
-                var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
-                // --- SLUT ÄNDRING 1 ---
-
                 // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
                 val availableMethods by brewVm.availableMethods.collectAsState()
 
-                // --- Hämta vågens anslutningsstatus ---
-                val scaleConnectionState by scaleVm.connectionState.collectAsState()
+                // --- Hämta vågens anslutningsstatus - MED INITIALVÄRDE ---
+                val scaleConnectionState by scaleVm.connectionState.collectAsState(
+                    initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
+                )
+                // --- SLUT ÄNDRING ---
 
                 // --- Funktion för att byta skärm ---
                 val navigateToScreen: (String) -> Unit = { screenName ->
@@ -147,6 +144,16 @@ class MainActivity : ComponentActivity() {
                     NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
                     NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
+
+                // --- NYTT: Hanterar automatisk navigering tillbaka från våg-skärmen ---
+                LaunchedEffect(scaleConnectionState) {
+                    // Om vi just anslutit OCH vi är på våg-skärmen
+                    if (scaleConnectionState is BleConnectionState.Connected && currentScreen == "scale") {
+                        // Gå tillbaka till den skärm vi kom från (antingen "home" eller "brew_setup")
+                        currentScreen = navigationOrigin
+                    }
+                }
+                // --- SLUT NYTT ---
 
 
                 Surface(color = MaterialTheme.colorScheme.background) {
@@ -163,7 +170,14 @@ class MainActivity : ComponentActivity() {
                                     homeVm = homeVm,
                                     coffeeImageVm = coffeeImageVm,
                                     scaleVm = scaleVm,
-                                    navigateToScreen = navigateToScreen,
+                                    // --- ÄNDRAD: Vi skickar en anpassad lambda för att sätta "home" som origin ---
+                                    navigateToScreen = { screenName ->
+                                        if (screenName == "scale") {
+                                            navigationOrigin = "home" // Sätt ursprung
+                                        }
+                                        currentScreen = screenName
+                                    },
+                                    // --- SLUT ÄNDRAD ---
                                     onNavigateToBrewSetup = {
                                         brewVm.clearBrewResults()
                                         lastBrewId = null
@@ -179,7 +193,11 @@ class MainActivity : ComponentActivity() {
                                 )
                                 "scale" -> ScaleConnectScreen(
                                     vm = scaleVm,
-                                    onNavigateBack = { navigateToScreen("home") }
+                                    // --- ÄNDRAD: Gå tillbaka till 'navigationOrigin' ---
+                                    onNavigateBack = {
+                                        currentScreen = navigationOrigin // Gå dit vi kom ifrån
+                                    }
+                                    // --- SLUT ÄNDRAD ---
                                 )
                                 "grinder" -> GrinderScreen(grinderVm)
 
@@ -196,7 +214,7 @@ class MainActivity : ComponentActivity() {
                                 "brew_setup" -> BrewScreen(
                                     vm = brewVm,
                                     completedBrewId = null,
-                                    scaleConnectionState = scaleConnectionState,
+                                    scaleConnectionState = scaleConnectionState, // Skicka med det insamlade state
                                     onStartBrewClick = { setupState ->
                                         brewVm.clearBrewResults()
                                         currentScreen = "live_brew"
@@ -213,9 +231,12 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     },
+                                    // --- ÄNDRAD: Sätt 'navigationOrigin' när vi går till vågen ---
                                     onNavigateToScale = {
+                                        navigationOrigin = "brew_setup" // Sätt ursprung
                                         navigateToScreen("scale")
                                     },
+                                    // --- SLUT ÄNDRAD ---
                                     onClearResult = { },
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
@@ -256,7 +277,9 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         onTareClick = { scaleVm.tareScale() },
-                                        onNavigateBack = { navigateToScreen("scale") },
+                                        // --- ÄNDRAD: Navigera tillbaka till "brew_setup" ---
+                                        onNavigateBack = { navigateToScreen("brew_setup") },
+                                        // --- SLUT ÄNDRAD ---
                                         onResetRecording = { scaleVm.stopRecording() },
                                         navigateTo = navigateToScreen
                                     )
@@ -279,7 +302,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        // --- ÄNDRING 2: Anropet till BrewDetailScreen är uppdaterat ---
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
@@ -289,13 +311,11 @@ class MainActivity : ComponentActivity() {
                                             onNavigateToCamera = {
                                                 currentScreen = "camera_screen"
                                             },
-                                            // Detta är den saknade parametern som orsakade felet:
-                                            onNavigateToImageFullscreen = { uri ->
-                                                fullscreenImageUrl = uri
-                                                currentScreen = "fullscreen_image"
-                                            }
+                                            // --- NY RAD FÖR ATT FIXA FELET (bekräftad) ---
+                                            onNavigateToImageFullscreen = { /* TODO: Implementera helskärm */ }
+                                            // --- SLUT NY RAD ---
                                         )
-                                        // --- SLUT PÅ ÄNDRING 2 ---
+                                        // --- SLUT PÅ NYTT ---
                                     } else {
                                         Text("Error: Brew ID missing")
                                     }
@@ -316,24 +336,6 @@ class MainActivity : ComponentActivity() {
                                 }
                                 // --- SLUT NYTT CASE ---
 
-                                // --- ÄNDRING 3: NYTT CASE FÖR HELSKÄRMSBILD ---
-                                "fullscreen_image" -> {
-                                    if (fullscreenImageUrl != null) {
-                                        FullscreenImageScreen(
-                                            uri = fullscreenImageUrl!!,
-                                            onNavigateBack = {
-                                                fullscreenImageUrl = null
-                                                currentScreen = "brew_detail" // Gå tillbaka till detaljerna
-                                            }
-                                        )
-                                    } else {
-                                        // Fallback om URI är null
-                                        Text("Error: Image URI missing")
-                                        LaunchedEffect(Unit) { currentScreen = "brew_detail" }
-                                    }
-                                }
-                                // --- SLUT ÄNDRING 3 ---
-
                                 "bean_detail" -> {
                                     if (selectedBeanId != null) {
                                         BeanDetailScreen(
@@ -347,7 +349,9 @@ class MainActivity : ComponentActivity() {
                                                 selectedBrewId = brewId
                                                 currentScreen = "brew_detail"
                                             }
+                                            // --- KORRIGERING: Tog bort skräptecken ---
                                         )
+                                        // --- SLUT KORRIGERING ---
                                     } else {
                                         // Fallback om ID saknas
                                         Text("Error: Bean ID missing")

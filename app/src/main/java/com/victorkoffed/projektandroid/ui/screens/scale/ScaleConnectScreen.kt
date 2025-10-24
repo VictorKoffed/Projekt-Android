@@ -20,26 +20,25 @@ import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermissionLauncher
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
+import kotlinx.coroutines.flow.firstOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScaleConnectScreen(
     vm: ScaleViewModel,
-    onNavigateBack: () -> Unit // <-- NY PARAMETER
+    onNavigateBack: () -> Unit
 ) {
-    val connectionState by vm.connectionState.collectAsState()
+    val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Connect to Scale") },
-                // --- NY NAVIGATION ICON ---
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
-                // --- SLUT ---
             )
         }
     ) { padding ->
@@ -51,48 +50,54 @@ fun ScaleConnectScreen(
         ) { state ->
             when (state) {
                 is BleConnectionState.Connected -> {
-                    val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f)) // Lägg till initialValue
+                    val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f))
+                    // Hämta remember-status direkt från VM
+                    val rememberScaleEnabled = vm.isRememberScaleEnabled()
+
                     ConnectedView(
                         deviceName = state.deviceName,
                         measurement = measurement,
+                        // Skicka med värden till ConnectedView
+                        rememberScale = rememberScaleEnabled,
+                        onRememberScaleChange = { vm.setRememberScaleEnabled(it) },
                         onDisconnect = { vm.disconnect() },
                         onTare = { vm.tareScale() }
                     )
                 }
-                // --- ÄNDRING: Hanterar nu Disconnected, Connecting och Error här ---
                 else -> { // Handles Disconnected, Connecting, Error
                     val devices by vm.devices.collectAsState()
                     val isScanning by vm.isScanning.collectAsState()
-                    val error by vm.error.collectAsState() // Detta state används inte längre direkt för att visa fel, men kan vara bra för loggning
+                    val error by vm.error.collectAsState()
                     val requestPermissions = rememberBluetoothPermissionLauncher { granted ->
                         if (granted) vm.startScan()
                     }
                     ScanningView(
                         devices = devices,
                         isScanning = isScanning,
-                        connectionState = state, // Skicka med hela state (Disconnected, Connecting eller Error)
-                        // Om state är Error, använd dess meddelande, annars null
+                        connectionState = state,
                         error = (state as? BleConnectionState.Error)?.message,
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
-                        onDeviceClick = {
-                            // --- NYTT: Tillåt bara connect om state är Disconnected eller Error ---
+                        // Använd explicit namn istället för 'it'
+                        onDeviceClick = { device -> // Explicit namn 'device'
                             if (state is BleConnectionState.Disconnected || state is BleConnectionState.Error) {
-                                vm.connect(it)
+                                vm.connect(device) // Använd 'device' här
                             }
                         }
                     )
                 }
-                // --- SLUT ÄNDRING ---
             }
         }
     }
 }
 
 
+// --- ConnectedView (oförändrad från förra svaret) ---
 @Composable
 private fun ConnectedView(
     deviceName: String,
     measurement: ScaleMeasurement,
+    rememberScale: Boolean,
+    onRememberScaleChange: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
     onTare: () -> Unit
 ) {
@@ -105,7 +110,19 @@ private fun ConnectedView(
     ) {
         Text("Ansluten till:", style = MaterialTheme.typography.titleMedium)
         Text(deviceName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(16.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { onRememberScaleChange(!rememberScale) }
+        ) {
+            Checkbox(
+                checked = rememberScale,
+                onCheckedChange = onRememberScaleChange
+            )
+            Text("Remember this scale")
+        }
+        Spacer(Modifier.height(16.dp))
 
         Text("Weight", style = MaterialTheme.typography.titleLarge)
         Text(
@@ -125,15 +142,16 @@ private fun ConnectedView(
     }
 }
 
-// ScanningView, DeviceList, och DeviceCard behöver inga ändringar
+
+// --- ScanningView definitionen behöver sina parametrar ---
 @Composable
 private fun ScanningView(
-    devices: List<DiscoveredDevice>,
-    isScanning: Boolean,
-    connectionState: BleConnectionState, // Tar nu emot hela state (Disconnected, Connecting, Error)
-    error: String?, // Felmeddelande (kan vara null)
-    onToggleScan: () -> Unit,
-    onDeviceClick: (DiscoveredDevice) -> Unit
+    devices: List<DiscoveredDevice>, // <--- Lades till
+    isScanning: Boolean,             // <--- Lades till
+    connectionState: BleConnectionState, // <--- Lades till
+    error: String?,                  // <--- Lades till
+    onToggleScan: () -> Unit,        // <--- Lades till
+    onDeviceClick: (DiscoveredDevice) -> Unit // <--- Lades till
 ) {
     Column(
         modifier = Modifier
@@ -147,7 +165,6 @@ private fun ScanningView(
             onToggleScan = onToggleScan
         )
 
-        // Visa felmeddelande om det finns (från connectionState.Error)
         error?.let {
             Text(
                 text = "Error: $it",
@@ -156,12 +173,12 @@ private fun ScanningView(
             )
         }
         Divider()
-        // --- ÄNDRING: Skicka med connectionState till DeviceList ---
-        DeviceList(devices, isScanning, connectionState, onDeviceClick)
-        // --- SLUT ÄNDRING ---
+        DeviceList(devices, isScanning, connectionState, onDeviceClick) // Skicka vidare
     }
 }
 
+
+// --- ScanControls (oförändrad) ---
 @Composable
 private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionState, onToggleScan: () -> Unit) {
     Row(
@@ -169,13 +186,10 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // --- ÄNDRING: Uppdaterat enabled-villkor ---
         Button(
             onClick = onToggleScan,
-            // Aktivera om state är Disconnected ELLER Error
             enabled = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
         ) {
-            // --- SLUT ÄNDRING ---
             when {
                 connectionState is BleConnectionState.Connecting -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
@@ -187,29 +201,25 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
                     Spacer(Modifier.width(8.dp))
                     Text("Stop scanning")
                 }
-                // Visa "Starta skanning" för både Disconnected och Error
                 else -> Text("Start scanning")
             }
         }
     }
 }
 
-// --- ÄNDRING: Lade till connectionState som parameter ---
+// --- DeviceList (oförändrad) ---
 @Composable
 private fun DeviceList(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
-    connectionState: BleConnectionState, // <-- NY PARAMETER
+    connectionState: BleConnectionState,
     onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
-// --- SLUT ÄNDRING ---
     if (isScanning && devices.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Scanning for devices...")
         }
-        // --- ÄNDRING: Använder den nya parametern här ---
-    } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) { // Visa bara om inget fel visas
-        // --- SLUT ÄNDRING ---
+    } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No devices found.")
         }
@@ -222,14 +232,15 @@ private fun DeviceList(
     }
 }
 
+// --- DeviceCard (oförändrad) ---
 @Composable
 private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick), // Klickbarheten är kvar
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White // <-- ENDA ÄNDRINGEN: vita kort
+            containerColor = Color.White
         )
     ) {
         Column(Modifier.padding(16.dp)) {

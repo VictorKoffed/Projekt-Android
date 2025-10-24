@@ -47,17 +47,14 @@ private val MockupColor = Color(0xFFDCC7AA)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // ... (parametrarna är oförändrade)
     homeVm: HomeViewModel,
     coffeeImageVm: CoffeeImageViewModel,
-    scaleVm: ScaleViewModel, // Ny parameter
-    navigateToScreen: (String) -> Unit, // Ny parameter
+    scaleVm: ScaleViewModel,
+    navigateToScreen: (String) -> Unit,
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
-    // --- NYA PARAMETRAR FÖR ATT INAKTIVERA KNAPP ---
     availableBeans: List<Bean>,
     availableMethods: List<Method>
-    // --- SLUT ---
 ) {
     // Hämta states från ViewModels
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -74,9 +71,11 @@ fun HomeScreen(
     // State för den formaterade "tid sedan"-strängen
     var timeSinceLastCoffee by remember { mutableStateOf<String?>("...") }
 
-    // --- NYTT: Hämta connection state ---
-    val scaleConnectionState by scaleVm.connectionState.collectAsState()
-    // --- SLUT ---
+    // --- NYTT: Hämta connection state - MED INITIALVÄRDE ---
+    val scaleConnectionState by scaleVm.connectionState.collectAsState(
+        initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
+    )
+    // --- SLUT ÄNDRING ---
 
     // --- NYTT STATE FÖR VARNINGSDIALOG ---
     var showSetupWarningDialog by remember { mutableStateOf(false) }

@@ -6,6 +6,11 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+// --- NYA IMPORTER ---
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraControl
+import androidx.camera.core.FocusMeteringAction
+// --- SLUT NYA IMPORTER ---
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -14,6 +19,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+// --- NYA IMPORTER ---
+import androidx.compose.foundation.gestures.detectTapGestures
+// --- SLUT NYA IMPORTER ---
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -25,6 +33,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+// --- NYA IMPORTER ---
+import androidx.compose.ui.input.pointer.pointerInput
+// --- SLUT NYA IMPORTER ---
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -99,7 +110,7 @@ private fun CameraCaptureScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    // val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) } // <-- BORTTAGEN
 
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     val imageCapture = remember { ImageCapture.Builder().build() }
@@ -107,50 +118,65 @@ private fun CameraCaptureScreen(
         CameraSelector.Builder().requireLensFacing(lensFacing).build()
     }
 
+    // --- NYTT: Kom ihåg PreviewView och CameraControl ---
+    val previewView = remember { PreviewView(context) }
+    var cameraControl: CameraControl? by remember { mutableStateOf(null) }
+    // --- SLUT NYTT ---
+
+    // --- NYTT: LaunchedEffect för att binda CameraX ---
+    // Denna körs när composable startar och varje gång lensFacing ändras
+    LaunchedEffect(lensFacing) {
+        val cameraProvider = context.getCameraProvider() // Använd suspend-hjälpfunktionen
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        try {
+            // Avbinda allt och bind sedan om
+            cameraProvider.unbindAll()
+            val camera = cameraProvider.bindToLifecycle( // Spara referensen till kameran
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                imageCapture
+            )
+            cameraControl = camera.cameraControl // Spara cameraControl för tap-to-focus
+        } catch (e: Exception) {
+            Log.e("CameraScreen", "Use case binding failed", e)
+        }
+    }
+    // --- SLUT NYTT ---
+
+
     // Box som täcker hela skärmen
     Box(modifier = Modifier.fillMaxSize()) {
         // AndroidView som håller CameraX PreviewView
         AndroidView(
-            factory = { ctx ->
-                val previewView = PreviewView(ctx)
-                val executor = ContextCompat.getMainExecutor(ctx)
-
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
-                    // Skapa och binda Preview
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
+            factory = { previewView }, // <-- ANVÄND DEN IHÅGKOMNA PREVIEWVIEW
+            modifier = Modifier
+                .fillMaxSize()
+                // --- NYTT: Lade till tap-to-focus ---
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        cameraControl?.let {
+                            val meteringPoint = previewView.meteringPointFactory
+                                .createPoint(offset.x, offset.y)
+                            val action = FocusMeteringAction.Builder(meteringPoint).build()
+                            it.startFocusAndMetering(action)
+                        }
                     }
-
-                    try {
-                        // Avbinda allt och bind sedan om
-                        cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            cameraSelector,
-                            preview,
-                            imageCapture
-                        )
-                    } catch (e: Exception) {
-                        Log.e("CameraScreen", "Use case binding failed", e)
-                    }
-                }, executor)
-
-                previewView
-            },
-            modifier = Modifier.fillMaxSize()
+                }
+            // --- SLUT NYTT ---
         )
 
-        // Knapp för att gå tillbaka (uppe i vänstra hörnet)
-        IconButton(
-            onClick = onNavigateBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-        ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-        }
+        // --- BORTTAGEN: Knapp för att gå tillbaka (uppe i vänstra hörnet) ---
+        // IconButton(
+        //     onClick = onNavigateBack,
+        //     modifier = Modifier
+        //         .align(Alignment.TopStart)
+        //         ...
+        // ) { ... }
+        // --- SLUT BORTTAGEN ---
 
         // Box för kontrollerna (längst ner)
         Box(
@@ -166,7 +192,7 @@ private fun CameraCaptureScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Knapp för att byta kamera
+                // Knapp för att byta kamera (Oförändrad)
                 IconButton(onClick = {
                     lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
                         CameraSelector.LENS_FACING_FRONT
@@ -177,7 +203,7 @@ private fun CameraCaptureScreen(
                     Icon(Icons.Default.Cameraswitch, contentDescription = "Switch Camera", tint = Color.White)
                 }
 
-                // Avtryckare
+                // Avtryckare (Oförändrad)
                 IconButton(
                     onClick = {
                         takePhoto(
@@ -196,8 +222,11 @@ private fun CameraCaptureScreen(
                     Icon(Icons.Default.PhotoCamera, contentDescription = "Take Picture", tint = Color.Black)
                 }
 
-                // Tom yta för att centrera avtryckaren
-                Spacer(modifier = Modifier.size(48.dp))
+                // --- ÄNDRAD: Byt ut Spacer mot "Tillbaka"-knappen ---
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+                // --- SLUT ÄNDRAD ---
             }
         }
     }

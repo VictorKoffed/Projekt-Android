@@ -73,21 +73,31 @@ fun LiveBrewScreen(
 ) {
     var showFlowInfo by remember { mutableStateOf(true) } // Denna styr nu bara textvisningen
     var showDisconnectedAlert by remember { mutableStateOf(false) }
-    var alertMessage by remember { mutableStateOf("The connection to the scale was lost during recording. Recording has been stopped.") }
+    var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") } // Mer generell starttext
 
-    // --- NYTT: Vi kollar även countdown här ---
-    LaunchedEffect(connectionState, isRecording, countdown) {
-        // Om vi tappar anslutning MEDAN vi spelar in ELLER räknar ner
-        if ((isRecording || countdown != null) && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
+    // --- ÄNDRAD LaunchedEffect ---
+    // Kollar nu ALLTID connectionState när vi är på denna skärm
+    LaunchedEffect(connectionState) {
+        // Om vi tappar anslutning (oavsett inspelningsstatus)
+        if (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) {
+            // Sätt specifikt felmeddelande om det är ett Error-state
             if (connectionState is BleConnectionState.Error) {
-                alertMessage = "Error connecting to the scale: ${connectionState.message}. Recording has been stopped."
+                alertMessage = "Error connecting to the scale: ${connectionState.message}."
             } else {
-                alertMessage = "The connection to the scale was lost during recording. Recording has been stopped.."
+                alertMessage = "The connection to the scale was lost."
             }
-            onResetRecording() // Nollställer (vilket även stoppar countdown)
-            showDisconnectedAlert = true
+            // Om inspelning eller nedräkning pågick, lägg till info om att den stoppats
+            if (isRecording || isPaused || countdown != null) {
+                alertMessage += " Recording has been stopped."
+                onResetRecording() // Nollställ inspelning/nedräkning
+            }
+            showDisconnectedAlert = true // Visa alltid dialogen vid disconnect/error
+        } else {
+            // Om vi ansluter igen (eller var anslutna från början), göm dialogen
+            showDisconnectedAlert = false
         }
     }
+    // --- SLUT ÄNDRAD LaunchedEffect ---
 
     Scaffold(
         topBar = {
@@ -170,15 +180,16 @@ fun LiveBrewScreen(
         if (showDisconnectedAlert) {
             AlertDialog(
                 onDismissRequest = {
+                    // Stäng dialogen men navigera bara om vi inte redan är på scale-skärmen
                     showDisconnectedAlert = false
-                    navigateTo("scale")
+                    navigateTo("scale") // Navigera alltid till scale-skärmen vid disconnect
                 },
                 title = { Text("Connection Broken") },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        navigateTo("scale")
+                        navigateTo("scale") // Navigera till scale-skärmen
                     }) {
                         Text("OK")
                     }
@@ -215,7 +226,7 @@ fun StatusDisplay(
                 countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
                 isPaused -> Color.Gray
                 isRecording -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> Color.Gray
+                else -> Color.Gray // Ändrad till grå när ingen inspelning pågår
             }
         )
     ) {
