@@ -43,6 +43,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. i pulled 340g in the live brew chart and in the detailbrewscreen it sayed 429g?
 2. Fix  banner to Bean, Method och grinder with a fitting background
+3. Fix the flowgraph in the BrewDetailScreen, make it to ignore high numbers, normal value around 0-20 g/s?
 
 ##  ToDo List
 
