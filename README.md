@@ -41,13 +41,12 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (And todo)
 
-1. Fix  banner to Bean, Method och grinder with a fitting background
-
 ##  ToDo List
 
 1. Lägga till kamerafunktion
 2. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
+3. Fix  banner to Bean, Method och grinder with a fitting background
 3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
 4. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
