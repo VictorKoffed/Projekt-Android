@@ -208,7 +208,7 @@ fun BrewItemCard(brew: Brew, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = Color.White) // <-- VITA KORT
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

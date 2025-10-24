@@ -105,7 +105,9 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf("home") }
                 var lastBrewId by remember { mutableStateOf<Long?>(null) }
                 var selectedBrewId by remember { mutableStateOf<Long?>(null) }
-                var selectedBeanId by remember { mutableStateOf<Long?>(null) } // <-- NYTT STATE
+                var selectedBeanId by remember { mutableStateOf<Long?>(null) }
+
+                var navigationOrigin by remember { mutableStateOf("home") }
 
                 // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
@@ -149,6 +151,7 @@ class MainActivity : ComponentActivity() {
                                         currentScreen = "brew_setup"
                                     },
                                     onBrewClick = { brewId ->
+                                        navigationOrigin = "home"
                                         selectedBrewId = brewId
                                         currentScreen = "brew_detail"
                                     },
@@ -161,15 +164,13 @@ class MainActivity : ComponentActivity() {
                                 )
                                 "grinder" -> GrinderScreen(grinderVm)
 
-                                // --- UPPDATERAT "bean" CASE ---
                                 "bean" -> BeanScreen(
                                     vm = beanVm,
                                     onBeanClick = { beanId ->
-                                        selectedBeanId = beanId // Spara ID
-                                        currentScreen = "bean_detail" // Navigera
+                                        selectedBeanId = beanId
+                                        currentScreen = "bean_detail"
                                     }
                                 )
-                                // --- SLUT UPPDATERING ---
 
                                 "method" -> MethodScreen(methodVm)
 
@@ -185,6 +186,7 @@ class MainActivity : ComponentActivity() {
                                         lifecycleScope.launch {
                                             val newBrewId = brewVm.saveBrewWithoutSamples()
                                             if (newBrewId != null) {
+                                                navigationOrigin = "brew_setup" // Sätt ursprung
                                                 selectedBrewId = newBrewId
                                                 currentScreen = "brew_detail"
                                             } else {
@@ -225,6 +227,7 @@ class MainActivity : ComponentActivity() {
                                                 val currentSetup = brewVm.getCurrentSetup()
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
                                                 if (savedBrewId != null) {
+                                                    navigationOrigin = "live_brew" // Sätt ursprung
                                                     selectedBrewId = savedBrewId
                                                     currentScreen = "brew_detail"
                                                 } else {
@@ -239,33 +242,42 @@ class MainActivity : ComponentActivity() {
                                         navigateTo = navigateToScreen
                                     )
                                 }
+
+                                // ==========================================
+                                // HÄR ÄR DEN ENDA ÄNDRINGEN
+                                // ==========================================
                                 "brew_detail" -> {
                                     if (selectedBrewId != null) {
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
                                                 selectedBrewId = null
-                                                currentScreen = "home"
+                                                currentScreen = navigationOrigin
                                             }
                                         )
                                     } else {
+                                        // DEN FARLIGA LaunchedEffect ÄR NU BORTTAGEN.
+                                        // Vi visar bara felet. Detta kommer bara visas
+                                        // en bråkdels sekund under ut-animeringen.
                                         Text("Error: Brew ID missing")
-                                        LaunchedEffect(Unit) { currentScreen = "home" }
                                     }
                                 }
+                                // ==========================================
+                                // SLUT PÅ ÄNDRING
+                                // ==========================================
 
-                                // --- NYTT "bean_detail" CASE ---
                                 "bean_detail" -> {
                                     if (selectedBeanId != null) {
                                         BeanDetailScreen(
                                             beanId = selectedBeanId!!,
                                             onNavigateBack = {
-                                                selectedBeanId = null // Nollställ
-                                                currentScreen = "bean" // Gå tillbaka till listan
+                                                selectedBeanId = null
+                                                currentScreen = "bean"
                                             },
                                             onBrewClick = { brewId ->
-                                                selectedBrewId = brewId // Sätt brew ID
-                                                currentScreen = "brew_detail" // Gå till brygg-detalj
+                                                navigationOrigin = "bean_detail" // Sätt ursprung
+                                                selectedBrewId = brewId
+                                                currentScreen = "brew_detail"
                                             }
                                         )
                                     } else {
