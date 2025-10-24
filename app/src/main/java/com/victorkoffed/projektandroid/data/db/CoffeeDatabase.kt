@@ -44,7 +44,7 @@ abstract class CoffeeDatabase : RoomDatabase() {
                 )
                     .addCallback(DatabaseCallback) // Lägger till våra Triggers
                     // --- ÄNDRING 2: Lade till fallback ---
-                    .fallbackToDestructiveMigration() // Raderar och återskapar DB vid versionsändring
+                    .fallbackToDestructiveMigration(false) // Raderar och återskapar DB vid versionsändring
                     // --- SLUT ÄNDRING 2 ---
                     .build()
                 INSTANCE = instance

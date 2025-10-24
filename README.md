@@ -43,10 +43,12 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (Bugfix)
 
+1. Scale disconneced in livebrew crashes the app, must be updated tp the new navigation
+
 ##  ToDo List
 
-1. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-2. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+1. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports (UI map left).
+2. Data migration to new device?
 
 ## 👤 Author
 

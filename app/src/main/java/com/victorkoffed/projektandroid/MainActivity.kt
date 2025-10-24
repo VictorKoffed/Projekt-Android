@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,14 +50,10 @@ import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
-import com.victorkoffed.projektandroid.data.db.Bean
-import com.victorkoffed.projektandroid.data.db.Method
 // --- NYA IMPORTER FÖR NAVIGERING OCH KAMERA ---
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavBackStackEntry
 import com.victorkoffed.projektandroid.ui.navigation.Screen // <-- NY IMPORT
 import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // --- SLUT NYA IMPORTER ---
 

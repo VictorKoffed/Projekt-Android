@@ -6,6 +6,7 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.Build // <-- NY IMPORT
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -15,14 +16,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay // <-- NY IMPORT
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import java.util.*
-import android.bluetooth.BluetoothProfile // <-- Se till att denna import finns
+import android.bluetooth.BluetoothProfile
+
+// --- KONSTANTER FÖR API 31-VÄRDEN ---
+private const val GATT_SUCCESS_COMPAT = 0 // Motsvarar BluetoothStatusCodes.SUCCESS och BluetoothGatt.GATT_SUCCESS
+private const val GATT_UNKNOWN_ERROR_COMPAT = -1 // Motsvarar BluetoothStatusCodes.ERROR_UNKNOWN
 
 @SuppressLint("MissingPermission")
 class BookooBleClient(private val context: Context) {
@@ -95,8 +100,11 @@ class BookooBleClient(private val context: Context) {
             }
         }
 
+        @Deprecated("Deprecated in Java") // Lägg till denna för att tysta varningen för hela funktionen
+        @Suppress("DEPRECATION") // Tysta varningen specifikt för characteristic.value
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID) {
+                // characteristic.value är deprecated, men fungerar. getValue() är alternativet.
                 parseMeasurement(characteristic.value)?.let {
                     scope.launch { measurements.emit(it) }
                 }
@@ -216,39 +224,34 @@ class BookooBleClient(private val context: Context) {
         handleDisconnect(currentGatt)
     }
 
+    @Suppress("DEPRECATION") // Tysta varningen för den äldre writeCharacteristic/value-användningen
     fun sendTareCommand() {
         val commandChar = gatt?.getService(BOOKOO_SERVICE_UUID)?.getCharacteristic(COMMAND_CHARACTERISTIC_UUID)
-        if (gatt == null || commandChar == null) { // <-- Lägg till null-check för gatt
+        if (gatt == null || commandChar == null) {
             Log.e("BookooBleClient", "Cannot send tare command: gatt or command characteristic not found.")
             return
         }
         val tareCommand = byteArrayOf(0x03, 0x0A, 0x01, 0x00, 0x00, 0x08)
 
-        // --- Förbättrad skrivning ---
-        // Android < 33: Behöver sätta writeType manuellt
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
-            commandChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        }
-        // Android >= 33: Använd writeCharacteristic med writeType som argument
-        val result = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            gatt?.writeCharacteristic(commandChar, tareCommand, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        // Förbättrad skrivning
+        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt?.writeCharacteristic(commandChar, tareCommand, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ?: GATT_UNKNOWN_ERROR_COMPAT // Använd kompatibel konstant
         } else {
-            // För äldre versioner, sätt value först
-            commandChar.value = tareCommand
-            gatt?.writeCharacteristic(commandChar)
-            // Notera: Returvärdet för den äldre writeCharacteristic indikerar bara om kommandot KUNDE köas,
-            // inte om det lyckades. Callbacken onCharacteristicWrite är viktigare.
-            // Vi simulerar samma returkod som den nyare metoden (0 = lyckad köning)
-            if (gatt?.writeCharacteristic(commandChar) == true) BluetoothStatusCodes.SUCCESS else BluetoothStatusCodes.ERROR_UNKNOWN
+            // För äldre versioner
+            commandChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            commandChar.value = tareCommand // .value är deprecated men fungerar
+            if (gatt?.writeCharacteristic(commandChar) == true) { // writeCharacteristic är deprecated men fungerar
+                GATT_SUCCESS_COMPAT // Använd kompatibel konstant
+            } else {
+                GATT_UNKNOWN_ERROR_COMPAT // Använd kompatibel konstant
+            }
         }
 
-        if (result == BluetoothStatusCodes.SUCCESS) {
+        if (result == GATT_SUCCESS_COMPAT) {
             Log.d("BookooBleClient", "Tare command write operation initiated successfully.")
         } else {
             Log.e("BookooBleClient", "Failed to initiate tare command write operation. Error code: $result")
-            // Överväg att sätta ett Error-state här om det misslyckas direkt
         }
-        // --- Slut förbättrad skrivning ---
     }
 
 
@@ -282,6 +285,7 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
+    @Suppress("DEPRECATION") // Tysta varningen för den äldre writeDescriptor/value-användningen
     private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         val cccdUuid = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         val descriptor = characteristic.getDescriptor(cccdUuid)
@@ -303,17 +307,20 @@ class BookooBleClient(private val context: Context) {
             }
 
             // Skriv till descriptorn för att aktivera dem på enheten
-            // Använd den nyare writeDescriptor API om möjligt (Android 13+)
             val writeResult: Int
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 writeResult = gatt.writeDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
             } else {
-                // För äldre versioner, sätt värdet manuellt och skriv sedan
-                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                writeResult = if (gatt.writeDescriptor(descriptor)) BluetoothStatusCodes.SUCCESS else BluetoothStatusCodes.ERROR_UNKNOWN
+                // För äldre versioner
+                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE // .value är deprecated men fungerar
+                writeResult = if (gatt.writeDescriptor(descriptor)) { // writeDescriptor är deprecated men fungerar
+                    GATT_SUCCESS_COMPAT // Använd kompatibel konstant
+                } else {
+                    GATT_UNKNOWN_ERROR_COMPAT // Använd kompatibel konstant
+                }
             }
 
-            if (writeResult != BluetoothStatusCodes.SUCCESS) {
+            if (writeResult != GATT_SUCCESS_COMPAT) {
                 Log.e("BookooBleClient", "Failed to write CCCD descriptor for ${characteristic.uuid}. Error: $writeResult")
                 connectionState.value = BleConnectionState.Error("Could not enable notifications (CCCD write fail: $writeResult)")
                 handleDisconnect(gatt)
@@ -327,6 +334,7 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
+    @Suppress("DEPRECATION") // Tysta varningen för data.getOrNull(...) som använder .value internt? (Eller bara allmän ByteArray-access)
     private fun parseMeasurement(data: ByteArray): ScaleMeasurement? {
         // Vi behöver åtminstone upp till index 9 (BYTE 10) och rätt header
         if (data.size < 10 || data.getOrNull(0) != 0x03.toByte() || data.getOrNull(1) != 0x0B.toByte()) {

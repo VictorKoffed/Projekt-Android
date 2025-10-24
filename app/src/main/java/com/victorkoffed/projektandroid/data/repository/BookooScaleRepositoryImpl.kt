@@ -30,7 +30,7 @@ class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository 
                     rssi = result.rssi
                 )
             }
-            .scan(emptyList<DiscoveredDevice>()) { acc, newDevice ->
+            .scan(emptyList()) { acc, newDevice ->
                 val mutable = acc.toMutableList()
                 val existing = mutable.find { it.address == newDevice.address }
                 if (existing != null) {
