@@ -5,23 +5,25 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.* // Importera alla filled ikoner
 import androidx.compose.material.icons.outlined.* // Importera alla outlined ikoner för ovalda state
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.victorkoffed.projektandroid.data.repository.BookooScaleRepositoryImpl
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- KONTROLLERA DENNA IMPORT
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -39,7 +41,6 @@ import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
-import com.victorkoffed.projektandroid.data.repository.BookooScaleRepositoryImpl
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.brew.LiveBrewScreen
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewScreen
@@ -52,8 +53,10 @@ import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
-// --- NYA IMPORTER FÖR KAMERA ---
-import androidx.lifecycle.viewmodel.compose.viewModel
+// --- NYA IMPORTER FÖR NAVIGERING OCH KAMERA ---
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavBackStackEntry
+import com.victorkoffed.projektandroid.ui.navigation.Screen // <-- NY IMPORT
 import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
@@ -110,265 +113,36 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProjektAndroidTheme {
-                // --- State för navigering och dataöverföring ---
-                var currentScreen by remember { mutableStateOf("home") }
-                var lastBrewId by remember { mutableStateOf<Long?>(null) }
-                var selectedBrewId by remember { mutableStateOf<Long?>(null) }
-                var selectedBeanId by remember { mutableStateOf<Long?>(null) }
+                // --- NYTT: NavController och state för bottenmenyn ---
+                val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
-                var navigationOrigin by remember { mutableStateOf("home") }
+                val navItems = listOf(
+                    NavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
+                    NavItem("Bean", Screen.BeanList.route, Icons.Filled.Coffee, Icons.Outlined.Coffee),
+                    NavItem("Method", Screen.MethodList.route, Icons.Filled.Science, Icons.Outlined.Science),
+                    NavItem("Grinder", Screen.GrinderList.route, Icons.Filled.Settings, Icons.Outlined.Settings)
+                )
 
-                // --- NYTT STATE FÖR BILD ---
-                var tempCapturedImageUri by remember { mutableStateOf<String?>(null) }
-                // --- SLUT NYTT STATE ---
+                // Lista över rutter som ska visa bottenmenyn
+                val bottomBarRoutes = navItems.map { it.screenRoute }
 
-                // --- Hämta listor för att kontrollera om setup är möjlig ---
+                // --- Hämta globala states ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
                 val availableMethods by brewVm.availableMethods.collectAsState()
-
-                // --- Hämta vågens anslutningsstatus - MED INITIALVÄRDE ---
                 val scaleConnectionState by scaleVm.connectionState.collectAsState(
                     initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
                 )
-                // --- SLUT ÄNDRING ---
 
-                // --- Funktion för att byta skärm ---
-                val navigateToScreen: (String) -> Unit = { screenName ->
-                    currentScreen = screenName
-                }
-
-                // --- Definiera navigationsalternativen ---
-                val navItems = listOf(
-                    NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
-                    NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
-                    NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
-                    NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
-                )
-
-                // --- NYTT: Hanterar automatisk navigering tillbaka från våg-skärmen ---
-                LaunchedEffect(scaleConnectionState) {
-                    // Om vi just anslutit OCH vi är på våg-skärmen
-                    if (scaleConnectionState is BleConnectionState.Connected && currentScreen == "scale") {
-                        // Gå tillbaka till den skärm vi kom från (antingen "home" eller "brew_setup")
-                        currentScreen = navigationOrigin
-                    }
-                }
-                // --- SLUT NYTT ---
-
-
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        AnimatedContent(
-                            targetState = currentScreen,
-                            transitionSpec = { fadeIn() togetherWith fadeOut() },
-                            label = "screenSwitch",
-                            // Lägg till padding för bottom bar här om skärmen KAN ha nav bar
-                            modifier = Modifier.fillMaxSize().padding(bottom = if (navItems.any { it.screenRoute == currentScreen }) 80.dp else 0.dp) // Cirka höjden på NavigationBar
-                        ) { screen ->
-                            when (screen) {
-                                "home" -> HomeScreen(
-                                    homeVm = homeVm,
-                                    coffeeImageVm = coffeeImageVm,
-                                    scaleVm = scaleVm,
-                                    // --- ÄNDRAD: Vi skickar en anpassad lambda för att sätta "home" som origin ---
-                                    navigateToScreen = { screenName ->
-                                        if (screenName == "scale") {
-                                            navigationOrigin = "home" // Sätt ursprung
-                                        }
-                                        currentScreen = screenName
-                                    },
-                                    // --- SLUT ÄNDRAD ---
-                                    onNavigateToBrewSetup = {
-                                        brewVm.clearBrewResults()
-                                        lastBrewId = null
-                                        currentScreen = "brew_setup"
-                                    },
-                                    onBrewClick = { brewId ->
-                                        navigationOrigin = "home"
-                                        selectedBrewId = brewId
-                                        currentScreen = "brew_detail"
-                                    },
-                                    availableBeans = availableBeans,
-                                    availableMethods = availableMethods
-                                )
-                                "scale" -> ScaleConnectScreen(
-                                    vm = scaleVm,
-                                    // --- ÄNDRAD: Gå tillbaka till 'navigationOrigin' ---
-                                    onNavigateBack = {
-                                        currentScreen = navigationOrigin // Gå dit vi kom ifrån
-                                    }
-                                    // --- SLUT ÄNDRAD ---
-                                )
-                                "grinder" -> GrinderScreen(grinderVm)
-
-                                "bean" -> BeanScreen(
-                                    vm = beanVm,
-                                    onBeanClick = { beanId ->
-                                        selectedBeanId = beanId
-                                        currentScreen = "bean_detail"
-                                    }
-                                )
-
-                                "method" -> MethodScreen(methodVm)
-
-                                "brew_setup" -> BrewScreen(
-                                    vm = brewVm,
-                                    completedBrewId = null,
-                                    scaleConnectionState = scaleConnectionState, // Skicka med det insamlade state
-                                    onStartBrewClick = { setupState ->
-                                        brewVm.clearBrewResults()
-                                        currentScreen = "live_brew"
-                                    },
-                                    onSaveWithoutGraph = {
-                                        lifecycleScope.launch {
-                                            val newBrewId = brewVm.saveBrewWithoutSamples()
-                                            if (newBrewId != null) {
-                                                navigationOrigin = "brew_setup" // Sätt ursprung
-                                                selectedBrewId = newBrewId
-                                                currentScreen = "brew_detail"
-                                            } else {
-                                                Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
-                                            }
-                                        }
-                                    },
-                                    // --- ÄNDRAD: Sätt 'navigationOrigin' när vi går till vågen ---
-                                    onNavigateToScale = {
-                                        navigationOrigin = "brew_setup" // Sätt ursprung
-                                        navigateToScreen("scale")
-                                    },
-                                    // --- SLUT ÄNDRAD ---
-                                    onClearResult = { },
-                                    onNavigateBack = { navigateToScreen("home") }
-                                )
-
-                                "live_brew" -> {
-                                    val samples by scaleVm.recordedSamplesFlow.collectAsState()
-                                    val time by scaleVm.recordingTimeMillis.collectAsState()
-                                    val isRecording by scaleVm.isRecording.collectAsState()
-                                    val isPaused by scaleVm.isPaused.collectAsState()
-                                    val currentMeasurement by scaleVm.measurement.collectAsState()
-                                    val weightAtPause by scaleVm.weightAtPause.collectAsState()
-                                    val countdown by scaleVm.countdown.collectAsState()
-
-                                    LiveBrewScreen(
-                                        samples = samples,
-                                        currentMeasurement = currentMeasurement,
-                                        currentTimeMillis = time,
-                                        isRecording = isRecording,
-                                        isPaused = isPaused,
-                                        weightAtPause = weightAtPause,
-                                        connectionState = scaleConnectionState,
-                                        countdown = countdown,
-                                        onStartClick = { scaleVm.startRecording() },
-                                        onPauseClick = { scaleVm.pauseRecording() },
-                                        onResumeClick = { scaleVm.resumeRecording() },
-                                        onStopAndSaveClick = {
-                                            lifecycleScope.launch {
-                                                val currentSetup = brewVm.getCurrentSetup()
-                                                val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
-                                                if (savedBrewId != null) {
-                                                    navigationOrigin = "live_brew" // Sätt ursprung
-                                                    selectedBrewId = savedBrewId
-                                                    currentScreen = "brew_detail"
-                                                } else {
-                                                    Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
-                                                    currentScreen = "brew_setup"
-                                                }
-                                            }
-                                        },
-                                        onTareClick = { scaleVm.tareScale() },
-                                        // --- ÄNDRAD: Navigera tillbaka till "brew_setup" ---
-                                        onNavigateBack = { navigateToScreen("brew_setup") },
-                                        // --- SLUT ÄNDRAD ---
-                                        onResetRecording = { scaleVm.stopRecording() },
-                                        navigateTo = navigateToScreen
-                                    )
-                                }
-
-                                "brew_detail" -> {
-                                    if (selectedBrewId != null) {
-                                        // --- NYTT: Hämta VM och kör LaunchedEffect ---
-                                        val vm: BrewDetailViewModel = viewModel(
-                                            key = selectedBrewId.toString(),
-                                            factory = BrewDetailViewModelFactory(app.coffeeRepository, selectedBrewId!!)
-                                        )
-
-                                        // Hantera en nyss tagen bild
-                                        LaunchedEffect(tempCapturedImageUri) {
-                                            if (tempCapturedImageUri != null) {
-                                                Log.d("MainActivity", "Hanterar ny bild-URI: $tempCapturedImageUri")
-                                                vm.updateBrewImageUri(tempCapturedImageUri)
-                                                tempCapturedImageUri = null // Nollställ efter hantering
-                                            }
-                                        }
-
-                                        BrewDetailScreen(
-                                            brewId = selectedBrewId!!,
-                                            onNavigateBack = {
-                                                selectedBrewId = null
-                                                currentScreen = navigationOrigin
-                                            },
-                                            onNavigateToCamera = {
-                                                currentScreen = "camera_screen"
-                                            },
-                                            // --- NY RAD FÖR ATT FIXA FELET (bekräftad) ---
-                                            onNavigateToImageFullscreen = { /* TODO: Implementera helskärm */ }
-                                            // --- SLUT NY RAD ---
-                                        )
-                                        // --- SLUT PÅ NYTT ---
-                                    } else {
-                                        Text("Error: Brew ID missing")
-                                    }
-                                }
-
-                                // --- NYTT CASE FÖR KAMERAN ---
-                                "camera_screen" -> {
-                                    CameraScreen(
-                                        onImageCaptured = { uri ->
-                                            Log.d("MainActivity", "Bild tagen: $uri")
-                                            tempCapturedImageUri = uri.toString() // Spara URI:n
-                                            currentScreen = "brew_detail" // Gå tillbaka
-                                        },
-                                        onNavigateBack = {
-                                            currentScreen = "brew_detail" // Gå tillbaka
-                                        }
-                                    )
-                                }
-                                // --- SLUT NYTT CASE ---
-
-                                "bean_detail" -> {
-                                    if (selectedBeanId != null) {
-                                        BeanDetailScreen(
-                                            beanId = selectedBeanId!!,
-                                            onNavigateBack = {
-                                                selectedBeanId = null
-                                                currentScreen = "bean"
-                                            },
-                                            onBrewClick = { brewId ->
-                                                navigationOrigin = "bean_detail" // Sätt ursprung
-                                                selectedBrewId = brewId
-                                                currentScreen = "brew_detail"
-                                            }
-                                            // --- KORRIGERING: Tog bort skräptecken ---
-                                        )
-                                        // --- SLUT KORRIGERING ---
-                                    } else {
-                                        // Fallback om ID saknas
-                                        Text("Error: Bean ID missing")
-                                        LaunchedEffect(Unit) { currentScreen = "bean" }
-                                    }
-                                }
-                                // --- SLUT NYTT CASE ---
-                            }
-                        }
-
-                        // --- NavigationBar ---
-                        if (navItems.any { it.screenRoute == currentScreen }) {
-                            NavigationBar(
-                                modifier = Modifier.align(Alignment.BottomCenter)
-                            ) {
+                // --- NYTT: Scaffold hanterar nu bottenmenyn ---
+                Scaffold(
+                    bottomBar = {
+                        // Visa bara bottenmenyn om vi är på en av huvudskärmarna
+                        if (bottomBarRoutes.contains(currentRoute)) {
+                            NavigationBar {
                                 navItems.forEach { item ->
-                                    val isSelected = currentScreen == item.screenRoute
+                                    val isSelected = currentRoute == item.screenRoute
                                     NavigationBarItem(
                                         icon = {
                                             Icon(
@@ -378,7 +152,13 @@ class MainActivity : ComponentActivity() {
                                         },
                                         label = { Text(item.label) },
                                         selected = isSelected,
-                                        onClick = { navigateToScreen(item.screenRoute) },
+                                        onClick = {
+                                            navController.navigate(item.screenRoute) {
+                                                // Pop up to the start destination to avoid building a large stack
+                                                popUpTo(navController.graph.startDestinationId)
+                                                launchSingleTop = true
+                                            }
+                                        },
                                         colors = NavigationBarItemDefaults.colors(
                                             selectedIconColor = MockupColor,
                                             selectedTextColor = Color.Black,
@@ -391,7 +171,196 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                }
+                ) { innerPadding ->
+                    // --- NYTT: NavHost ersätter AnimatedContent ---
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.Home.route,
+                        modifier = Modifier.padding(innerPadding) // Applicera padding från Scaffold
+                    ) {
+
+                        // --- Home ---
+                        composable(Screen.Home.route) {
+                            HomeScreen(
+                                homeVm = homeVm,
+                                coffeeImageVm = coffeeImageVm,
+                                scaleVm = scaleVm,
+                                navigateToScreen = { screenName -> navController.navigate(screenName) },
+                                onNavigateToBrewSetup = {
+                                    brewVm.clearBrewResults()
+                                    navController.navigate(Screen.BrewSetup.route)
+                                },
+                                onBrewClick = { brewId ->
+                                    navController.navigate(Screen.BrewDetail.createRoute(brewId))
+                                },
+                                availableBeans = availableBeans,
+                                availableMethods = availableMethods
+                            )
+                        }
+
+                        // --- Huvudmenyns skärmar ---
+                        composable(Screen.BeanList.route) {
+                            BeanScreen(
+                                vm = beanVm,
+                                onBeanClick = { beanId ->
+                                    navController.navigate(Screen.BeanDetail.createRoute(beanId))
+                                }
+                            )
+                        }
+                        composable(Screen.GrinderList.route) { GrinderScreen(grinderVm) }
+                        composable(Screen.MethodList.route) { MethodScreen(methodVm) }
+
+                        // --- Våg ---
+                        composable(Screen.ScaleConnect.route) {
+                            ScaleConnectScreen(
+                                vm = scaleVm,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+
+                            // Auto-navigera tillbaka från våg-skärmen vid anslutning
+                            LaunchedEffect(scaleConnectionState) {
+                                if (scaleConnectionState is BleConnectionState.Connected) {
+                                    navController.popBackStack()
+                                }
+                            }
+                        }
+
+                        // --- Flöde för ny bryggning ---
+                        composable(Screen.BrewSetup.route) {
+                            BrewScreen(
+                                vm = brewVm,
+                                completedBrewId = null,
+                                scaleConnectionState = scaleConnectionState,
+                                onStartBrewClick = { setupState ->
+                                    brewVm.clearBrewResults()
+                                    navController.navigate(Screen.LiveBrew.route)
+                                },
+                                onSaveWithoutGraph = {
+                                    lifecycleScope.launch {
+                                        val newBrewId = brewVm.saveBrewWithoutSamples()
+                                        if (newBrewId != null) {
+                                            // Navigera till detalj och rensa setup-skärmen från stacken
+                                            navController.navigate(Screen.BrewDetail.createRoute(newBrewId)) {
+                                                popUpTo(Screen.BrewSetup.route) { inclusive = true }
+                                            }
+                                        } else {
+                                            Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
+                                        }
+                                    }
+                                },
+                                onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
+                                onClearResult = { },
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(Screen.LiveBrew.route) {
+                            val samples by scaleVm.recordedSamplesFlow.collectAsState()
+                            val time by scaleVm.recordingTimeMillis.collectAsState()
+                            val isRecording by scaleVm.isRecording.collectAsState()
+                            val isPaused by scaleVm.isPaused.collectAsState()
+                            val currentMeasurement by scaleVm.measurement.collectAsState()
+                            val weightAtPause by scaleVm.weightAtPause.collectAsState()
+                            val countdown by scaleVm.countdown.collectAsState()
+
+                            LiveBrewScreen(
+                                samples = samples,
+                                currentMeasurement = currentMeasurement,
+                                currentTimeMillis = time,
+                                isRecording = isRecording,
+                                isPaused = isPaused,
+                                weightAtPause = weightAtPause,
+                                connectionState = scaleConnectionState,
+                                countdown = countdown,
+                                onStartClick = { scaleVm.startRecording() },
+                                onPauseClick = { scaleVm.pauseRecording() },
+                                onResumeClick = { scaleVm.resumeRecording() },
+                                onStopAndSaveClick = {
+                                    lifecycleScope.launch {
+                                        val currentSetup = brewVm.getCurrentSetup()
+                                        val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
+                                        if (savedBrewId != null) {
+                                            // Navigera till detalj och rensa setup-skärmen från stacken
+                                            navController.navigate(Screen.BrewDetail.createRoute(savedBrewId)) {
+                                                popUpTo(Screen.BrewSetup.route) { inclusive = true }
+                                            }
+                                        } else {
+                                            Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
+                                            navController.popBackStack() // Gå tillbaka till BrewSetup
+                                        }
+                                    }
+                                },
+                                onTareClick = { scaleVm.tareScale() },
+                                onNavigateBack = { navController.popBackStack() },
+                                onResetRecording = { scaleVm.stopRecording() },
+                                navigateTo = { route -> navController.navigate(route) }
+                            )
+                        }
+
+                        // --- Detalj-skärmar (med argument) ---
+                        composable(
+                            route = Screen.BrewDetail.route,
+                            arguments = listOf(navArgument("brewId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val brewId = backStackEntry.arguments?.getLong("brewId")
+                            if (brewId != null) {
+                                BrewDetailScreen(
+                                    brewId = brewId,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
+                                    onNavigateToImageFullscreen = { /* TODO: Implementera helskärm */ },
+
+                                    // NYTT: Hämta VM scoped till denna route
+                                    viewModel = viewModel(
+                                        key = "brewDetail_$brewId", // Unik nyckel för denna bryggning
+                                        factory = BrewDetailViewModelFactory(app.coffeeRepository, brewId)
+                                    ),
+
+                                    // NYTT: Skicka med backStackEntry för att ta emot resultat
+                                    navBackStackEntry = backStackEntry
+                                )
+                            } else {
+                                // Detta ska inte hända om navigeringen görs rätt
+                                Text("Error: Brew ID saknas.")
+                                LaunchedEffect(Unit) { navController.popBackStack() }
+                            }
+                        }
+
+                        composable(
+                            route = Screen.BeanDetail.route,
+                            arguments = listOf(navArgument("beanId") { type = NavType.LongType })
+                        ) { backStackEntry ->
+                            val beanId = backStackEntry.arguments?.getLong("beanId")
+                            if (beanId != null) {
+                                BeanDetailScreen(
+                                    beanId = beanId,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onBrewClick = { brewId ->
+                                        navController.navigate(Screen.BrewDetail.createRoute(brewId))
+                                    }
+                                )
+                            } else {
+                                // Detta ska inte hända
+                                Text("Error: Bean ID saknas.")
+                                LaunchedEffect(Unit) { navController.popBackStack() }
+                            }
+                        }
+
+                        // --- Kamera ---
+                        composable(Screen.Camera.route) {
+                            CameraScreen(
+                                onImageCaptured = { uri ->
+                                    // Skicka tillbaka URI:n till föregående skärm (BrewDetail)
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("captured_image_uri", uri.toString())
+                                    navController.popBackStack()
+                                },
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                    } // Slut på NavHost
+                } // Slut på Scaffold
             }
         }
     }

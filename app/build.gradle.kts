@@ -19,6 +19,7 @@ android {
         versionName = "1.0"
 
 
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -29,6 +30,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
 
         }
     }
@@ -43,7 +45,7 @@ android {
         // Behåller din toolchain
         jvmToolchain(11)
     }
-    buildFeatures {
+    buildFeatures{
         compose = true
     }
 }
@@ -58,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.compose.runtime.livedata)
 
     // Ikoner (styrda av BOM)
     implementation(libs.compose.material.icons.core)
@@ -68,6 +71,7 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
 
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     // AndroidX
@@ -89,9 +93,13 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler) // Denna rad är nu korrekt
 
+    // --- TILLAGD FÖR NAVIGATION ---
+    implementation(libs.androidx.navigation.compose)
+
     // --- TILLAGD FÖR CAMERAX ---
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
+
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     // --- SLUT CAMERAX ---

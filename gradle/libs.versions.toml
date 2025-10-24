@@ -15,6 +15,8 @@ room = "2.8.2"
 ksp = "2.2.20-2.0.3"
 # --- NY VERSION FÖR CAMERAX ---
 camerax = "1.4.1" # Jag valde en stabil version, du kan byta denna om du vill
+# --- NY VERSION FÖR NAVIGATION ---
+navigation-compose = "2.8.0-beta05"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +36,10 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# --- NY RAD FÖR RUNTIME-LIVEDATA ---
+# Använder BOM för att hantera versionen eftersom den ingår i Compose
+androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
+
 volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
@@ -44,6 +50,9 @@ compose-material-icons-core = { group = "androidx.compose.material", name = "mat
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+# --- NYTT BIBLIOTEK FÖR NAVIGATION ---
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 
 # --- NYA BIBLIOTEK FÖR CAMERAX ---
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }

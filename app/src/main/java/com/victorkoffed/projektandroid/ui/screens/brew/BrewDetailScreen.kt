@@ -56,6 +56,10 @@ import kotlin.math.max
 import androidx.compose.runtime.collectAsState
 // Bild
 import coil.compose.AsyncImage
+// --- NYA IMPORTER ---
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.navigation.NavBackStackEntry
+// --- SLUT NYA IMPORTER ---
 
 // Lokala färger för denna skärm
 private val Accent = Color(0xFFDCC7AA)
@@ -71,15 +75,17 @@ fun BrewDetailScreen(
     brewId: Long,
     onNavigateBack: () -> Unit,
     onNavigateToCamera: () -> Unit,
-    onNavigateToImageFullscreen: (String) -> Unit
-) {
-    val application = LocalContext.current.applicationContext as CoffeeJournalApplication
-    val repository = application.coffeeRepository
+    onNavigateToImageFullscreen: (String) -> Unit,
 
-    val viewModel: BrewDetailViewModel = viewModel(
-        key = brewId.toString(),
-        factory = BrewDetailViewModelFactory(repository, brewId)
-    )
+    // --- NYA PARAMETRAR (från NavHost) ---
+    viewModel: BrewDetailViewModel,
+    navBackStackEntry: NavBackStackEntry
+    // --- SLUT NYA PARAMETRAR ---
+) {
+    // --- VM-initiering är bortflyttad till NavHost ---
+    // val application = LocalContext.current.applicationContext as CoffeeJournalApplication
+    // val repository = application.coffeeRepository
+    // val viewModel: BrewDetailViewModel = viewModel( ... )
 
     val state by viewModel.brewDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
@@ -91,6 +97,20 @@ fun BrewDetailScreen(
 
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
+
+    // --- NYTT: Hantera returvärde från CameraScreen ---
+    val savedImageUri by navBackStackEntry.savedStateHandle
+        .getLiveData<String>("captured_image_uri")
+        .observeAsState()
+
+    LaunchedEffect(savedImageUri) {
+        if (savedImageUri != null) {
+            viewModel.updateBrewImageUri(savedImageUri)
+            // Rensa värdet så det inte återanvänds
+            navBackStackEntry.savedStateHandle.remove<String>("captured_image_uri")
+        }
+    }
+    // --- SLUT NYTT ---
 
     Scaffold(
         containerColor = CardGray, // grå bakgrund mellan korten

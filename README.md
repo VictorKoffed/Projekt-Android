@@ -43,8 +43,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
-   Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
+1. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation.
 2. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
 3. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
