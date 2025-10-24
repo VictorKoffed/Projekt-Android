@@ -12,12 +12,12 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 - Store brew history locally with **Room (SQLite)**
 - See weight and time in a chart of the brew from the **Bookoo smart scale** via Bluetooth for real-time brew data
 - Add Flow to the chart graf
-
-**Planned**
-- Capture and save photos of brews using **CameraX**
 - Create a working Homescreen that follows the mockup **Homescreen**
 - Create a working Graphscreen that follows the mockup **Graphscreen**
 - Clean and responsive UI design inspired by modern coffee apps
+
+**Planned**
+- Capture and save photos of brews using **CameraX**
 
 ## 🧩 Technology Stack
 
@@ -45,14 +45,15 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Fixa tema på Brewdetailscreen för att passa appen (DCC7AA).
-2. Lägga till kamerafunktion
-3. Förbättra HomeScreen:
+1. Fixa så att första gången man trycker på playknappen i livebrew så tare vågen sig automatiskt och det dyker upp en timer på 3 sek?
+2. Lägga till i böna att trycka fram alla brews som är skapade utav denna böna?
+3. Lägga till kamerafunktion
+4. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
-4. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+5. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
-5. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-6. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+6. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+7. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 

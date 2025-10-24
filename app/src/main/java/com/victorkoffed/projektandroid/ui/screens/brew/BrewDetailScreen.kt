@@ -48,6 +48,10 @@ import kotlin.math.ceil
 import kotlin.math.max
 import androidx.compose.runtime.collectAsState
 
+// Lokal accent för denna skärm
+private val Accent = Color(0xFFDCC7AA)
+private val CardGray = Color(0xFFF0F0F0)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewDetailScreen(
@@ -74,6 +78,7 @@ fun BrewDetailScreen(
     var showFlowLine by remember { mutableStateOf(true) }
 
     Scaffold(
+        containerColor = CardGray, // <-- grå bakgrund för utrymmet mellan kort
         topBar = {
             TopAppBar(
                 title = {
@@ -96,14 +101,14 @@ fun BrewDetailScreen(
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.saveChanges() }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save changes")
+                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = Accent)
                         }
                     } else {
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            Icon(Icons.Default.Edit, contentDescription = "Edit") // tillbaka till default (ingen Accent)
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Accent) // sopptunnan i Accent
                         }
                     }
                 }
@@ -143,7 +148,10 @@ fun BrewDetailScreen(
 
                         state.metrics?.let { metrics ->
                             BrewMetricsCard(metrics = metrics)
-                        } ?: Card(Modifier.fillMaxWidth()) {
+                        } ?: Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White) // vit infotext
+                        ) {
                             Text("No ratio/water data.", modifier = Modifier.padding(16.dp))
                         }
 
@@ -156,7 +164,12 @@ fun BrewDetailScreen(
                                 label = { Text("Vikt") },
                                 leadingIcon = {
                                     if (showWeightLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
-                                }
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Accent,
+                                    selectedLabelColor = Color.Black,
+                                    selectedLeadingIconColor = Color.Black
+                                )
                             )
                             FilterChip(
                                 selected = showFlowLine,
@@ -164,7 +177,12 @@ fun BrewDetailScreen(
                                 label = { Text("Flow") },
                                 leadingIcon = {
                                     if (showFlowLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
-                                }
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Accent,
+                                    selectedLabelColor = Color.Black,
+                                    selectedLeadingIconColor = Color.Black
+                                )
                             )
                         }
 
@@ -176,7 +194,10 @@ fun BrewDetailScreen(
                                 modifier = Modifier.fillMaxWidth().height(300.dp)
                             )
                         } else {
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                            ) {
                                 Text("No graph data saved.", modifier = Modifier.padding(16.dp))
                             }
                         }
@@ -187,10 +208,29 @@ fun BrewDetailScreen(
                                 value = viewModel.editNotes,
                                 onValueChange = { viewModel.onEditNotesChanged(it) },
                                 label = { Text("Noteringar") },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 100.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    disabledContainerColor = Color.White,
+                                    errorContainerColor = Color.White,
+                                    focusedBorderColor = Accent,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    cursorColor = Accent,
+                                    focusedLabelColor = Accent
+                                )
                             )
                         } else {
-                            currentBrew.notes?.let { Text(it) } ?: Text("-")
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+                            ) {
+                                Text(
+                                    currentBrew.notes ?: "-",
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -214,8 +254,8 @@ fun BrewDetailScreen(
                                 onNavigateBack()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Ta bort") }
+                        colors = ButtonDefaults.buttonColors(containerColor = Accent)
+                    ) { Text("Ta bort", color = Color.Black) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
@@ -225,7 +265,7 @@ fun BrewDetailScreen(
     }
 }
 
-// ---------- Summary & rows (Oförändrad) ----------
+// ---------- Summary & rows ----------
 @Composable
 fun BrewSummaryCard(state: BrewDetailState) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
@@ -236,7 +276,10 @@ fun BrewSummaryCard(state: BrewDetailState) {
         String.format("%02d:%02d", minutes, seconds)
     }
 
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Details", style = MaterialTheme.typography.titleLarge)
             DetailRow("Bean:", state.bean?.name ?: "-")
@@ -260,7 +303,7 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-// ---------- Edit card (Oförändrad) ----------
+// ---------- Edit card ----------
 @Composable
 fun BrewEditCard(
     viewModel: BrewDetailViewModel,
@@ -270,7 +313,10 @@ fun BrewEditCard(
     val state = viewModel.brewDetailState.collectAsState().value
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Edit Details", style = MaterialTheme.typography.titleLarge)
             DetailRow("Bean:", state.bean?.name ?: "-")
@@ -315,10 +361,14 @@ fun BrewEditCard(
     }
 }
 
-// ---------- Reusable UI (Oförändrad) ----------
+// ---------- Reusable UI ----------
 @Composable
 fun BrewMetricsCard(metrics: BrewMetrics) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceAround
@@ -349,7 +399,7 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
 }
 
 
-// --- UPPDATERAD GRAF med justerad axeltitel-padding OCH CAPPAD Y-AXEL ---
+// --- Graf (oförändrad) ---
 @Composable
 fun BrewSamplesGraph(
     samples: List<BrewSample>,
@@ -402,25 +452,17 @@ fun BrewSamplesGraph(
     }
 
     Canvas(modifier = modifier) {
-
-        // --- ÖKAD PADDING FÖR TITLAR ---
-        // Utrymme för axeltitlar (längst ut) - Öka dessa värden
-        val titlePaddingBottom = 60.dp.toPx() // Tidigare 20
-        val titlePaddingStart = 60.dp.toPx()  // Tidigare 20
-        val titlePaddingEnd = 60.dp.toPx()    // Tidigare 20
-        // --- SLUT PÅ ÄNDRING ---
-
-        // Utrymme för sifferetiketter (innanför titlarna) - Behåll dessa
+        val titlePaddingBottom = 60.dp.toPx()
+        val titlePaddingStart = 60.dp.toPx()
+        val titlePaddingEnd = 60.dp.toPx()
         val numericLabelPaddingBottom = 16.dp.toPx()
         val numericLabelPaddingStart = 28.dp.toPx()
         val numericLabelPaddingEnd = 28.dp.toPx()
 
-        // Totalt utrymme reserverat på varje sida
         val totalPaddingBottom = titlePaddingBottom + numericLabelPaddingBottom
         val totalPaddingStart = titlePaddingStart + numericLabelPaddingStart
         val totalPaddingEnd = titlePaddingEnd + numericLabelPaddingEnd
 
-        // Beräkna det faktiska grafområdet
         val graphStartX = totalPaddingStart
         val graphEndX = size.width - totalPaddingEnd
         val graphStartY = 0f
@@ -428,22 +470,15 @@ fun BrewSamplesGraph(
         val graphWidth = graphEndX - graphStartX
         val graphHeight = graphEndY - graphStartY
 
-        if (graphWidth <= 0 || graphHeight <= 0) return@Canvas // Undvik ritning om området är ogiltigt
+        if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
 
-        // --- SKALNING (FLÖDE ÄR ÄNDRAT) ---
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
+        val roundedMaxFlow = 20f
+        val maxFlow = max(5f, roundedMaxFlow * 1.1f)
 
-        // --- ÄNDRING: HÅRDKODA Y-AXELN FÖR FLÖDE ---
-        // Ersätt de gamla raderna för actualMaxFlow, roundedMaxFlow, maxFlow
-        val roundedMaxFlow = 20f // Din föreslagna max-etikett (g/s)
-        val maxFlow = max(5f, roundedMaxFlow * 1.1f) // Skala axeln till 110% av din cap (dvs. 22 g/s)
-        // --- SLUT PÅ ÄNDRING ---
-
-        // --- Rita Rutnät och Etiketter (Inga ändringar här) ---
         drawContext.canvas.nativeCanvas.apply {
-            // 1. Vänster Y-axel (Vikt)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -454,23 +489,20 @@ fun BrewSamplesGraph(
                 currentMassGrid += massGridInterval
             }
 
-            // 2. Höger Y-axel (Flöde) - Rita färre etiketter
             if (hasFlowData) {
-                // Denna logik fungerar nu utmärkt med vår cappade 'roundedMaxFlow'
                 val yMax = graphEndY - (roundedMaxFlow / maxFlow) * graphHeight
                 drawText("${roundedMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yMax + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 val halfMaxFlow = roundedMaxFlow / 2f
-                if (halfMaxFlow > 2f) { // Visar 10 g/s
+                if (halfMaxFlow > 2f) {
                     val yHalf = graphEndY - (halfMaxFlow / maxFlow) * graphHeight
                     drawText("${halfMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yHalf + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 }
-                if (roundedMaxFlow > 4f) { // Visar 2 g/s
+                if (roundedMaxFlow > 4f) {
                     val yLow = graphEndY - (2f / maxFlow) * graphHeight
                     drawText("2 g/s", graphEndX + 4.dp.toPx(), yLow + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 }
             }
 
-            // 3. X-axel (Tid)
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
@@ -481,16 +513,14 @@ fun BrewSamplesGraph(
                 drawText("${timeSec}s", x, graphEndY + numericLabelPaddingBottom / 2 + numericLabelPaint.textSize / 2, numericLabelPaint)
                 currentTimeGrid += timeGridInterval
             }
-        } // Slut på apply för rutnät/etiketter
-
-        // --- Rita Axlar (Inga ändringar här) ---
-        drawLine(massColor, Offset(graphStartX, graphStartY), Offset(graphStartX, graphEndY)) // Vänster Y
-        drawLine(Color.Gray, Offset(graphStartX, graphEndY), Offset(graphEndX, graphEndY)) // X
-        if (hasFlowData) {
-            drawLine(flowColor, Offset(graphEndX, graphStartY), Offset(graphEndX, graphEndY)) // Höger Y
         }
 
-        // --- Rita Linjer (EN RAD ÄNDRAD) ---
+        drawLine(massColor, Offset(graphStartX, graphStartY), Offset(graphStartX, graphEndY))
+        drawLine(Color.Gray, Offset(graphStartX, graphEndY), Offset(graphEndX, graphEndY))
+        if (hasFlowData) {
+            drawLine(flowColor, Offset(graphEndX, graphStartY), Offset(graphEndX, graphEndY))
+        }
+
         if (samples.size > 1) {
             val massPath = Path()
             val flowPath = Path()
@@ -504,9 +534,7 @@ fun BrewSamplesGraph(
                     if (index == 0) massPath.moveTo(cx, cyMass) else massPath.lineTo(cx, cyMass)
                 }
 
-                // --- ÄNDRING HÄR: Ignorera värden över 20 g/s ---
                 if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null && s.flowRateGramsPerSecond in 0.0..roundedMaxFlow.toDouble()) {
-                    // --- SLUT PÅ ÄNDRING ---
                     val yFlow = graphEndY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
                     val cyFlow = yFlow.coerceIn(graphStartY, graphEndY)
 
@@ -517,7 +545,6 @@ fun BrewSamplesGraph(
                         flowPath.lineTo(cx, cyFlow)
                     }
                 } else {
-                    // Detta skapar glappet i linjen när värdet är för högt (eller null/negativt)
                     flowPathStarted = false
                 }
             }
@@ -529,27 +556,20 @@ fun BrewSamplesGraph(
             }
         }
 
-        // --- Rita Axeltitlar (Justerade Y-värden för roterade titlar) ---
         drawContext.canvas.nativeCanvas.apply {
-            // Tid (Centrerad längst ner i titlePaddingBottom-området)
-            drawText("Tid", graphStartX + graphWidth / 2, size.height - titlePaddingBottom / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
-
+            drawText("Tid", graphStartX + graphWidth / 2, size.height - 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
             save(); rotate(-90f)
-            // Vikt (Centrerad vertikalt i titlePaddingStart-området)
-            drawText("Weight (g)", -(graphStartY + graphHeight / 2), titlePaddingStart / 2 + axisTitlePaint.textSize / 3, axisTitlePaint) // Justerad Y
-
+            drawText("Weight (g)", -(graphStartY + graphHeight / 2), 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
             if (hasFlowData) {
-                // Flöde (Centrerad vertikalt i titlePaddingEnd-området)
-                drawText("Flow (g/s)", -(graphStartY + graphHeight / 2), size.width - titlePaddingEnd / 2 - axisTitlePaintFlow.descent(), axisTitlePaintFlow) // Justerad Y
+                drawText("Flow (g/s)", -(graphStartY + graphHeight / 2), size.width - 60.dp.toPx() / 2 - axisTitlePaint.descent(), axisTitlePaintFlow)
             }
             restore()
         }
-        // --- SLUT PÅ TITELRITNING ---
     }
 }
-// --- SLUT PÅ GRAFUPPDATERING ---
 
 
+// --- Dropdown (oförändrad) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> EditDropdownSelector(

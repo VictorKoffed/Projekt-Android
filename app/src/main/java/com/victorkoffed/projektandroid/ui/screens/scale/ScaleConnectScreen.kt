@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -226,7 +227,10 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick) // Klickbarheten är kvar
+            .clickable(onClick = onClick), // Klickbarheten är kvar
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White // <-- ENDA ÄNDRINGEN: vita kort
+        )
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
