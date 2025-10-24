@@ -19,6 +19,8 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 
 **Planned**
 
+- All done....
+
 ## 🧩 Technology Stack
 
 - **Kotlin** – Main language
@@ -43,9 +45,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation.
-2. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-3. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+1. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+2. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 
