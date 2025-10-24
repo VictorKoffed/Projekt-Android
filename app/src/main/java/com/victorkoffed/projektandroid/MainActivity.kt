@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -50,17 +51,23 @@ import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
+import com.victorkoffed.projektandroid.data.db.Bean
+import com.victorkoffed.projektandroid.data.db.Method
 // --- NYA IMPORTER FÖR NAVIGERING OCH KAMERA ---
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavBackStackEntry
 import com.victorkoffed.projektandroid.ui.navigation.Screen // <-- NY IMPORT
 import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // --- SLUT NYA IMPORTER ---
 
-// --- NYA IMPORTER FÖR SNACKBAR ---
+// --- NYA IMPORTER FÖR SNACKBAR & HELSKÄRMSBILD ---
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
+import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
+import android.net.Uri // <-- NY IMPORT FÖR URL-KODNING
 // --- SLUT NYA IMPORTER ---
 
 
@@ -229,12 +236,15 @@ class MainActivity : ComponentActivity() {
                                 onNavigateBack = { navController.popBackStack() }
                             )
 
-                            // Auto-navigera tillbaka från våg-skärmen vid anslutning
+                            // PROBLEMLOGIKEN ÄR BORTTAGEN HÄR: Du stannar nu på ScaleConnectScreen
+                            // när en anslutning upprättas.
+                            /*
                             LaunchedEffect(scaleConnectionState) {
                                 if (scaleConnectionState is BleConnectionState.Connected) {
                                     navController.popBackStack()
                                 }
                             }
+                            */
                         }
 
                         // --- Flöde för ny bryggning ---
@@ -334,7 +344,13 @@ class MainActivity : ComponentActivity() {
                                     brewId = brewId,
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
-                                    onNavigateToImageFullscreen = { /* TODO: Implementera helskärm */ },
+                                    // --- ÄNDRING: Implementera helskärmsnavigering ---
+                                    onNavigateToImageFullscreen = { uri ->
+                                        // Måste URL-koda URI:n
+                                        val encodedUri = Uri.encode(uri)
+                                        navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
+                                    },
+                                    // --- SLUT ÄNDRING ---
 
                                     // NYTT: Hämta VM scoped till denna route
                                     viewModel = viewModel(
@@ -385,6 +401,26 @@ class MainActivity : ComponentActivity() {
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
+
+                        // --- NYTT: Helskärmsvy för bild ---
+                        composable(
+                            route = Screen.ImageFullscreen.route,
+                            arguments = listOf(navArgument("uri") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val encodedUri = backStackEntry.arguments?.getString("uri")
+                            val uri = encodedUri?.let { Uri.decode(it) } // Avkoda URI:n
+
+                            if (uri != null) {
+                                FullscreenImageScreen(
+                                    uri = uri,
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            } else {
+                                Log.e("MainActivity", "Error: URI argument for FullscreenImageScreen missing or invalid.")
+                                LaunchedEffect(Unit) { navController.popBackStack() }
+                            }
+                        }
+                        // --- SLUT NYTT ---
                     } // Slut på NavHost
                 } // Slut på Scaffold
             }

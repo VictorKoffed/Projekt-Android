@@ -10,7 +10,15 @@ sealed class Screen(val route: String) {
     object BrewSetup : Screen("brew_setup")
     object LiveBrew : Screen("live_brew")
     object Camera : Screen("camera")
-    object ImageFullscreen : Screen("image_fullscreen") // TODO: Implementera denna skärm
+
+    // --- ÄNDRING ---
+    // Rutt med ett obligatoriskt 'uri' argument
+    object ImageFullscreen : Screen("image_fullscreen/{uri}") {
+        // Hjälpfunktion för att bygga den fullständiga rutten
+        // Notera: URI:n måste vara URL-kodad om den innehåller specialtecken
+        fun createRoute(uri: String) = "image_fullscreen/$uri"
+    }
+    // --- SLUT ÄNDRING ---
 
     // Rutt med ett obligatoriskt 'brewId' argument
     object BrewDetail : Screen("brew_detail/{brewId}") {

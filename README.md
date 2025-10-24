@@ -43,7 +43,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (Bugfix)
 
-1. Scale disconneced in livebrew crashes the app, must be updated tp the new navigation
+1. The auto connect BLE dont work.
 
 ##  ToDo List
 

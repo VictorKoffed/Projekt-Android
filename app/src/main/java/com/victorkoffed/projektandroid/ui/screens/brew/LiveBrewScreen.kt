@@ -51,6 +51,10 @@ import kotlinx.coroutines.launch // <-- DEN HÄR RADEN LADES TILL
 import kotlin.math.ceil
 import kotlin.math.max
 
+// --- NY IMPORT FÖR NAVIGATIONS-RUTTER ---
+import com.victorkoffed.projektandroid.ui.navigation.Screen
+// --- SLUT NY IMPORT ---
+
 @OptIn(ExperimentalMaterial3Api::class) // Se till att denna finns
 @Composable
 fun LiveBrewScreen(
@@ -182,14 +186,14 @@ fun LiveBrewScreen(
                 onDismissRequest = {
                     // Stäng dialogen men navigera bara om vi inte redan är på scale-skärmen
                     showDisconnectedAlert = false
-                    navigateTo("scale") // Navigera alltid till scale-skärmen vid disconnect
+                    navigateTo(Screen.ScaleConnect.route) // KORRIGERING: Använd korrekt rutt
                 },
                 title = { Text("Connection Broken") },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        navigateTo("scale") // Navigera till scale-skärmen
+                        navigateTo(Screen.ScaleConnect.route) // KORRIGERING: Använd korrekt rutt
                     }) {
                         Text("OK")
                     }
