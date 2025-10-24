@@ -55,6 +55,8 @@ import com.victorkoffed.projektandroid.data.db.Method
 // --- NYA IMPORTER FÖR KAMERA ---
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
+// --- NY IMPORT FÖR HELSKÄRMSBILD ---
+import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // --- SLUT NYA IMPORTER ---
@@ -121,6 +123,10 @@ class MainActivity : ComponentActivity() {
                 // --- NYTT STATE FÖR BILD ---
                 var tempCapturedImageUri by remember { mutableStateOf<String?>(null) }
                 // --- SLUT NYTT STATE ---
+
+                // --- ÄNDRING 1: NYTT STATE FÖR HELSKÄRMSBILD ---
+                var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
+                // --- SLUT ÄNDRING 1 ---
 
                 // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
@@ -273,6 +279,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
+                                        // --- ÄNDRING 2: Anropet till BrewDetailScreen är uppdaterat ---
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
@@ -281,9 +288,14 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onNavigateToCamera = {
                                                 currentScreen = "camera_screen"
+                                            },
+                                            // Detta är den saknade parametern som orsakade felet:
+                                            onNavigateToImageFullscreen = { uri ->
+                                                fullscreenImageUrl = uri
+                                                currentScreen = "fullscreen_image"
                                             }
                                         )
-                                        // --- SLUT PÅ NYTT ---
+                                        // --- SLUT PÅ ÄNDRING 2 ---
                                     } else {
                                         Text("Error: Brew ID missing")
                                     }
@@ -303,6 +315,24 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 // --- SLUT NYTT CASE ---
+
+                                // --- ÄNDRING 3: NYTT CASE FÖR HELSKÄRMSBILD ---
+                                "fullscreen_image" -> {
+                                    if (fullscreenImageUrl != null) {
+                                        FullscreenImageScreen(
+                                            uri = fullscreenImageUrl!!,
+                                            onNavigateBack = {
+                                                fullscreenImageUrl = null
+                                                currentScreen = "brew_detail" // Gå tillbaka till detaljerna
+                                            }
+                                        )
+                                    } else {
+                                        // Fallback om URI är null
+                                        Text("Error: Image URI missing")
+                                        LaunchedEffect(Unit) { currentScreen = "brew_detail" }
+                                    }
+                                }
+                                // --- SLUT ÄNDRING 3 ---
 
                                 "bean_detail" -> {
                                     if (selectedBeanId != null) {

@@ -486,15 +486,34 @@ fun RecentBrewCard(
                 Text(brewItem.beanName ?: "Unknown bean", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.width(12.dp))
-            Image(
-                painter = painterResource(id = R.mipmap.ic_launcher_foreground), // Använd mipmap (kaffebönan)
-                contentDescription = "BryggImage",
-                contentScale = ContentScale.Crop,
+
+            // --- HELA DETTA BLOCK ÄR ERSATT ---
+            // Box för att hålla bilden eller placeholdern
+            Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                // Ingen extra skugga på bilden inuti kortet
-            )
+                    .clip(RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (brewItem.brew.imageUri != null) {
+                    // Om bild-URI finns, ladda den med Coil
+                    AsyncImage(
+                        model = brewItem.brew.imageUri, // Ladda bilden från URI:n
+                        contentDescription = "Brew photo",
+                        contentScale = ContentScale.Crop, // Fyll utrymmet
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // Annars, visa placeholder-bilden
+                    Image(
+                        painter = painterResource(id = R.mipmap.ic_launcher_foreground), // Använd mipmap (kaffebönan)
+                        contentDescription = "BryggImage",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize() // Fyll boxen
+                    )
+                }
+            }
+            // --- SLUT PÅ ERSÄTTNING ---
         }
     }
 }

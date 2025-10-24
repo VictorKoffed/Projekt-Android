@@ -2,9 +2,11 @@ package com.victorkoffed.projektandroid.ui.screens.brew
 
 // Core
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Save
@@ -51,20 +54,24 @@ import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
 import androidx.compose.runtime.collectAsState
-// --- NY IMPORT ---
+// Bild
 import coil.compose.AsyncImage
-// --- SLUT NY IMPORT ---
 
-// Lokal accent för denna skärm
+// Lokala färger för denna skärm
 private val Accent = Color(0xFFDCC7AA)
 private val CardGray = Color(0xFFF0F0F0)
+
+// Specifikt för "Add Picture"-ytan (grå stil)
+private val AddPicBgGray = Color(0xFFE7E7E7)   // ljusgrå bakgrund
+private val AddPicFgGray = Color(0xFF606060)   // mörkgrå ikon/text
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewDetailScreen(
     brewId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToCamera: () -> Unit // <-- NY PARAMETER
+    onNavigateToCamera: () -> Unit,
+    onNavigateToImageFullscreen: (String) -> Unit
 ) {
     val application = LocalContext.current.applicationContext as CoffeeJournalApplication
     val repository = application.coffeeRepository
@@ -86,7 +93,7 @@ fun BrewDetailScreen(
     var showFlowLine by remember { mutableStateOf(true) }
 
     Scaffold(
-        containerColor = CardGray, // <-- grå bakgrund för utrymmet mellan kort
+        containerColor = CardGray, // grå bakgrund mellan korten
         topBar = {
             TopAppBar(
                 title = {
@@ -112,18 +119,11 @@ fun BrewDetailScreen(
                             Icon(Icons.Default.Save, contentDescription = "Save changes", tint = Accent)
                         }
                     } else {
-                        // --- NY KAMERAKNAPP ---
-                        if (state.brew?.imageUri == null) { // Visa bara om bild saknas
-                            IconButton(onClick = onNavigateToCamera, enabled = state.brew != null) {
-                                Icon(Icons.Default.PhotoCamera, contentDescription = "Add Picture")
-                            }
-                        }
-                        // --- SLUT NY KNAPP ---
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit") // tillbaka till default (ingen Accent)
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Accent) // sopptunnan i Accent
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = Accent)
                         }
                     }
                 }
@@ -142,7 +142,8 @@ fun BrewDetailScreen(
                 }
             }
             else -> {
-                state.brew?.let { currentBrew ->
+                val currentBrew = state.brew
+                if (currentBrew != null) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -151,22 +152,72 @@ fun BrewDetailScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // --- NY BILDVISARE ---
-                        state.brew?.imageUri?.let { uri ->
-                            AsyncImage(
-                                model = uri, // Ladda bilden från URI:n
-                                contentDescription = "Brew photo",
-                                contentScale = ContentScale.Crop, // Fyll utrymmet
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(250.dp) // Ge den en fast höjd
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        // TODO: Öppna i helskärm? (framtida funktion)
+                        // --- Bild/placeholder ---
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            if (currentBrew.imageUri != null) {
+                                // Visa bilden
+                                AsyncImage(
+                                    model = currentBrew.imageUri,
+                                    contentDescription = "Brew photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .clickable {
+                                            if (!isEditing) {
+                                                onNavigateToImageFullscreen(currentBrew.imageUri!!)
+                                            }
+                                        }
+                                )
+
+                                // Ta bort-knapp när vi redigerar
+                                if (isEditing) {
+                                    IconButton(
+                                        onClick = { viewModel.updateBrewImageUri(null) },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(8.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                                    ) {
+                                        Icon(Icons.Default.DeleteForever, contentDescription = "Delete Picture")
                                     }
-                            )
+                                }
+                            } else {
+                                // GRÅ "Add Picture"-yta (oavsett om vi redigerar eller ej)
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(150.dp)
+                                        .clickable { onNavigateToCamera() },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = AddPicBgGray,
+                                        contentColor = AddPicFgGray
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(
+                                                Icons.Default.PhotoCamera,
+                                                contentDescription = "Add Picture",
+                                                tint = AddPicFgGray
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("Add Picture", color = AddPicFgGray)
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        // --- SLUT NY BILDVISARE ---
+                        // --- Slut bild/placeholder ---
 
                         if (isEditing) {
                             BrewEditCard(
@@ -182,7 +233,7 @@ fun BrewDetailScreen(
                             BrewMetricsCard(metrics = metrics)
                         } ?: Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White) // vit infotext
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
                         ) {
                             Text("No ratio/water data.", modifier = Modifier.padding(16.dp))
                         }
@@ -256,7 +307,7 @@ fun BrewDetailScreen(
                             )
                         } else {
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+                                colors = CardDefaults.cardColors(containerColor = Color.White)
                             ) {
                                 Text(
                                     currentBrew.notes ?: "-",
@@ -265,6 +316,8 @@ fun BrewDetailScreen(
                             }
                         }
                     }
+                } else {
+                    Text("Brew data became unavailable.")
                 }
             }
         }
@@ -276,7 +329,7 @@ fun BrewDetailScreen(
                 onDismissRequest = { showDeleteConfirmDialog = false },
                 title = { Text("Delete brew?") },
                 text = {
-                    Text("ÄAre you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'?")
+                    Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'?")
                 },
                 confirmButton = {
                     Button(
@@ -297,6 +350,15 @@ fun BrewDetailScreen(
     }
 }
 
+// --- DetailRow ---
+@Composable
+fun DetailRow(label: String, value: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(100.dp))
+        Text(value)
+    }
+}
+
 // ---------- Summary & rows ----------
 @Composable
 fun BrewSummaryCard(state: BrewDetailState) {
@@ -310,7 +372,7 @@ fun BrewSummaryCard(state: BrewDetailState) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Details", style = MaterialTheme.typography.titleLarge)
@@ -327,14 +389,6 @@ fun BrewSummaryCard(state: BrewDetailState) {
     }
 }
 
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(verticalAlignment = Alignment.Top) {
-        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(100.dp))
-        Text(value)
-    }
-}
-
 // ---------- Edit card ----------
 @Composable
 fun BrewEditCard(
@@ -347,7 +401,7 @@ fun BrewEditCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Edit Details", style = MaterialTheme.typography.titleLarge)
@@ -399,7 +453,7 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White) // vit info
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -430,8 +484,7 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
     }
 }
 
-
-// --- Graf (oförändrad) ---
+// --- Graf ---
 @Composable
 fun BrewSamplesGraph(
     samples: List<BrewSample>,
@@ -441,7 +494,6 @@ fun BrewSamplesGraph(
 ) {
     val density = LocalDensity.current
 
-    // Färger och Penslar (inga ändringar)
     val massColor = Color.Black
     val flowColor = Color(0xFF007BFF)
     val gridLineColor = Color.LightGray
@@ -600,8 +652,7 @@ fun BrewSamplesGraph(
     }
 }
 
-
-// --- Dropdown (oförändrad) ---
+// --- Dropdown ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> EditDropdownSelector(
@@ -646,6 +697,43 @@ fun <T> EditDropdownSelector(
                     }
                 )
             }
+        }
+    }
+}
+
+// --- Helskärmsbild ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FullscreenImageScreen(
+    uri: String,
+    onNavigateBack: () -> Unit
+) {
+    Scaffold(
+        containerColor = Color.Black,
+        topBar = {
+            TopAppBar(
+                title = { Text("Brew Photo", color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = uri,
+                contentDescription = "Fullscreen brew photo",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

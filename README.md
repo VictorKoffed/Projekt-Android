@@ -43,14 +43,14 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Lägga till att kunna ta bort bild
-2. Kunna visa upp brewbilden i kortet av brew på hemskärmen ifall det finns en bild istället för placeholder logo.
+1. Fixa komera screen så att ux blir bättre t.ex. kunna använda främre kamrean och flytta ner tillbaka knappen så¨att den går att använda.
 2. Ifall man kommer till new brewskärmen och trycker på start live brew och vågen inte är connected så ska men efter man connectat vågen komma tillbaka till new brew skärmen med det man tidigare valt?
-3. Fix  banner to Bean, Method och grinder with a fitting background
-3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+3. Ifall man backar ifrån Livebrew skärmen så kommer man till connectscale, borde väl vara new brew? ifall det är pga av att scale disconnect during graph så borde jag komma till connectscale skärmen?
+4. Fix  banner to Bean, Method och grinder with a fitting background
+5. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
-4. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-5. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+6. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+7. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 
