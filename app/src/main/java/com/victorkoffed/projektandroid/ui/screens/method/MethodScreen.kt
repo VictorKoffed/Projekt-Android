@@ -100,7 +100,8 @@ fun MethodCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Ändring 1: Vit bakgrund
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -111,7 +112,7 @@ fun MethodCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Ta bort metod",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
                 )
             }
         }
@@ -197,6 +198,7 @@ fun DeleteMethodConfirmationDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
+                // Behåller error-färg här för att indikera en permanent, destruktiv åtgärd (trots önskemål om tema-färg, är rött standard UX för Delete)
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Ta bort") }
         },

@@ -121,7 +121,8 @@ fun BeanScreen(vm: BeanViewModel) {
 fun BeanCard(bean: Bean, onClick: () -> Unit, onDeleteClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Fix 1: Vit bakgrund
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -155,7 +156,11 @@ fun BeanCard(bean: Bean, onClick: () -> Unit, onDeleteClick: () -> Unit) {
                 bean.notes?.let { Text("Noteringar: $it", style = MaterialTheme.typography.bodySmall) }
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Ta bort böna", tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Ta bort böna",
+                    tint = MaterialTheme.colorScheme.primary // Fix 2: DCC7AA färg
+                )
             }
         }
     }

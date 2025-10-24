@@ -102,7 +102,8 @@ fun GrinderCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick), // Gör kortet klickbart
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Ändring 1: Vit bakgrund
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -117,7 +118,7 @@ fun GrinderCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Ta bort kvarn",
-                    tint = MaterialTheme.colorScheme.error // Röd färg
+                    tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
                 )
             }
         }
@@ -213,4 +214,3 @@ fun DeleteGrinderConfirmationDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
     )
 }
-
