@@ -41,10 +41,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (And todo)
 
-1. Translate app to english
+1. i pulled 340g in the live brew chart and in the detailbrewscreen it sayed 429g?
 2. Fix  banner to Bean, Method och grinder with a fitting background
-3. Fix buttons and some text have the app brown color (DCC7AA)
-4. Maybe have the buttons att the bottom fill in with the color (DCC7AA)?
 
 ##  ToDo List
 
