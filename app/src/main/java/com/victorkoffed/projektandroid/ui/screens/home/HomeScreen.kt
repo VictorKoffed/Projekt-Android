@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,6 +45,12 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+// --- NYA IMPORTER FÖR SNACKBAR ---
+import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
+// --- SLUT NYA IMPORTER ---
+
+
 // Färgdefinitionen antas vara tillgänglig i MainActivity eller på annat ställe.
 private val MockupColor = Color(0xFFDCC7AA)
 
@@ -53,6 +60,9 @@ fun HomeScreen(
     homeVm: HomeViewModel,
     coffeeImageVm: CoffeeImageViewModel,
     scaleVm: ScaleViewModel,
+    // --- NY PARAMETER ---
+    snackbarHostState: SnackbarHostState,
+    // --- SLUT NY PARAMETER ---
     navigateToScreen: (String) -> Unit, // Denna tar emot en Rutt-sträng
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
@@ -69,7 +79,7 @@ fun HomeScreen(
     // States för slumpmässig bild
     val imageUrl by coffeeImageVm.imageUrl
     val imageLoading by coffeeImageVm.loading
-    val imageError by coffeeImageVm.error
+    val imageError by coffeeImageVm.error // Fel från VM
 
     // State för den formaterade "tid sedan"-strängen
     var timeSinceLastCoffee by remember { mutableStateOf<String?>("...") }
@@ -83,6 +93,10 @@ fun HomeScreen(
     // --- STATE FÖR VARNINGSDIALOG ---
     var showSetupWarningDialog by remember { mutableStateOf(false) }
     // --- SLUT ---
+
+    // --- NYTT: Scope för Snackbar ---
+    val scope = rememberCoroutineScope()
+    // --- SLUT NYTT ---
 
     // Effekt för att hämta slumpmässig bild
     LaunchedEffect(Unit) {
@@ -98,6 +112,20 @@ fun HomeScreen(
             delay(60000) // Vänta en minut
         }
     }
+
+    // --- NYTT: Effekt för att visa Snackbar vid bildfel ---
+    LaunchedEffect(imageError) {
+        if (imageError != null) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = "Image Error: $imageError"
+                )
+            }
+            // Nollställ felet i ViewModel så det inte visas igen
+            coffeeImageVm.clearError()
+        }
+    }
+    // --- SLUT NYTT ---
 
     Scaffold(
         // --- Ljusgrå bakgrundsfärg för Scaffold ---
@@ -166,7 +194,9 @@ fun HomeScreen(
                     availableWeight = availableWeight,
                     imageUrl = imageUrl,
                     imageLoading = imageLoading,
+                    // --- ÄNDRING: Skicka med felet ---
                     imageError = imageError,
+                    // --- SLUT ÄNDRING ---
                     timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState,
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
@@ -223,7 +253,7 @@ fun InfoGrid(
     availableWeight: Double,
     imageUrl: String?,
     imageLoading: Boolean,
-    imageError: String?,
+    imageError: String?, // <-- Ta emot felet
     timeSinceLastCoffee: String,
     scaleConnectionState: BleConnectionState,
     onReloadImage: () -> Unit,
@@ -240,14 +270,17 @@ fun InfoGrid(
                 Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                     when {
                         imageLoading -> CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        // --- ÄNDRING: Ta bort Text-visningen av felet ---
                         imageError != null -> {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Error", color = Color.Gray, fontSize = 12.sp)
+                                // Behåll bara ikonen och knappen
+                                Icon(Icons.Default.Warning, "Error loading image", tint = Color.Gray)
                                 IconButton(onClick = onReloadImage, modifier= Modifier.size(32.dp)) {
                                     Icon(Icons.Default.Refresh, "Reload")
                                 }
                             }
                         }
+                        // --- SLUT ÄNDRING ---
                         imageUrl != null -> {
                             AsyncImage(
                                 model = imageUrl,

@@ -74,7 +74,10 @@ class BrewDetailViewModel(
             _brewDetailState.update { it.copy(isLoading = true, error = null) }
             try {
                 val brew = repository.getBrewById(brewId)
-                if (brew == null) { /* ... felhantering ... */ return@launch }
+                if (brew == null) {
+                    _brewDetailState.update { it.copy(isLoading = false, error = "Brew not found") } // <-- Bättre felhantering
+                    return@launch
+                }
                 Log.d(LOG_TAG, "Hittade bryggning: $brew")
 
                 val beanFlow = flow { emit(repository.getBeanById(brew.beanId)) }.onEach { Log.d(LOG_TAG, "Hämtade böna: $it") }
@@ -91,7 +94,10 @@ class BrewDetailViewModel(
                         brew = brew, bean = bean, grinder = grinder, method = method,
                         samples = samples, metrics = metrics, isLoading = false
                     )
-                }.catch { e -> /* ... felhantering ... */ }.collectLatest { state ->
+                }.catch { e ->
+                    Log.e(LOG_TAG, "Error in combine flow", e)
+                    _brewDetailState.update { it.copy(isLoading = false, error = "Error loading details: ${e.message}") }
+                }.collectLatest { state ->
                     Log.d(LOG_TAG, "Uppdaterar state: ...")
                     _brewDetailState.value = state
                     // NYTT: När data laddats, initiera redigeringsfälten
@@ -99,7 +105,10 @@ class BrewDetailViewModel(
                         resetEditFieldsToCurrentState()
                     }
                 }
-            } catch (e: Exception) { /* ... felhantering ... */ }
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Error in loadBrewDetails", e)
+                _brewDetailState.update { it.copy(isLoading = false, error = "Failed to load brew: ${e.message}") }
+            }
         }
     }
 
@@ -192,8 +201,20 @@ class BrewDetailViewModel(
             viewModelScope.launch {
                 try {
                     repository.deleteBrew(brewToDelete); onSuccess()
-                } catch (e: Exception) { /* ... felhantering ... */ }
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Kunde inte radera bryggning: ${e.message}", e)
+                    _brewDetailState.update { it.copy(error = "Kunde inte radera: ${e.message}") }
+                }
             }
-        } else { /* ... felhantering ... */ }
+        } else {
+            _brewDetailState.update { it.copy(error = "Kan inte radera, ingen bryggning laddad.") }
+        }
+    }
+
+    /**
+     * NY FUNKTION: Nollställer felmeddelandet efter att det har visats.
+     */
+    fun clearError() {
+        _brewDetailState.update { it.copy(error = null) }
     }
 }

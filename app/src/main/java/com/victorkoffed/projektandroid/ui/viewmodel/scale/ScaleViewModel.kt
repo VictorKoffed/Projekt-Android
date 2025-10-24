@@ -375,4 +375,11 @@ class ScaleViewModel : AndroidViewModel {
         }
     }
     // --- SLUT ÄNDRINGAR ---
+
+    /**
+     * NY FUNKTION: Nollställer felmeddelandet efter att det har visats.
+     */
+    fun clearError() {
+        _error.value = null
+    }
 }

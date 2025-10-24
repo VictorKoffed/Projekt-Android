@@ -61,6 +61,15 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.navigation.NavBackStackEntry
 // --- SLUT NYA IMPORTER ---
 
+// --- NYA IMPORTER FÖR SNACKBAR ---
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+// --- SLUT NYA IMPORTER ---
+
+
 // Lokala färger för denna skärm
 private val Accent = Color(0xFFDCC7AA)
 private val CardGray = Color(0xFFF0F0F0)
@@ -98,6 +107,11 @@ fun BrewDetailScreen(
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
 
+    // --- NYTT: Snackbar state och scope ---
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    // --- SLUT NYTT ---
+
     // --- NYTT: Hantera returvärde från CameraScreen ---
     val savedImageUri by navBackStackEntry.savedStateHandle
         .getLiveData<String>("captured_image_uri")
@@ -108,6 +122,21 @@ fun BrewDetailScreen(
             viewModel.updateBrewImageUri(savedImageUri)
             // Rensa värdet så det inte återanvänds
             navBackStackEntry.savedStateHandle.remove<String>("captured_image_uri")
+        }
+    }
+    // --- SLUT NYTT ---
+
+    // --- NYTT: LaunchedEffect för att visa fel ---
+    LaunchedEffect(state.error) {
+        if (state.error != null) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = state.error!!,
+                    duration = SnackbarDuration.Long
+                )
+            }
+            // Nollställ felet i ViewModel
+            viewModel.clearError()
         }
     }
     // --- SLUT NYTT ---
@@ -148,7 +177,10 @@ fun BrewDetailScreen(
                     }
                 }
             )
-        }
+        },
+        // --- NYTT: Lägg till snackbarHost ---
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+        // --- SLUT NYTT ---
     ) { paddingValues ->
         when {
             state.isLoading && !isEditing -> {
@@ -156,11 +188,15 @@ fun BrewDetailScreen(
                     CircularProgressIndicator()
                 }
             }
+            // --- BORTTAGEN: Denna gren hanteras nu av LaunchedEffect ---
+            /*
             state.error != null -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), Alignment.Center) {
                     Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
+            */
+            // --- SLUT BORTTAGEN ---
             else -> {
                 val currentBrew = state.brew
                 if (currentBrew != null) {
@@ -337,6 +373,8 @@ fun BrewDetailScreen(
                         }
                     }
                 } else {
+                    // Denna text visas nu bara om state.error är null men state.brew ändå blev null,
+                    // vilket inte borde hända om ViewModelns logik är korrekt.
                     Text("Brew data became unavailable.")
                 }
             }
@@ -369,6 +407,10 @@ fun BrewDetailScreen(
         }
     }
 }
+
+
+// --- Resten av Composable-funktionerna (DetailRow, BrewSummaryCard, BrewEditCard, BrewMetricsCard, BrewSamplesGraph, EditDropdownSelector, FullscreenImageScreen) är oförändrade ---
+
 
 // --- DetailRow ---
 @Composable

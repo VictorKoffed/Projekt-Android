@@ -164,4 +164,11 @@ class BeanDetailViewModel(
         editRemainingWeightStr = bean?.remainingWeightGrams?.toString() ?: ""
         editNotes = bean?.notes ?: ""
     }
+
+    /**
+     * NY FUNKTION: Nollställer felmeddelandet efter att det har visats.
+     */
+    fun clearError() {
+        _beanDetailState.update { it.copy(error = null) }
+    }
 }

@@ -21,6 +21,13 @@ import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermissionLauncher
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.flow.firstOrNull
+// --- NYA IMPORTER FÖR SNACKBAR ---
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+// --- SLUT NYA IMPORTER ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +36,27 @@ fun ScaleConnectScreen(
     onNavigateBack: () -> Unit
 ) {
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
+    val error by vm.error.collectAsState() // Hämta error state
+
+    // --- NYTT: Snackbar state och scope ---
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    // --- SLUT NYTT ---
+
+    // --- NYTT: LaunchedEffect för att visa fel ---
+    LaunchedEffect(error) {
+        if (error != null) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = error!!,
+                    duration = SnackbarDuration.Long
+                )
+            }
+            // Nollställ felet i ViewModel
+            vm.clearError()
+        }
+    }
+    // --- SLUT NYTT ---
 
     Scaffold(
         topBar = {
@@ -40,7 +68,10 @@ fun ScaleConnectScreen(
                     }
                 }
             )
-        }
+        },
+        // --- NYTT: Lägg till snackbarHost ---
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+        // --- SLUT NYTT ---
     ) { padding ->
         AnimatedContent(
             targetState = connectionState,
@@ -67,7 +98,7 @@ fun ScaleConnectScreen(
                 else -> { // Handles Disconnected, Connecting, Error
                     val devices by vm.devices.collectAsState()
                     val isScanning by vm.isScanning.collectAsState()
-                    val error by vm.error.collectAsState()
+                    // error hämtas nu högre upp
                     val requestPermissions = rememberBluetoothPermissionLauncher { granted ->
                         if (granted) vm.startScan()
                     }
@@ -75,7 +106,9 @@ fun ScaleConnectScreen(
                         devices = devices,
                         isScanning = isScanning,
                         connectionState = state,
-                        error = (state as? BleConnectionState.Error)?.message,
+                        // --- ÄNDRING: Skicka inte med 'error' längre ---
+                        // error = (state as? BleConnectionState.Error)?.message,
+                        // --- SLUT ÄNDRING ---
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
                         // Använd explicit namn istället för 'it'
                         onDeviceClick = { device -> // Explicit namn 'device'
@@ -143,15 +176,17 @@ private fun ConnectedView(
 }
 
 
-// --- ScanningView definitionen behöver sina parametrar ---
+// --- UPPDATERAD ScanningView ---
 @Composable
 private fun ScanningView(
-    devices: List<DiscoveredDevice>, // <--- Lades till
-    isScanning: Boolean,             // <--- Lades till
-    connectionState: BleConnectionState, // <--- Lades till
-    error: String?,                  // <--- Lades till
-    onToggleScan: () -> Unit,        // <--- Lades till
-    onDeviceClick: (DiscoveredDevice) -> Unit // <--- Lades till
+    devices: List<DiscoveredDevice>,
+    isScanning: Boolean,
+    connectionState: BleConnectionState,
+    // --- BORTTAGEN PARAMETER: error ---
+    // error: String?,
+    // --- SLUT BORTTAGEN ---
+    onToggleScan: () -> Unit,
+    onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -165,6 +200,8 @@ private fun ScanningView(
             onToggleScan = onToggleScan
         )
 
+        // --- BORTTAGEN: Text-visning av fel ---
+        /*
         error?.let {
             Text(
                 text = "Error: $it",
@@ -172,10 +209,14 @@ private fun ScanningView(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+        */
+        // --- SLUT BORTTAGEN ---
+
         Divider()
         DeviceList(devices, isScanning, connectionState, onDeviceClick) // Skicka vidare
     }
 }
+// --- SLUT UPPDATERAD ScanningView ---
 
 
 // --- ScanControls (oförändrad) ---

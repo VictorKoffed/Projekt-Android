@@ -62,6 +62,12 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // --- SLUT NYA IMPORTER ---
 
+// --- NYA IMPORTER FÖR SNACKBAR ---
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+// --- SLUT NYA IMPORTER ---
+
 
 // --- ÅTERSTÄLLD DATA CLASS för navigationsalternativ ---
 data class NavItem(
@@ -135,6 +141,11 @@ class MainActivity : ComponentActivity() {
                     initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
                 )
 
+                // --- NYTT: SnackbarHostState och Scope ---
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+                // --- SLUT NYTT ---
+
                 // --- NYTT: Scaffold hanterar nu bottenmenyn ---
                 Scaffold(
                     bottomBar = {
@@ -170,7 +181,10 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    }
+                    },
+                    // --- NYTT: Lade till snackbarHost ---
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                    // --- SLUT NYTT ---
                 ) { innerPadding ->
                     // --- NYTT: NavHost ersätter AnimatedContent ---
                     NavHost(
@@ -185,6 +199,9 @@ class MainActivity : ComponentActivity() {
                                 homeVm = homeVm,
                                 coffeeImageVm = coffeeImageVm,
                                 scaleVm = scaleVm,
+                                // --- NYTT: Skicka med snackbarHostState ---
+                                snackbarHostState = snackbarHostState,
+                                // --- SLUT NYTT ---
                                 navigateToScreen = { screenName -> navController.navigate(screenName) },
                                 onNavigateToBrewSetup = {
                                     brewVm.clearBrewResults()
@@ -245,6 +262,11 @@ class MainActivity : ComponentActivity() {
                                             }
                                         } else {
                                             Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
+                                            // --- NYTT: Visa felmeddelande ---
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Could not save brew. Check inputs.")
+                                            }
+                                            // --- SLUT NYTT ---
                                         }
                                     }
                                 },
@@ -286,6 +308,15 @@ class MainActivity : ComponentActivity() {
                                             }
                                         } else {
                                             Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
+                                            // --- NYTT: Visa fel om det finns ett (från ScaleVM) ---
+                                            val errorMsg = scaleVm.error.value
+                                            if(errorMsg != null) {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(errorMsg)
+                                                    scaleVm.clearError() // Nollställ felet
+                                                }
+                                            }
+                                            // --- SLUT NYTT ---
                                             navController.popBackStack() // Gå tillbaka till BrewSetup
                                         }
                                     }

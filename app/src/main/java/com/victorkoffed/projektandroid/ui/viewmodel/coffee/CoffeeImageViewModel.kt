@@ -49,4 +49,11 @@ class CoffeeImageViewModel(app: Application) : AndroidViewModel(app) {
         // Lägg till i Volley-kön för att skicka förfrågan
         queue.add(request)
     }
+
+    /**
+     * NY FUNKTION: Nollställer felmeddelandet efter att det har visats.
+     */
+    fun clearError() {
+        error.value = null
+    }
 }

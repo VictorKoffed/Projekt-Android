@@ -34,6 +34,15 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+// --- NYA IMPORTER FÖR SNACKBAR ---
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+// --- SLUT NYA IMPORTER ---
+
+
 // Formatterare
 private val detailDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -57,6 +66,26 @@ fun BeanDetailScreen(
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
+    // --- NYTT: Snackbar state och scope ---
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    // --- SLUT NYTT ---
+
+    // --- NYTT: LaunchedEffect för att visa fel ---
+    LaunchedEffect(state.error) {
+        if (state.error != null) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = state.error!!,
+                    duration = SnackbarDuration.Long // Visa felet lite längre
+                )
+            }
+            // Nollställ felet i ViewModel
+            viewModel.clearError()
+        }
+    }
+    // --- SLUT NYTT ---
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,7 +104,10 @@ fun BeanDetailScreen(
                     }
                 }
             )
-        }
+        },
+        // --- NYTT: Lägg till snackbarHost ---
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+        // --- SLUT NYTT ---
     ) { paddingValues ->
         when {
             state.isLoading -> {
@@ -83,11 +115,15 @@ fun BeanDetailScreen(
                     CircularProgressIndicator()
                 }
             }
+            // --- BORTTAGEN: Denna gren hanteras nu av LaunchedEffect ---
+            /*
             state.error != null -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), Alignment.Center) {
                     Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
+            */
+            // --- SLUT BORTTAGEN ---
             state.bean != null -> {
                 LazyColumn(
                     modifier = Modifier
@@ -169,6 +205,8 @@ fun BeanDetailScreen(
         }
     }
 }
+
+// --- Resten av Composable-funktionerna (BeanDetailHeaderCard, BrewItemCard, DetailRow, EditBeanDialog, DeleteConfirmationDialog) är oförändrade ---
 
 @Composable
 fun BeanDetailHeaderCard(bean: Bean) {
