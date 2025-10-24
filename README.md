@@ -43,8 +43,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. Translate app to english
 2. Fix  banner to Bean, Method och grinder with a fitting background
-4. Fix buttons and some text have the app brown color (DCC7AA)
-5. Maybe have the buttons att the bottom fill in with the color (DCC7AA)?
+3. Fix buttons and some text have the app brown color (DCC7AA)
+4. Maybe have the buttons att the bottom fill in with the color (DCC7AA)?
 
 ##  ToDo List
 
@@ -52,13 +52,13 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 appens tema färger (DCC7AA).
 2. När man är klar med en brew kanske man ska komma till brewdetailscreen direkt istället för after brew skärmen (kanske ta bort after brew?).
 3. Fixa tema på Brewdetailscreen för att passa appen (DCC7AA).
-1. Lägga till kamerafunktion
-2. Förbättra HomeScreen:
+4. Lägga till kamerafunktion
+5. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
-3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+6. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
-4. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-5. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+7. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+8. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 
