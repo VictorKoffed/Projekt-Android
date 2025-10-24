@@ -39,7 +39,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 3. Sync Gradle and run on an emulator or Android device
 4. *(Optional)* Enable Bluetooth permissions to test smart scale features
 
-##  Known issue (And todo)
+##  Known issue (Bugfixing)
 
 ##  ToDo List
 
