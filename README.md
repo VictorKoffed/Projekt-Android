@@ -45,15 +45,14 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Fixa grafskärmen  Även ändra de show flow och knappen över till appens tema färger (DCC7AA).
-2. Fixa tema på Brewdetailscreen för att passa appen (DCC7AA).
-3. Lägga till kamerafunktion
-4. Förbättra HomeScreen:
+1. Fixa tema på Brewdetailscreen för att passa appen (DCC7AA).
+2. Lägga till kamerafunktion
+3. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
-5. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
+4. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
-6. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
-7. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
+5. Felhantering/Feedback: Visa felmeddelanden på ett snyggare sätt (t.ex. med Snackbar) istället för bara Text.
+6. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports.
 
 ## 👤 Author
 
