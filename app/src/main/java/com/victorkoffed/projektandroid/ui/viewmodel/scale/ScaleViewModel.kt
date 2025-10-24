@@ -64,6 +64,9 @@ class ScaleViewModel : AndroidViewModel {
         this.recordingTimeMillis = _recordingTimeMillis
         this._weightAtPause = MutableStateFlow<Float?>(null)
         this.weightAtPause = _weightAtPause
+        // --- NY RAD NEDAN ---
+        this._countdown = MutableStateFlow<Int?>(null)
+        this.countdown = _countdown
     }
 
     // --- Scanning State ---
@@ -95,6 +98,11 @@ class ScaleViewModel : AndroidViewModel {
     val recordingTimeMillis: StateFlow<Long>
     private val _weightAtPause: MutableStateFlow<Float?>
     val weightAtPause: StateFlow<Float?>
+    // --- NYTT STATE FÖR NEDRÄKNING ---
+    private val _countdown: MutableStateFlow<Int?>
+    val countdown: StateFlow<Int?>
+    // --- SLUT NYTT STATE ---
+
 
     private var recordingStartTime: Long = 0L
     private var timePausedAt: Long = 0L
@@ -178,8 +186,56 @@ class ScaleViewModel : AndroidViewModel {
     }
 
     // --- Recording Functions ---
+
+    // --- HELA startRecording() ÄR OMSKRIVEN ---
+    /**
+     * Initierar inspelningssekvensen:
+     * 1. Tarerar vågen.
+     * 2. Startar en 3-sekunders nedräkning.
+     * 3. Startar den faktiska inspelningen.
+     */
     fun startRecording() {
-        if (_isRecording.value || connectionState.value !is BleConnectionState.Connected) return // Säkerställ att vi är anslutna
+        // Förhindra start om vi redan är upptagna (spelar in, pausad, eller redan räknar ner)
+        if (_isRecording.value || _isPaused.value || _countdown.value != null) {
+            Log.w("ScaleViewModel", "Start recording called but already busy.")
+            return
+        }
+        // Säkerställ att vi är anslutna
+        if (connectionState.value !is BleConnectionState.Connected) {
+            _error.value = "Cannot start recording, scale is not connected."
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                Log.d("ScaleViewModel", "Initiating recording sequence...")
+                // 1. Tarera vågen
+                tareScale()
+                // 2. Starta 3-sekunders nedräkning
+                _countdown.value = 3
+                delay(1000L)
+                _countdown.value = 2
+                delay(1000L)
+                _countdown.value = 1
+                delay(1000L)
+                _countdown.value = null
+                Log.d("ScaleViewModel", "Countdown finished. Starting recording.")
+                // 3. Starta den faktiska inspelningen
+                internalStartRecording()
+            } catch (e: Exception) {
+                Log.e("ScaleViewModel", "Error during recording initiation", e)
+                _countdown.value = null
+                _error.value = "Failed to start recording."
+            }
+        }
+    }
+
+    /**
+     * Den interna logiken för att starta timer och datainsamling.
+     * Anropas av `startRecording()` EFTER nedräkningen.
+     */
+    private fun internalStartRecording() {
+        // Vi kollar inte connection state igen, det gjordes i den publika funktionen
         _recordedSamplesFlow.value = emptyList()
         _recordingTimeMillis.value = 0L
         _isPaused.value = false
@@ -189,6 +245,8 @@ class ScaleViewModel : AndroidViewModel {
         addSamplePoint(measurement.value) // Lägg till första punkten (troligen 0g)
         startTimer()
     }
+    // --- SLUT PÅ OMSKRIVNING AV startRecording ---
+
 
     fun pauseRecording() {
         if (!_isRecording.value || _isPaused.value) return
@@ -208,6 +266,13 @@ class ScaleViewModel : AndroidViewModel {
     }
 
     suspend fun stopRecordingAndSave(setupState: BrewSetupState): Long? {
+        // --- NYTT: Hantera om användaren trycker "Done" MEDAN nedräkning pågår ---
+        if (_countdown.value != null) {
+            stopRecording() // Avbryt bara nedräkningen och nollställ
+            return null
+        }
+        // --- SLUT NYTT ---
+
         if (!_isRecording.value && !_isPaused.value) return null // Kan bara spara om inspelning pågått
 
         // Spara aktuell tid och samples innan vi nollställer
@@ -266,6 +331,7 @@ class ScaleViewModel : AndroidViewModel {
     // --- Helper functions ---
     // Denna är nu public för att kunna anropas från LiveBrewScreen (Reset-knappen)
     fun stopRecording() {
+        _countdown.value = null // <-- NY RAD: Se till att nedräkning avbryts
         _isRecording.value = false
         _isPaused.value = false
         _weightAtPause.value = null

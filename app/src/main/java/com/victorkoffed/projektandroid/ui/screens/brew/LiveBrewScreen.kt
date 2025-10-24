@@ -47,6 +47,7 @@ import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch // <-- DEN HÄR RADEN LADES TILL
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -60,6 +61,7 @@ fun LiveBrewScreen(
     isPaused: Boolean,
     weightAtPause: Float?,
     connectionState: BleConnectionState,
+    countdown: Int?, // <-- NY PARAMETER
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -73,14 +75,16 @@ fun LiveBrewScreen(
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost during recording. Recording has been stopped.") }
 
-    LaunchedEffect(connectionState, isRecording) {
-        if (isRecording && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
+    // --- NYTT: Vi kollar även countdown här ---
+    LaunchedEffect(connectionState, isRecording, countdown) {
+        // Om vi tappar anslutning MEDAN vi spelar in ELLER räknar ner
+        if ((isRecording || countdown != null) && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
             if (connectionState is BleConnectionState.Error) {
                 alertMessage = "Error connecting to the scale: ${connectionState.message}. Recording has been stopped."
             } else {
                 alertMessage = "The connection to the scale was lost during recording. Recording has been stopped.."
             }
-            onResetRecording()
+            onResetRecording() // Nollställer (vilket även stoppar countdown)
             showDisconnectedAlert = true
         }
     }
@@ -97,7 +101,8 @@ fun LiveBrewScreen(
                 actions = {
                     TextButton(
                         onClick = onStopAndSaveClick,
-                        enabled = isRecording || isPaused
+                        // --- ÄNDRAD: Aktivera även om vi pausat ELLER räknar ner (för att avbryta) ---
+                        enabled = isRecording || isPaused || countdown != null
                     ) {
                         Text("Done")
                     }
@@ -117,7 +122,8 @@ fun LiveBrewScreen(
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
-                showFlow = showFlowInfo // Skicka med för textvisning
+                showFlow = showFlowInfo, // Skicka med för textvisning
+                countdown = countdown // <-- SKICKA MED NEDRÄKNING
             )
             Spacer(Modifier.height(16.dp)) // <-- Använder korrekt Spacer från layout.*
             BrewGraph( // <-- Använder den förenklade BrewGraph nedan
@@ -152,6 +158,7 @@ fun LiveBrewScreen(
                 isRecording = isRecording,
                 isPaused = isPaused,
                 isConnected = connectionState is BleConnectionState.Connected,
+                countdown = countdown, // <-- SKICKA MED NEDRÄKNING
                 onStartClick = onStartClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
@@ -181,18 +188,21 @@ fun LiveBrewScreen(
     }
 }
 
-// --- StatusDisplay (Oförändrad) ---
+// --- StatusDisplay (UPPDATERAD) ---
 @Composable
 fun StatusDisplay(
     currentTimeMillis: Long,
     currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
-    showFlow: Boolean // Används för textvisning
+    showFlow: Boolean, // Används för textvisning
+    countdown: Int? // <-- NY PARAMETER
 ) {
-    val minutes = (currentTimeMillis / 1000 / 60).toInt()
-    val seconds = (currentTimeMillis / 1000 % 60).toInt()
-    val timeString = remember(minutes, seconds) { String.format("%02d:%02d", minutes, seconds) }
+    val timeString = remember(currentTimeMillis) {
+        val minutes = (currentTimeMillis / 1000 / 60).toInt()
+        val seconds = (currentTimeMillis / 1000 % 60).toInt()
+        String.format("%02d:%02d", minutes, seconds)
+    }
 
     val weightString = remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
     val flowString = remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
@@ -201,6 +211,8 @@ fun StatusDisplay(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = when {
+                // --- NY: Sätt en färg för nedräkning ---
+                countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
                 isPaused -> Color.Gray
                 isRecording -> MaterialTheme.colorScheme.tertiaryContainer
                 else -> Color.Gray
@@ -208,30 +220,51 @@ fun StatusDisplay(
         )
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 16.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            // --- ÄNDRAD: Lade till minHeight och VerticalArrangement.Center ---
+            modifier = Modifier
+                .padding(vertical = 16.dp)
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 180.dp), // Ge den en höjd så den inte hoppar
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center // Centrera innehållet
         ) {
-            Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
-            Spacer(Modifier.height(8.dp)) // <-- Använder korrekt Spacer
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = if (showFlow) Arrangement.SpaceEvenly else Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Weight", style = MaterialTheme.typography.labelMedium)
-                    Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
-                }
-                if (showFlow) {
+            // --- NYTT: Visa nedräkning om den är aktiv ---
+            if (countdown != null) {
+                Text(
+                    text = "Starting in...",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Text(
+                    text = countdown.toString(),
+                    fontSize = 72.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            } else {
+                // --- Annars, visa den vanliga vyn ---
+                Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (showFlow) Arrangement.SpaceEvenly else Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Flow", style = MaterialTheme.typography.labelMedium)
-                        Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                        Text("Weight", style = MaterialTheme.typography.labelMedium)
+                        Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                    }
+                    if (showFlow) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Flow", style = MaterialTheme.typography.labelMedium)
+                            Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                        }
                     }
                 }
-            }
-            if (isPaused) {
-                Spacer(Modifier.height(4.dp)) // <-- Använder korrekt Spacer
-                Text("Paused", fontSize = 14.sp)
+                if (isPaused) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Paused", fontSize = 14.sp)
+                }
             }
         }
     }
@@ -357,19 +390,22 @@ fun BrewGraph(
 // --- SLUT PÅ FÖRENKLAD BrewGraph ---
 
 
-/* BrewControls (Oförändrad) */
+// --- BrewControls (UPPDATERAD) ---
 @Composable
 fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
     isConnected: Boolean,
+    countdown: Int?, // <-- NY PARAMETER
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
     onTareClick: () -> Unit,
     onResetClick: () -> Unit
 ) {
-    // ... (koden är densamma som tidigare) ...
+    // --- NYTT: Kontrollera om vi är upptagna med nedräkning ---
+    val isBusy = countdown != null
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -377,7 +413,8 @@ fun BrewControls(
     ) {
         IconButton(
             onClick = onResetClick,
-            enabled = (isRecording || isPaused)
+            // --- ÄNDRAD: Inaktivera vid nedräkning ---
+            enabled = (isRecording || isPaused) && !isBusy
         ) {
             Icon(
                 imageVector = Icons.Default.Replay,
@@ -389,20 +426,24 @@ fun BrewControls(
                 when {
                     isPaused -> onResumeClick()
                     isRecording -> onPauseClick()
-                    else -> onStartClick()
+                    else -> onStartClick() // Denna startar nu sekvensen i VM
                 }
             },
             modifier = Modifier.size(72.dp),
             contentPadding = PaddingValues(0.dp),
-            enabled = isConnected
+            // --- ÄNDRAD: Inaktivera vid nedräkning ---
+            enabled = isConnected && !isBusy
         ) {
             Icon(
                 imageVector = when {
+                    // --- NYTT: Visa timer-ikon vid nedräkning ---
+                    isBusy -> Icons.Default.Timer
                     isPaused -> Icons.Default.PlayArrow
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
                 },
                 contentDescription = when {
+                    isBusy -> "Starting..."
                     isPaused -> "Resume"
                     isRecording -> "Pause"
                     else -> "Start"
@@ -412,7 +453,8 @@ fun BrewControls(
         }
         OutlinedButton(
             onClick = onTareClick,
-            enabled = isConnected && !isRecording && !isPaused,
+            // --- ÄNDRAD: Inaktivera vid nedräkning ---
+            enabled = isConnected && !isRecording && !isPaused && !isBusy,
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
             contentPadding = PaddingValues(0.dp)
@@ -425,12 +467,12 @@ fun BrewControls(
     }
 }
 
-// Preview (Oförändrad förutom null-säker läsning av Double?)
+// --- Preview (UPPDATERAD) ---
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
-    // ... (koden är densamma som tidigare) ...
     ProjektAndroidTheme {
+        // ... (samma previewSamples som innan) ...
         val previewSamples = remember {
             listOf(
                 BrewSample(brewId = 1, timeMillis = 0, massGrams = 0.0, flowRateGramsPerSecond = 0.0),
@@ -443,8 +485,11 @@ fun LiveBrewScreenPreview() {
         }
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
-        var time by remember { mutableStateOf(0L) } // Starta på 0 i preview
+        var time by remember { mutableStateOf(0L) }
         var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale")) }
+        var countdown by remember { mutableStateOf<Int?>(null) } // <-- NYTT PREVIEW STATE
+
+        val scope = rememberCoroutineScope()
 
         val nextSample = remember(isRec, isPaused, time) { previewSamples.find { it.timeMillis >= time } }
         val lastSample = remember { previewSamples.last() }
@@ -460,20 +505,35 @@ fun LiveBrewScreenPreview() {
         val weightAtPausePreview = remember(isPaused, currentWeight) { if (isPaused) currentWeight.weightGrams else null }
 
         LiveBrewScreen(
-            samples = previewSamples.filter { it.timeMillis <= time }, // Visa bara samples upp till aktuell tid
+            samples = previewSamples.filter { it.timeMillis <= time },
             currentMeasurement = currentWeight,
             currentTimeMillis = time,
             isRecording = isRec,
             isPaused = isPaused,
             weightAtPause = weightAtPausePreview,
             connectionState = connectionState,
-            onStartClick = { isRec = true; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Scale") }, // Nollställ tid vid start
+            countdown = countdown, // <-- SKICKA MED
+            onStartClick = {
+                // Simulera nedräkningen i preview
+                scope.launch {
+                    countdown = 3
+                    delay(1000)
+                    countdown = 2
+                    delay(1000)
+                    countdown = 1
+                    delay(1000)
+                    countdown = null
+                    isRec = true
+                    isPaused = false
+                    time = 0L
+                }
+            },
             onPauseClick = { isPaused = true },
             onResumeClick = { isPaused = false },
-            onStopAndSaveClick = { isRec = false; isPaused = false },
+            onStopAndSaveClick = { isRec = false; isPaused = false; countdown = null },
             onTareClick = {},
             onNavigateBack = { Log.d("Preview", "Navigate Back to Scale") },
-            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Scale") },
+            onResetRecording = { isRec = false; isPaused = false; time = 0L; countdown = null },
             navigateTo = { screen -> Log.d("Preview", "Navigate to $screen") }
         )
     }

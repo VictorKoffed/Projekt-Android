@@ -188,6 +188,7 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
 
+                                // --- START PÅ UPPDATERAT BLOCK ---
                                 "live_brew" -> {
                                     val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                     val time by scaleVm.recordingTimeMillis.collectAsState()
@@ -195,7 +196,8 @@ class MainActivity : ComponentActivity() {
                                     val isPaused by scaleVm.isPaused.collectAsState()
                                     val currentMeasurement by scaleVm.measurement.collectAsState()
                                     val weightAtPause by scaleVm.weightAtPause.collectAsState()
-                                    // scaleConnectionState hämtas redan utanför
+                                    // Hämta det nya countdown-värdet
+                                    val countdown by scaleVm.countdown.collectAsState()
 
                                     LiveBrewScreen(
                                         samples = samples,
@@ -205,28 +207,27 @@ class MainActivity : ComponentActivity() {
                                         isPaused = isPaused,
                                         weightAtPause = weightAtPause,
                                         connectionState = scaleConnectionState,
+                                        countdown = countdown, // <-- Skicka med det nya värdet
                                         onStartClick = { scaleVm.startRecording() },
                                         onPauseClick = { scaleVm.pauseRecording() },
                                         onResumeClick = { scaleVm.resumeRecording() },
 
-                                        // --- ÄNDRINGEN ÄR HÄR ---
                                         onStopAndSaveClick = {
                                             lifecycleScope.launch {
                                                 val currentSetup = brewVm.getCurrentSetup()
                                                 Log.d("MainActivity", "Saving brew with setup: $currentSetup")
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
-                                                // Nu navigerar vi direkt till detaljskärmen
+
                                                 if (savedBrewId != null) {
                                                     selectedBrewId = savedBrewId // Spara det nya ID:t
                                                     currentScreen = "brew_detail" // Gå till detaljskärmen
                                                 } else {
-                                                    // Om något gick fel med sparandet, gå tillbaka till setup
-                                                    Log.e("MainActivity", "Failed to save brew from LiveBrewScreen.")
+                                                    // Om något gick fel ELLER om nedräkningen avbröts
+                                                    Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
                                                     currentScreen = "brew_setup"
                                                 }
                                             }
                                         },
-                                        // --- SLUT PÅ ÄNDRING ---
 
                                         onTareClick = { scaleVm.tareScale() },
                                         onNavigateBack = { navigateToScreen("scale") },
@@ -234,6 +235,8 @@ class MainActivity : ComponentActivity() {
                                         navigateTo = navigateToScreen
                                     )
                                 }
+                                // --- SLUT PÅ UPPDATERAT BLOCK ---
+
                                 "brew_detail" -> {
                                     if (selectedBrewId != null) {
                                         BrewDetailScreen(
