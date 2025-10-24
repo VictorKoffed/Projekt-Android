@@ -44,6 +44,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 ##  ToDo List
 
 1. Lägga till kamerafunktion
+2. Ifall man kommer till new brewskärmen och trycker på start live brew och vågen inte är connected så ska men efter man connectat vågen komma tillbaka till new brew skärmen med det man tidigare valt?
 2. Förbättra HomeScreen:
    Byta ut placeholder-bilderna i "Last brews"-listan.
 3. Fix  banner to Bean, Method och grinder with a fitting background

@@ -20,7 +20,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BrewSample::class
     ],
     views = [BrewMetrics::class],
-    version = 1,
+    // --- ÄNDRING 1: Versionen har ökats ---
+    version = 2,
+    // --- SLUT ÄNDRING 1 ---
     exportSchema = false // Kan sättas till true för produktionsappar
 )
 @TypeConverters(Converters::class) // Används för att konvertera t.ex. Date till Long (Epoch)
@@ -41,6 +43,9 @@ abstract class CoffeeDatabase : RoomDatabase() {
                     "coffee_journal.db" // Byt namn för konsekvens
                 )
                     .addCallback(DatabaseCallback) // Lägger till våra Triggers
+                    // --- ÄNDRING 2: Lade till fallback ---
+                    .fallbackToDestructiveMigration() // Raderar och återskapar DB vid versionsändring
+                    // --- SLUT ÄNDRING 2 ---
                     .build()
                 INSTANCE = instance
                 instance
@@ -91,4 +96,3 @@ abstract class CoffeeDatabase : RoomDatabase() {
         }
     }
 }
-

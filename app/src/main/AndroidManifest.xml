@@ -2,28 +2,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Rättigheter för Bluetooth och Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Steg 1: Rättigheter för Bluetooth (Android 12 / API 31 och högre) -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-    <!-- Steg 2: Rättigheter för Bluetooth (Äldre än Android 12 / API 30 och lägre) -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- Steg 3: Rättighet för plats (Äldre än Android 12 / API 30 och lägre) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30"/>
 
-    <!-- Steg 4: Deklarera att appen använder BLE -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
-
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application
         android:name=".CoffeeJournalApplication"
         android:allowBackup="true"
@@ -47,4 +43,3 @@
     </application>
 
 </manifest>
-

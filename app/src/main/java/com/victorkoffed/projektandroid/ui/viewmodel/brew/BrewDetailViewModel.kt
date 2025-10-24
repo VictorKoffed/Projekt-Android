@@ -130,7 +130,7 @@ class BrewDetailViewModel(
                     methodId = editSelectedMethod?.id, // Använd ID
                     brewTempCelsius = editBrewTempCelsius.toDoubleOrNull(),
                     notes = editNotes.takeIf { it.isNotBlank() }
-                    // Fält som INTE ska ändras (beanId, doseGrams, startedAt) lämnas orörda
+                    // Fält som INTE ska ändras (beanId, doseGrams, startedAt, imageUri) lämnas orörda
                 )
                 repository.updateBrew(updatedBrew)
                 isEditing = false // Avsluta redigeringsläget
@@ -164,6 +164,26 @@ class BrewDetailViewModel(
     }
     // --- SLUT PÅ NYA FUNKTIONER ---
 
+    // --- NY FUNKTION FÖR BILD ---
+    /**
+     * Uppdaterar den nuvarande bryggningen med en URI till en bild.
+     */
+    fun updateBrewImageUri(uri: String?) {
+        val currentBrew = _brewDetailState.value.brew ?: return
+        viewModelScope.launch {
+            try {
+                // Skapa en kopia, uppdatera BARA bild-URI:n
+                val updatedBrew = currentBrew.copy(imageUri = uri)
+                repository.updateBrew(updatedBrew)
+                // Ladda om detaljerna för att UI:t ska visa den nya bilden
+                loadBrewDetails()
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Kunde inte spara bild-URI: ${e.message}", e)
+                _brewDetailState.update { it.copy(error = "Kunde inte spara bild: ${e.message}") }
+            }
+        }
+    }
+    // --- SLUT PÅ NY FUNKTION ---
 
     // deleteCurrentBrew (oförändrad)
     fun deleteCurrentBrew(onSuccess: () -> Unit) {
@@ -177,4 +197,3 @@ class BrewDetailViewModel(
         } else { /* ... felhantering ... */ }
     }
 }
-

@@ -135,7 +135,12 @@ data class Brew(
     @ColumnInfo(name = "started_at")
     val startedAt: Date = Date(), // Sätts automatiskt till "nu"
 
-    val notes: String?
+    val notes: String?,
+
+    // --- NYTT FÄLT ---
+    @ColumnInfo(name = "image_uri")
+    val imageUri: String? = null
+    // --- SLUT NYTT FÄLT ---
 )
 
 /**

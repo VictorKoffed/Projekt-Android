@@ -52,6 +52,12 @@ import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
+// --- NYA IMPORTER FÖR KAMERA ---
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
+// --- SLUT NYA IMPORTER ---
 
 
 // --- ÅTERSTÄLLD DATA CLASS för navigationsalternativ ---
@@ -76,11 +82,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var homeVm: HomeViewModel
     private val coffeeImageVm: CoffeeImageViewModel by viewModels()
 
+    // --- NYTT: Håll i appen för att skapa factories ---
+    private lateinit var app: CoffeeJournalApplication
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // --- Hämta repositories och skapa ViewModels ---
-        val app = application as CoffeeJournalApplication
+        app = application as CoffeeJournalApplication // <-- SPARA app-instansen
         val coffeeRepository = app.coffeeRepository
         val scaleRepository = BookooScaleRepositoryImpl(this)
 
@@ -108,6 +117,10 @@ class MainActivity : ComponentActivity() {
                 var selectedBeanId by remember { mutableStateOf<Long?>(null) }
 
                 var navigationOrigin by remember { mutableStateOf("home") }
+
+                // --- NYTT STATE FÖR BILD ---
+                var tempCapturedImageUri by remember { mutableStateOf<String?>(null) }
+                // --- SLUT NYTT STATE ---
 
                 // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
@@ -243,28 +256,53 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ==========================================
-                                // HÄR ÄR DEN ENDA ÄNDRINGEN
-                                // ==========================================
                                 "brew_detail" -> {
                                     if (selectedBrewId != null) {
+                                        // --- NYTT: Hämta VM och kör LaunchedEffect ---
+                                        val vm: BrewDetailViewModel = viewModel(
+                                            key = selectedBrewId.toString(),
+                                            factory = BrewDetailViewModelFactory(app.coffeeRepository, selectedBrewId!!)
+                                        )
+
+                                        // Hantera en nyss tagen bild
+                                        LaunchedEffect(tempCapturedImageUri) {
+                                            if (tempCapturedImageUri != null) {
+                                                Log.d("MainActivity", "Hanterar ny bild-URI: $tempCapturedImageUri")
+                                                vm.updateBrewImageUri(tempCapturedImageUri)
+                                                tempCapturedImageUri = null // Nollställ efter hantering
+                                            }
+                                        }
+
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
                                                 selectedBrewId = null
                                                 currentScreen = navigationOrigin
+                                            },
+                                            onNavigateToCamera = {
+                                                currentScreen = "camera_screen"
                                             }
                                         )
+                                        // --- SLUT PÅ NYTT ---
                                     } else {
-                                        // DEN FARLIGA LaunchedEffect ÄR NU BORTTAGEN.
-                                        // Vi visar bara felet. Detta kommer bara visas
-                                        // en bråkdels sekund under ut-animeringen.
                                         Text("Error: Brew ID missing")
                                     }
                                 }
-                                // ==========================================
-                                // SLUT PÅ ÄNDRING
-                                // ==========================================
+
+                                // --- NYTT CASE FÖR KAMERAN ---
+                                "camera_screen" -> {
+                                    CameraScreen(
+                                        onImageCaptured = { uri ->
+                                            Log.d("MainActivity", "Bild tagen: $uri")
+                                            tempCapturedImageUri = uri.toString() // Spara URI:n
+                                            currentScreen = "brew_detail" // Gå tillbaka
+                                        },
+                                        onNavigateBack = {
+                                            currentScreen = "brew_detail" // Gå tillbaka
+                                        }
+                                    )
+                                }
+                                // --- SLUT NYTT CASE ---
 
                                 "bean_detail" -> {
                                     if (selectedBeanId != null) {

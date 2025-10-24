@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 // Material 3
@@ -15,18 +16,21 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 // UI helpers
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +51,9 @@ import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
 import androidx.compose.runtime.collectAsState
+// --- NY IMPORT ---
+import coil.compose.AsyncImage
+// --- SLUT NY IMPORT ---
 
 // Lokal accent för denna skärm
 private val Accent = Color(0xFFDCC7AA)
@@ -56,7 +63,8 @@ private val CardGray = Color(0xFFF0F0F0)
 @Composable
 fun BrewDetailScreen(
     brewId: Long,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToCamera: () -> Unit // <-- NY PARAMETER
 ) {
     val application = LocalContext.current.applicationContext as CoffeeJournalApplication
     val repository = application.coffeeRepository
@@ -104,6 +112,13 @@ fun BrewDetailScreen(
                             Icon(Icons.Default.Save, contentDescription = "Save changes", tint = Accent)
                         }
                     } else {
+                        // --- NY KAMERAKNAPP ---
+                        if (state.brew?.imageUri == null) { // Visa bara om bild saknas
+                            IconButton(onClick = onNavigateToCamera, enabled = state.brew != null) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = "Add Picture")
+                            }
+                        }
+                        // --- SLUT NY KNAPP ---
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit") // tillbaka till default (ingen Accent)
                         }
@@ -136,6 +151,23 @@ fun BrewDetailScreen(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // --- NY BILDVISARE ---
+                        state.brew?.imageUri?.let { uri ->
+                            AsyncImage(
+                                model = uri, // Ladda bilden från URI:n
+                                contentDescription = "Brew photo",
+                                contentScale = ContentScale.Crop, // Fyll utrymmet
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(250.dp) // Ge den en fast höjd
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        // TODO: Öppna i helskärm? (framtida funktion)
+                                    }
+                            )
+                        }
+                        // --- SLUT NY BILDVISARE ---
+
                         if (isEditing) {
                             BrewEditCard(
                                 viewModel = viewModel,
