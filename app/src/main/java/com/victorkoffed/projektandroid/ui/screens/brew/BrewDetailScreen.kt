@@ -349,7 +349,7 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
 }
 
 
-// --- UPPDATERAD GRAF med justerad axeltitel-padding ---
+// --- UPPDATERAD GRAF med justerad axeltitel-padding OCH CAPPAD Y-AXEL ---
 @Composable
 fun BrewSamplesGraph(
     samples: List<BrewSample>,
@@ -430,13 +430,16 @@ fun BrewSamplesGraph(
 
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas // Undvik ritning om området är ogiltigt
 
-        // Skalning (inga ändringar)
+        // --- SKALNING (FLÖDE ÄR ÄNDRAT) ---
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
-        val actualMaxFlow = samples.maxOfOrNull { it.flowRateGramsPerSecond ?: 0.0 }?.toFloat() ?: 1f
-        val roundedMaxFlow = ceil(actualMaxFlow / 2f) * 2f
-        val maxFlow = max(5f, roundedMaxFlow) * 1.1f
+
+        // --- ÄNDRING: HÅRDKODA Y-AXELN FÖR FLÖDE ---
+        // Ersätt de gamla raderna för actualMaxFlow, roundedMaxFlow, maxFlow
+        val roundedMaxFlow = 20f // Din föreslagna max-etikett (g/s)
+        val maxFlow = max(5f, roundedMaxFlow * 1.1f) // Skala axeln till 110% av din cap (dvs. 22 g/s)
+        // --- SLUT PÅ ÄNDRING ---
 
         // --- Rita Rutnät och Etiketter (Inga ändringar här) ---
         drawContext.canvas.nativeCanvas.apply {
@@ -453,14 +456,15 @@ fun BrewSamplesGraph(
 
             // 2. Höger Y-axel (Flöde) - Rita färre etiketter
             if (hasFlowData) {
+                // Denna logik fungerar nu utmärkt med vår cappade 'roundedMaxFlow'
                 val yMax = graphEndY - (roundedMaxFlow / maxFlow) * graphHeight
                 drawText("${roundedMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yMax + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 val halfMaxFlow = roundedMaxFlow / 2f
-                if (halfMaxFlow > 2f) {
+                if (halfMaxFlow > 2f) { // Visar 10 g/s
                     val yHalf = graphEndY - (halfMaxFlow / maxFlow) * graphHeight
                     drawText("${halfMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yHalf + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 }
-                if (roundedMaxFlow > 4f) {
+                if (roundedMaxFlow > 4f) { // Visar 2 g/s
                     val yLow = graphEndY - (2f / maxFlow) * graphHeight
                     drawText("2 g/s", graphEndX + 4.dp.toPx(), yLow + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 }
@@ -486,7 +490,7 @@ fun BrewSamplesGraph(
             drawLine(flowColor, Offset(graphEndX, graphStartY), Offset(graphEndX, graphEndY)) // Höger Y
         }
 
-        // --- Rita Linjer (Inga ändringar här) ---
+        // --- Rita Linjer (EN RAD ÄNDRAD) ---
         if (samples.size > 1) {
             val massPath = Path()
             val flowPath = Path()
@@ -499,9 +503,13 @@ fun BrewSamplesGraph(
                 if (showWeightLine) {
                     if (index == 0) massPath.moveTo(cx, cyMass) else massPath.lineTo(cx, cyMass)
                 }
-                if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null && s.flowRateGramsPerSecond > 0.0) {
+
+                // --- ÄNDRING HÄR: Ignorera värden över 20 g/s ---
+                if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null && s.flowRateGramsPerSecond in 0.0..roundedMaxFlow.toDouble()) {
+                    // --- SLUT PÅ ÄNDRING ---
                     val yFlow = graphEndY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
                     val cyFlow = yFlow.coerceIn(graphStartY, graphEndY)
+
                     if (!flowPathStarted) {
                         flowPath.moveTo(cx, cyFlow)
                         flowPathStarted = true
@@ -509,6 +517,7 @@ fun BrewSamplesGraph(
                         flowPath.lineTo(cx, cyFlow)
                     }
                 } else {
+                    // Detta skapar glappet i linjen när värdet är för högt (eller null/negativt)
                     flowPathStarted = false
                 }
             }

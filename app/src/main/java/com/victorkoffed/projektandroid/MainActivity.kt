@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- KONTROLLERA DENNA IMPORT
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
@@ -64,7 +64,7 @@ val MockupColor = Color(0xFFDCC7AA)
 
 class MainActivity : ComponentActivity() {
 
-    // ... (View Model definitioner) ...
+    // --- View Model definitioner ---
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
@@ -76,12 +76,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Hämta repositories och skapa ViewModels
+        // --- Hämta repositories och skapa ViewModels ---
         val app = application as CoffeeJournalApplication
         val coffeeRepository = app.coffeeRepository
         val scaleRepository = BookooScaleRepositoryImpl(this)
 
-        // Instansiera ViewModels via Factories
+        // --- Instansiera ViewModels via Factories ---
         val scaleViewModelFactory = ScaleViewModelFactory(app, scaleRepository, coffeeRepository)
         scaleVm = ViewModelProvider(this, scaleViewModelFactory)[ScaleViewModel::class.java]
         val grinderViewModelFactory = GrinderViewModelFactory(coffeeRepository)
@@ -95,31 +95,34 @@ class MainActivity : ComponentActivity() {
         val homeViewModelFactory = HomeViewModelFactory(coffeeRepository)
         homeVm = ViewModelProvider(this, homeViewModelFactory)[HomeViewModel::class.java]
 
+
         setContent {
             ProjektAndroidTheme {
-                // State för navigering och dataöverföring
+                // --- State för navigering och dataöverföring ---
                 var currentScreen by remember { mutableStateOf("home") }
-                var lastBrewId by remember { mutableStateOf<Long?>(null) }
-                var selectedBrewId by remember { mutableStateOf<Long?>(null) }
+                var lastBrewId by remember { mutableStateOf<Long?>(null) } // Används inte längre för navigering, men kan behållas
+                var selectedBrewId by remember { mutableStateOf<Long?>(null) } // Används för BrewDetailScreen
 
-                // --- NYTT: Hämta listor för att kontrollera om setup är möjlig ---
+                // --- Hämta listor för att kontrollera om setup är möjlig ---
                 val availableBeans by brewVm.availableBeans.collectAsState()
                 val availableMethods by brewVm.availableMethods.collectAsState()
-                // --- SLUT ---
 
-                // Funktion för att byta skärm
+                // --- Hämta vågens anslutningsstatus ---
+                val scaleConnectionState by scaleVm.connectionState.collectAsState()
+
+                // --- Funktion för att byta skärm ---
                 val navigateToScreen: (String) -> Unit = { screenName ->
                     currentScreen = screenName
                 }
 
-                // --- Definiera navigationsalternativen (med BÅDE Filled och Outlined) ---
+                // --- Definiera navigationsalternativen ---
                 val navItems = listOf(
                     NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
                     NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
                     NavItem("Method", "method", Icons.Filled.Science, Icons.Outlined.Science),
                     NavItem("Grinder", "grinder", Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
-                // --- SLUT ---
+
 
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -137,37 +140,54 @@ class MainActivity : ComponentActivity() {
                                     scaleVm = scaleVm,
                                     navigateToScreen = navigateToScreen,
                                     onNavigateToBrewSetup = {
-                                        lastBrewId = null; brewVm.clearBrewResults()
+                                        // Rensa gamla resultat när man går till en ny bryggning
+                                        brewVm.clearBrewResults()
+                                        lastBrewId = null // Nollställ ev. gammalt ID
                                         currentScreen = "brew_setup"
                                     },
                                     onBrewClick = { brewId ->
                                         selectedBrewId = brewId
                                         currentScreen = "brew_detail"
                                     },
-                                    // --- NYA PARAMETRAR ---
                                     availableBeans = availableBeans,
                                     availableMethods = availableMethods
                                 )
                                 "scale" -> ScaleConnectScreen(
                                     vm = scaleVm,
-                                    onNavigateBack = { navigateToScreen("home") } // Gå till home
+                                    onNavigateBack = { navigateToScreen("home") }
                                 )
                                 "grinder" -> GrinderScreen(grinderVm)
                                 "bean" -> BeanScreen(beanVm)
                                 "method" -> MethodScreen(methodVm)
+
                                 "brew_setup" -> BrewScreen(
                                     vm = brewVm,
-                                    completedBrewId = lastBrewId,
+                                    completedBrewId = null, // Vi visar inte längre "After brew" här
+                                    scaleConnectionState = scaleConnectionState,
                                     onStartBrewClick = { setupState ->
-                                        lastBrewId = null
-                                        brewVm.clearBrewResults()
+                                        // Gå bara vidare om vågen är ansluten (annars visas dialog)
+                                        brewVm.clearBrewResults() // Rensa ev. gamla resultat
                                         currentScreen = "live_brew"
                                     },
-                                    onClearResult = {
-                                        lastBrewId = null
+                                    onSaveWithoutGraph = {
+                                        lifecycleScope.launch {
+                                            val newBrewId = brewVm.saveBrewWithoutSamples()
+                                            if (newBrewId != null) {
+                                                selectedBrewId = newBrewId
+                                                currentScreen = "brew_detail" // Gå till detalj efter spara
+                                            } else {
+                                                Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
+                                                // TODO: Visa felmeddelande för användaren?
+                                            }
+                                        }
                                     },
+                                    onNavigateToScale = {
+                                        navigateToScreen("scale")
+                                    },
+                                    onClearResult = { /* Behövs inte längre här */ },
                                     onNavigateBack = { navigateToScreen("home") }
                                 )
+
                                 "live_brew" -> {
                                     val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                     val time by scaleVm.recordingTimeMillis.collectAsState()
@@ -175,8 +195,7 @@ class MainActivity : ComponentActivity() {
                                     val isPaused by scaleVm.isPaused.collectAsState()
                                     val currentMeasurement by scaleVm.measurement.collectAsState()
                                     val weightAtPause by scaleVm.weightAtPause.collectAsState()
-                                    // --- NY RAD: Hämta connection state ---
-                                    val scaleConnectionState by scaleVm.connectionState.collectAsState()
+                                    // scaleConnectionState hämtas redan utanför
 
                                     LiveBrewScreen(
                                         samples = samples,
@@ -185,25 +204,33 @@ class MainActivity : ComponentActivity() {
                                         isRecording = isRecording,
                                         isPaused = isPaused,
                                         weightAtPause = weightAtPause,
-                                        // --- NY PARAMETER: Skicka med state ---
                                         connectionState = scaleConnectionState,
                                         onStartClick = { scaleVm.startRecording() },
                                         onPauseClick = { scaleVm.pauseRecording() },
                                         onResumeClick = { scaleVm.resumeRecording() },
+
+                                        // --- ÄNDRINGEN ÄR HÄR ---
                                         onStopAndSaveClick = {
                                             lifecycleScope.launch {
                                                 val currentSetup = brewVm.getCurrentSetup()
                                                 Log.d("MainActivity", "Saving brew with setup: $currentSetup")
                                                 val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
-                                                lastBrewId = savedBrewId
-                                                currentScreen = "brew_setup" // Gå tillbaka till setup efter spara
+                                                // Nu navigerar vi direkt till detaljskärmen
+                                                if (savedBrewId != null) {
+                                                    selectedBrewId = savedBrewId // Spara det nya ID:t
+                                                    currentScreen = "brew_detail" // Gå till detaljskärmen
+                                                } else {
+                                                    // Om något gick fel med sparandet, gå tillbaka till setup
+                                                    Log.e("MainActivity", "Failed to save brew from LiveBrewScreen.")
+                                                    currentScreen = "brew_setup"
+                                                }
                                             }
                                         },
+                                        // --- SLUT PÅ ÄNDRING ---
+
                                         onTareClick = { scaleVm.tareScale() },
-                                        // --- ÄNDRAD RAD: Navigera till 'scale' för återanslutning ---
-                                        onNavigateBack = { navigateToScreen("scale") }, // Gå till scale-skärmen
+                                        onNavigateBack = { navigateToScreen("scale") },
                                         onResetRecording = { scaleVm.stopRecording() },
-                                        // --- NY RAD: Skicka med navigateToScreen ---
                                         navigateTo = navigateToScreen
                                     )
                                 }
@@ -212,11 +239,12 @@ class MainActivity : ComponentActivity() {
                                         BrewDetailScreen(
                                             brewId = selectedBrewId!!,
                                             onNavigateBack = {
-                                                selectedBrewId = null
-                                                currentScreen = "home"
+                                                selectedBrewId = null // Nollställ ID när man backar
+                                                currentScreen = "home" // Gå till home
                                             }
                                         )
                                     } else {
+                                        // Fallback om ID saknas
                                         Text("Error: Brew ID missing")
                                         LaunchedEffect(Unit) { currentScreen = "home" }
                                     }
@@ -224,19 +252,16 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // --- UPPDATERAD NAVIGATIONSRAD ---
-                        // Visas endast på skärmar som finns i navItems
+                        // --- NavigationBar ---
                         if (navItems.any { it.screenRoute == currentScreen }) {
                             NavigationBar(
                                 modifier = Modifier.align(Alignment.BottomCenter)
-                                // .navigationBarsPadding() // Kan behövas beroende på system-UI
                             ) {
                                 navItems.forEach { item ->
                                     val isSelected = currentScreen == item.screenRoute
                                     NavigationBarItem(
                                         icon = {
                                             Icon(
-                                                // Använd Filled för vald, Outlined för ovald
                                                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                                                 contentDescription = item.label
                                             )
@@ -244,26 +269,17 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(item.label) },
                                         selected = isSelected,
                                         onClick = { navigateToScreen(item.screenRoute) },
-
-                                        // ++ UPPDATERADE FÄRGER HÄR ++
                                         colors = NavigationBarItemDefaults.colors(
-                                            // Vald ikonfärg (Filled ikonen fylls med DCC7AA)
                                             selectedIconColor = MockupColor,
-                                            // Vald textfärg (Texten förblir svart)
                                             selectedTextColor = Color.Black,
-                                            // Ovald ikonfärg (Outlined ikonen blir svart)
                                             unselectedIconColor = Color.Black,
-                                            // Ovald textfärg (Texten förblir svart)
                                             unselectedTextColor = Color.Black,
-                                            // Indicator color för att ta bort standardbakgrunden (om den finns)
                                             indicatorColor = Color.Transparent
                                         )
-                                        // ++ SLUT PÅ UPPDATERING ++
                                     )
                                 }
                             }
                         }
-                        // --- SLUT PÅ UPPDATERING ---
                     }
                 }
             }
