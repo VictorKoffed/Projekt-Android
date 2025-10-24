@@ -15,9 +15,9 @@ The app lets coffee enthusiasts record and visualize their brews with a simple a
 - Create a working Homescreen that follows the mockup **Homescreen**
 - Create a working Graphscreen that follows the mockup **Graphscreen**
 - Clean and responsive UI design inspired by modern coffee apps
+- Capture and save photos of brews using **CameraX**
 
 **Planned**
-- Capture and save photos of brews using **CameraX**
 
 ## 🧩 Technology Stack
 
@@ -39,14 +39,13 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 3. Sync Gradle and run on an emulator or Android device
 4. *(Optional)* Enable Bluetooth permissions to test smart scale features
 
-##  Known issue (Bugfixing)
+##  Known issue (Bugfix)
 
 ##  ToDo List
 
-1. Lägga till kamerafunktion
+1. Lägga till att kunna ta bort bild
+2. Kunna visa upp brewbilden i kortet av brew på hemskärmen.
 2. Ifall man kommer till new brewskärmen och trycker på start live brew och vågen inte är connected så ska men efter man connectat vågen komma tillbaka till new brew skärmen med det man tidigare valt?
-2. Förbättra HomeScreen:
-   Byta ut placeholder-bilderna i "Last brews"-listan.
 3. Fix  banner to Bean, Method och grinder with a fitting background
 3. Navigation: Byta ut den enkla currentScreen-hanteringen i MainActivity mot en mer robust lösning som Compose Navigation. 
    Detta skulle också göra det möjligt att implementera sidomenyn från din mockup.
