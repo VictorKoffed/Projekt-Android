@@ -48,7 +48,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 ##  ToDo List
 
 1. Fixa grafskärmen så att om man går in på den utan att ha connectat till vågen så får man en varning. Även ändra de show flow och knappen över till a
-appens tema färger (DCC7AA).
+appens tema färger (DCC7AA). Även kunna spara utan graph?
 2. När man är klar med en brew kanske man ska komma till brewdetailscreen direkt istället för after brew skärmen (kanske ta bort after brew?).
 3. Fixa tema på Brewdetailscreen för att passa appen (DCC7AA).
 4. Lägga till kamerafunktion
