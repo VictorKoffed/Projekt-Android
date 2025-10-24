@@ -17,13 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // <-- TILLAGD IMPORT
-import androidx.compose.ui.graphics.vector.ImageVector // <-- NY IMPORT
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-// import androidx.compose.ui.unit.sp // Behövs ej för NavigationBarItem label
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- NY IMPORT
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
@@ -48,27 +47,24 @@ import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import kotlinx.coroutines.launch
-// --- NYA IMPORTER ---
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
-// --- SLUT ---
 
 
-// --- NY DATA CLASS för navigationsalternativ ---
+// --- ÅTERSTÄLLD DATA CLASS för navigationsalternativ ---
 data class NavItem(
     val label: String,
     val screenRoute: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val selectedIcon: ImageVector, // Filled ikon
+    val unselectedIcon: ImageVector // Outlined ikon
 )
-// --- SLUT ---
+// --- SLUT ÅTERSTÄLLD ---
 
-// ++ DEFINIERA DIN FÄRG HÄR ++
 val MockupColor = Color(0xFFDCC7AA)
 
 class MainActivity : ComponentActivity() {
 
-    // --- ViewModels ---
+    // ... (View Model definitioner) ...
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
@@ -116,7 +112,7 @@ class MainActivity : ComponentActivity() {
                     currentScreen = screenName
                 }
 
-                // --- Definiera navigationsalternativen ---
+                // --- Definiera navigationsalternativen (med BÅDE Filled och Outlined) ---
                 val navItems = listOf(
                     NavItem("Home", "home", Icons.Filled.Home, Icons.Outlined.Home),
                     NavItem("Bean", "bean", Icons.Filled.Coffee, Icons.Outlined.Coffee),
@@ -240,6 +236,7 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         icon = {
                                             Icon(
+                                                // Använd Filled för vald, Outlined för ovald
                                                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                                                 contentDescription = item.label
                                             )
@@ -248,14 +245,20 @@ class MainActivity : ComponentActivity() {
                                         selected = isSelected,
                                         onClick = { navigateToScreen(item.screenRoute) },
 
-                                        // ++ LADE TILL DETTA FÖR ATT ÄNDRA FÄRG ++
+                                        // ++ UPPDATERADE FÄRGER HÄR ++
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = MockupColor, // Din färg
-                                            selectedTextColor = MockupColor, // Din färg
-                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Standard grå
-                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant // Standard grå
+                                            // Vald ikonfärg (Filled ikonen fylls med DCC7AA)
+                                            selectedIconColor = MockupColor,
+                                            // Vald textfärg (Texten förblir svart)
+                                            selectedTextColor = Color.Black,
+                                            // Ovald ikonfärg (Outlined ikonen blir svart)
+                                            unselectedIconColor = Color.Black,
+                                            // Ovald textfärg (Texten förblir svart)
+                                            unselectedTextColor = Color.Black,
+                                            // Indicator color för att ta bort standardbakgrunden (om den finns)
+                                            indicatorColor = Color.Transparent
                                         )
-                                        // ++ SLUT PÅ TILLÄGG ++
+                                        // ++ SLUT PÅ UPPDATERING ++
                                     )
                                 }
                             }
