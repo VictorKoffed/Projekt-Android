@@ -41,15 +41,17 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+// Färgdefinitionen antas vara tillgänglig i MainActivity eller på annat ställe.
+private val MockupColor = Color(0xFFDCC7AA)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    // --- UPPDATERADE PARAMETRAR ---
+    // ... (parametrarna är oförändrade)
     homeVm: HomeViewModel,
     coffeeImageVm: CoffeeImageViewModel,
     scaleVm: ScaleViewModel, // Ny parameter
     navigateToScreen: (String) -> Unit, // Ny parameter
-    // --- SLUT ---
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
     // --- NYA PARAMETRAR FÖR ATT INAKTIVERA KNAPP ---
@@ -109,7 +111,7 @@ fun HomeScreen(
                 actions = {
                     // --- HELA DENNA DEL ÄR ÄNDRAD ---
                     val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
-                    val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
+                    val buttonColor = MockupColor // Färgen från mockupen
                     val iconColor = Color.Black // Svart ikonfärg för kontrast
 
                     // Använd Surface för att få en klickbar yta med färg och form
@@ -182,7 +184,14 @@ fun HomeScreen(
                 )
             }
             if (recentBrews.isEmpty()) {
-                item { Text("Inga bryggningar sparade än, tryck på + för att skapa en.", modifier = Modifier.padding(vertical = 16.dp)) }
+                // --- UPPDATERAT OBJEKT HÄR ---
+                item {
+                    NoBrewsTextWithIcon(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        onNavigateToBrewSetup = onNavigateToBrewSetup
+                    )
+                }
+                // --- SLUT UPPDATERAT OBJEKT ---
             } else {
                 items(recentBrews) { brewItem ->
                     RecentBrewCard(
@@ -302,6 +311,7 @@ fun ScaleStatusCard(
     val title: String
     val subtitle: String
     val iconColor: Color
+    val titleColor: Color // <-- NY VARIABEL FÖR TITELFÄRG
 
     when (connectionState) {
         is BleConnectionState.Connected -> {
@@ -310,24 +320,28 @@ fun ScaleStatusCard(
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Ansluten"
             subtitle = "Tryck för att koppla från"
             iconColor = MaterialTheme.colorScheme.primary
+            titleColor = MockupColor // <-- ANVÄND MOCKUPFÄRG HÄR
         }
         is BleConnectionState.Connecting -> {
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) } // Visa spinner
             title = "Ansluter..."
             subtitle = "Var god vänta"
             iconColor = LocalContentColor.current.copy(alpha = 0.6f)
+            titleColor = LocalContentColor.current // <-- Standardfärg
         }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Fel", tint = MaterialTheme.colorScheme.error) }
             title = "Anslutningsfel"
             subtitle = connectionState.message // Visa felmeddelandet
             iconColor = MaterialTheme.colorScheme.error
+            titleColor = MaterialTheme.colorScheme.error // <-- Felfärg
         }
         BleConnectionState.Disconnected -> { // Explicit hantera Disconnected
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
             title = "Våg frånkopplad"
             subtitle = "Tryck för att ansluta"
             iconColor = LocalContentColor.current.copy(alpha = 0.6f)
+            titleColor = LocalContentColor.current // <-- Standardfärg
         }
     }
 
@@ -352,7 +366,9 @@ fun ScaleStatusCard(
                 }
             }
             Spacer(Modifier.height(4.dp)) // Lite luft
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) // Medium för att få plats med längre namn
+            // --- ÄNDRAD RAD: Lade till color = titleColor ---
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = titleColor) // Medium för att få plats med längre namn
+            // --- SLUT ÄNDRING ---
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center)
         }
     }
@@ -383,12 +399,64 @@ fun InfoCard(
         ) {
             if (content != null) { content() }
             else if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) // Centrera text
+                // --- ÄNDRAD RAD: Lade till color = MockupColor ---
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MockupColor) // Centrera text
+                // --- SLUT ÄNDRING ---
                 subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center) } // Centrera text
             }
         }
     }
 }
+
+// --- NY/KORRIGERAD COMPOSABLE: Använder Column för att tvinga radbrytning ---
+@Composable
+fun NoBrewsTextWithIcon(
+    modifier: Modifier = Modifier,
+    onNavigateToBrewSetup: () -> Unit // Behövs om användaren klickar på ikonen
+) {
+    // Använder Column för att stapla raderna vertikalt
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onNavigateToBrewSetup) // Gör hela ytan klickbar
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally // Centrera texten
+    ) {
+        // Rad 1: "Inga bryggningar sparade än, tryck på [ikon]"
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Inga bryggningar sparade än, tryck på ",
+                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray) // Använder Color.Gray för hint-text
+            )
+            // Liten cirkel med plus-ikonen för att imitera knappen
+            Surface(
+                modifier = Modifier
+                    .size(24.dp) // Gör den lagom stor i texten
+                    .clip(CircleShape),
+                color = MockupColor // Använd MockupColor
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null, // Inget behov av contentDescription för inbäddad ikon
+                        tint = Color.Black, // Svart plus
+                        modifier = Modifier.size(16.dp) // Mindre ikon
+                    )
+                }
+            }
+        }
+
+        // Rad 2: "för att skapa en."
+        Text(
+            "för att skapa en.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray),
+            modifier = Modifier.padding(top = 2.dp) // Litet utrymme mellan raderna
+        )
+    }
+}
+// --- SLUT NY COMPOSABLE ---
 
 
 // RecentBrewCard

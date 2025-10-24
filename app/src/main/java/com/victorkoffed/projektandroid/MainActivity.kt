@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color // <-- TILLAGD IMPORT
 import androidx.compose.ui.graphics.vector.ImageVector // <-- NY IMPORT
 import androidx.compose.ui.unit.dp
 // import androidx.compose.ui.unit.sp // Behövs ej för NavigationBarItem label
@@ -61,6 +62,9 @@ data class NavItem(
     val unselectedIcon: ImageVector
 )
 // --- SLUT ---
+
+// ++ DEFINIERA DIN FÄRG HÄR ++
+val MockupColor = Color(0xFFDCC7AA)
 
 class MainActivity : ComponentActivity() {
 
@@ -243,6 +247,15 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(item.label) },
                                         selected = isSelected,
                                         onClick = { navigateToScreen(item.screenRoute) },
+
+                                        // ++ LADE TILL DETTA FÖR ATT ÄNDRA FÄRG ++
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = MockupColor, // Din färg
+                                            selectedTextColor = MockupColor, // Din färg
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Standard grå
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant // Standard grå
+                                        )
+                                        // ++ SLUT PÅ TILLÄGG ++
                                     )
                                 }
                             }
