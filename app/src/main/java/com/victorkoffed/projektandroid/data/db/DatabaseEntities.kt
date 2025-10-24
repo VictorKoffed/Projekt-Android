@@ -184,13 +184,26 @@ data class BrewSample(
     SELECT
         b.brew_id,
         b.dose_g AS doseGrams,
-        MAX(s.mass_g) AS waterUsedGrams,
+        -- FIX: Hämta mass_g från det sample som har högst t_ms (det sista)
+        (
+            SELECT s.mass_g 
+            FROM BrewSample s 
+            WHERE s.brew_id = b.brew_id 
+            ORDER BY s.t_ms DESC 
+            LIMIT 1
+        ) AS waterUsedGrams,
         CASE 
-            WHEN b.dose_g > 0 THEN (MAX(s.mass_g) / b.dose_g) 
+            WHEN b.dose_g > 0 THEN (
+                -- Använd samma subquery för att beräkna ration
+                SELECT s.mass_g 
+                FROM BrewSample s 
+                WHERE s.brew_id = b.brew_id 
+                ORDER BY s.t_ms DESC 
+                LIMIT 1
+            ) / b.dose_g 
             ELSE NULL 
         END AS ratio
     FROM Brew b
-    LEFT JOIN BrewSample s ON s.brew_id = b.brew_id
     GROUP BY b.brew_id
 """)
 data class BrewMetrics(
