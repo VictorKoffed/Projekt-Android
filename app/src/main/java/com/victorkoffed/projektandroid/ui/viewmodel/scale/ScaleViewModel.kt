@@ -25,50 +25,76 @@ import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 // --- SLUT PÅ IMPORTER ---
 
-class ScaleViewModel(
-    app: Application,
-    private val scaleRepo: ScaleRepository,
+class ScaleViewModel : AndroidViewModel {
+
+    private val scaleRepo: ScaleRepository
     private val coffeeRepo: CoffeeRepository
-) : AndroidViewModel(app) {
+
+    constructor(app: Application, scaleRepo: ScaleRepository, coffeeRepo: CoffeeRepository) : super(
+        app
+    ) {
+        this.scaleRepo = scaleRepo
+        this.coffeeRepo = coffeeRepo
+        this._devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
+        this.devices = _devices
+        this._isScanning = MutableStateFlow(false)
+        this.isScanning = _isScanning
+        this.connectionState = scaleRepo.observeConnectionState()
+        this._rawMeasurement = MutableStateFlow(ScaleMeasurement(0.0f, 0.0f))
+        this._tareOffset = MutableStateFlow(0.0f)
+        this.measurement = combine(_rawMeasurement, _tareOffset) { raw, offset ->
+            ScaleMeasurement(
+                weightGrams = raw.weightGrams - offset,
+                flowRateGramsPerSecond = raw.flowRateGramsPerSecond // Flödet påverkas inte av tarering
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ScaleMeasurement(0.0f, 0.0f)
+        )
+        this._error = MutableStateFlow<String?>(null)
+        this.error = _error
+        this._isRecording = MutableStateFlow(false)
+        this.isRecording = _isRecording
+        this._isPaused = MutableStateFlow(false)
+        this.isPaused = _isPaused
+        this._recordedSamplesFlow = MutableStateFlow<List<BrewSample>>(emptyList())
+        this.recordedSamplesFlow = _recordedSamplesFlow
+        this._recordingTimeMillis = MutableStateFlow(0L)
+        this.recordingTimeMillis = _recordingTimeMillis
+        this._weightAtPause = MutableStateFlow<Float?>(null)
+        this.weightAtPause = _weightAtPause
+    }
 
     // --- Scanning State ---
-    private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
-    val devices: StateFlow<List<DiscoveredDevice>> = _devices
-    private val _isScanning = MutableStateFlow(false)
-    val isScanning: StateFlow<Boolean> = _isScanning
+    private val _devices: MutableStateFlow<List<DiscoveredDevice>>
+    val devices: StateFlow<List<DiscoveredDevice>>
+    private val _isScanning: MutableStateFlow<Boolean>
+    val isScanning: StateFlow<Boolean>
     private var scanJob: Job? = null
 
     // --- Connection and Measurement State ---
-    val connectionState: StateFlow<BleConnectionState> = scaleRepo.observeConnectionState()
-    private val _rawMeasurement = MutableStateFlow(ScaleMeasurement(0.0f, 0.0f))
-    private val _tareOffset = MutableStateFlow(0.0f)
+    val connectionState: StateFlow<BleConnectionState>
+    private val _rawMeasurement: MutableStateFlow<ScaleMeasurement>
+    private val _tareOffset: MutableStateFlow<Float>
 
-    val measurement: StateFlow<ScaleMeasurement> = combine(_rawMeasurement, _tareOffset) { raw, offset ->
-        ScaleMeasurement(
-            weightGrams = raw.weightGrams - offset,
-            flowRateGramsPerSecond = raw.flowRateGramsPerSecond // Flödet påverkas inte av tarering
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ScaleMeasurement(0.0f, 0.0f)
-    )
+    val measurement: StateFlow<ScaleMeasurement>
 
     // --- Error State ---
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error: MutableStateFlow<String?>
+    val error: StateFlow<String?>
 
     // --- Recording State ---
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording
-    private val _isPaused = MutableStateFlow(false)
-    val isPaused: StateFlow<Boolean> = _isPaused
-    private val _recordedSamplesFlow = MutableStateFlow<List<BrewSample>>(emptyList())
-    val recordedSamplesFlow: StateFlow<List<BrewSample>> = _recordedSamplesFlow
-    private val _recordingTimeMillis = MutableStateFlow(0L)
-    val recordingTimeMillis: StateFlow<Long> = _recordingTimeMillis
-    private val _weightAtPause = MutableStateFlow<Float?>(null)
-    val weightAtPause: StateFlow<Float?> = _weightAtPause
+    private val _isRecording: MutableStateFlow<Boolean>
+    val isRecording: StateFlow<Boolean>
+    private val _isPaused: MutableStateFlow<Boolean>
+    val isPaused: StateFlow<Boolean>
+    private val _recordedSamplesFlow: MutableStateFlow<List<BrewSample>>
+    val recordedSamplesFlow: StateFlow<List<BrewSample>>
+    private val _recordingTimeMillis: MutableStateFlow<Long>
+    val recordingTimeMillis: StateFlow<Long>
+    private val _weightAtPause: MutableStateFlow<Float?>
+    val weightAtPause: StateFlow<Float?>
 
     private var recordingStartTime: Long = 0L
     private var timePausedAt: Long = 0L
@@ -91,7 +117,7 @@ class ScaleViewModel(
                 withTimeoutOrNull(5.seconds) { // Timeout efter 5 sekunder
                     scaleRepo.startScanDevices()
                         .catch { e ->
-                            _error.value = e.message ?: "Okänt skanningsfel"
+                            _error.value = e.message ?: "Unknown scan error"
                             _isScanning.value = false // Säkerställ att vi slutar vid fel
                         }
                         .collect { list ->
@@ -192,7 +218,7 @@ class ScaleViewModel(
         stopRecording() // Detta nollställer _recordedSamplesFlow, _recordingTimeMillis etc.
 
         if (finalSamples.isEmpty()) {
-            _error.value = "Ingen data spelades in."
+            _error.value = "No data was recorded."
             return null
         }
 
@@ -204,7 +230,7 @@ class ScaleViewModel(
         val doseGrams = setupState.doseGrams.toDoubleOrNull()
 
         if (beanId == null || doseGrams == null) {
-            _error.value = "Saknar böna eller dos för att spara."
+            _error.value = "Missing bean or dose to save."
             return null // Returnera null om setup är ogiltig
         }
 
@@ -218,7 +244,7 @@ class ScaleViewModel(
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
             grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(),
             brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
-            notes = "Inspelad från våg ${Date()}" // Enkel standardnotering
+            notes = "Recorded from scale ${Date()}" // Enkel standardnotering
         )
 
         // Försök spara asynkront
@@ -229,7 +255,7 @@ class ScaleViewModel(
                 _error.value = null // Rensa ev. tidigare fel
                 newId // Returnera det nya Brew ID:t
             } catch (e: Exception) {
-                _error.value = "Kunde inte spara bryggning: ${e.message}"
+                _error.value = "Could not save brew: ${e.message}"
                 Log.e("ScaleViewModel", "Error saving brew: ${e.message}", e)
                 null // Returnera null vid fel
             }

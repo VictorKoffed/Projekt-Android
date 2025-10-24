@@ -49,7 +49,7 @@ fun BeanScreen(vm: BeanViewModel) {
     var beanToDelete by remember { mutableStateOf<Bean?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Bönor") }) }
+        topBar = { TopAppBar(title = { Text("Beans") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -58,11 +58,11 @@ fun BeanScreen(vm: BeanViewModel) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(onClick = { showAddDialog = true }) { Text("Lägg till ny böna") }
+            Button(onClick = { showAddDialog = true }) { Text("Add new bean") }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (beans.isEmpty()) {
-                Text("Inga bönor tillagda än.")
+                Text("No beans added yet.")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -130,7 +130,7 @@ fun BeanCard(bean: Bean, onClick: () -> Unit, onDeleteClick: () -> Unit) {
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(bean.name, style = MaterialTheme.typography.titleMedium)
-                bean.roaster?.let { Text("Rosteri: $it", style = MaterialTheme.typography.bodyMedium) }
+                bean.roaster?.let { Text("Roaster: $it", style = MaterialTheme.typography.bodyMedium) }
 
                 // --- NY LOGIK FÖR DATUM OCH ÅLDER ---
                 bean.roastDate?.let { roastDate ->
@@ -140,25 +140,25 @@ fun BeanCard(bean: Bean, onClick: () -> Unit, onDeleteClick: () -> Unit) {
 
                     val dateStr = dateFormat.format(roastDate)
                     val ageStr = when {
-                        daysOld < 0 -> "(Framtida datum)" // Om datumet är felaktigt
-                        daysOld == 0L -> "(Rostad idag)"
-                        daysOld == 1L -> "(1 dag gammal)"
-                        else -> "($daysOld dagar gammal)"
+                        daysOld < 0 -> "(Future date)" // Om datumet är felaktigt
+                        daysOld == 0L -> "(Roasted today)"
+                        daysOld == 1L -> "(1 day old)"
+                        else -> "($daysOld days old)"
                     }
 
                     // Visa både datum och ålder
-                    Text("Rostdatum: $dateStr $ageStr", style = MaterialTheme.typography.bodySmall)
+                    Text("Roast Date:: $dateStr $ageStr", style = MaterialTheme.typography.bodySmall)
                 }
                 // --- SLUT PÅ NY LOGIK ---
 
-                Text("Kvar: %.1f g".format(bean.remainingWeightGrams), style = MaterialTheme.typography.bodyMedium)
-                bean.initialWeightGrams?.let { Text("Ursprung: %.1f g".format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
-                bean.notes?.let { Text("Noteringar: $it", style = MaterialTheme.typography.bodySmall) }
+                Text("Remaining: %.1f g".format(bean.remainingWeightGrams), style = MaterialTheme.typography.bodyMedium)
+                bean.initialWeightGrams?.let { Text("Initial: %.1f g".format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+                bean.notes?.let { Text("Notes: $it", style = MaterialTheme.typography.bodySmall) }
             }
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Ta bort böna",
+                    contentDescription = "Delete bean",
                     tint = MaterialTheme.colorScheme.primary // Fix 2: DCC7AA färg
                 )
             }
@@ -211,18 +211,18 @@ fun AddBeanDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lägg till ny böna") },
+        title = { Text("Add new bean") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
-                OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Rosteri") }, singleLine = true)
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, singleLine = true)
+                OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Roaster") }, singleLine = true)
 
                 // --- UPPDATERAT DATUMFÄLT ---
                 OutlinedTextField(
                     value = roastDateStr,
                     onValueChange = {}, // Låt vara tom, uppdateras av dialogen
-                    label = { Text("Rostdatum (yyyy-mm-dd)") },
-                    placeholder = { Text("Välj datum...") },
+                    label = { Text("Roast Date: (yyyy-mm-dd)") },
+                    placeholder = { Text("Select date...") },
                     singleLine = true,
                     readOnly = true, // <--- VIKTIGT: Förhindrar tangentbordet
                     modifier = Modifier.clickable(onClick = { // <--- VIKTIGT: Gör hela fältet klickbart
@@ -231,7 +231,7 @@ fun AddBeanDialog(
                     trailingIcon = { // <--- Bonus: Lägg till en klickbar ikon
                         Icon(
                             Icons.Default.DateRange,
-                            contentDescription = "Välj datum",
+                            contentDescription = "Select dateSelect date",
                             modifier = Modifier.clickable { datePickerDialog.show() }
                         )
                     }
@@ -240,15 +240,15 @@ fun AddBeanDialog(
 
                 OutlinedTextField(
                     value = initialWeightStr, onValueChange = { initialWeightStr = it },
-                    label = { Text("Ursprungsvikt (g)") },
+                    label = { Text("Initial Weight (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = remainingWeightStr, onValueChange = { remainingWeightStr = it },
-                    label = { Text("Nuvarande vikt (g) *") },
+                    label = { Text("Current Weight (g) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar") })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
             }
         },
         confirmButton = {
@@ -260,9 +260,9 @@ fun AddBeanDialog(
                     }
                 },
                 enabled = name.isNotBlank() && (remainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
-            ) { Text("Lägg till") }
+            ) { Text("Add") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -316,18 +316,18 @@ fun EditBeanDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Redigera böna") },
+        title = { Text("Edit Bean") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
-                OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Rosteri") }, singleLine = true)
+                OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Roaster") }, singleLine = true)
 
                 // --- UPPDATERAT DATUMFÄLT (samma som i Add) ---
                 OutlinedTextField(
                     value = roastDateStr,
                     onValueChange = {},
-                    label = { Text("Rostdatum (yyyy-mm-dd)") },
-                    placeholder = { Text("Välj datum...") },
+                    label = { Text("Roast Date: (yyyy-mm-dd)") },
+                    placeholder = { Text("Select date...") },
                     singleLine = true,
                     readOnly = true,
                     modifier = Modifier.clickable(onClick = {
@@ -336,7 +336,7 @@ fun EditBeanDialog(
                     trailingIcon = {
                         Icon(
                             Icons.Default.DateRange,
-                            contentDescription = "Välj datum",
+                            contentDescription = "Select date",
                             modifier = Modifier.clickable { datePickerDialog.show() }
                         )
                     }
@@ -345,15 +345,15 @@ fun EditBeanDialog(
 
                 OutlinedTextField(
                     value = initialWeightStr, onValueChange = { initialWeightStr = it },
-                    label = { Text("Ursprungsvikt (g)") },
+                    label = { Text("Initial Weight (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = remainingWeightStr, onValueChange = { remainingWeightStr = it },
-                    label = { Text("Nuvarande vikt (g) *") },
+                    label = { Text("Current Weight (g) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar") })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
             }
         },
         confirmButton = {
@@ -365,9 +365,9 @@ fun EditBeanDialog(
                     }
                 },
                 enabled = name.isNotBlank() && (remainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
-            ) { Text("Spara") }
+            ) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -380,11 +380,11 @@ fun DeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ta bort böna?") },
-        text = { Text("Är du säker på att du vill ta bort '$beanName'? Detta går inte att ångra.") },
+        title = { Text("Delete bean?") },
+        text = { Text("Are you sure you want to delete '$beanName'? This cannot be undone.") },
         confirmButton = {
             Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Ta bort") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

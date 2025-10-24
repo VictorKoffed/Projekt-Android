@@ -31,11 +31,11 @@ fun ScaleConnectScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Anslut till våg") },
+                title = { Text("Connect to Scale") },
                 // --- NY NAVIGATION ICON ---
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
                 // --- SLUT ---
@@ -106,7 +106,7 @@ private fun ConnectedView(
         Text(deviceName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(32.dp))
 
-        Text("Vikt", style = MaterialTheme.typography.titleLarge)
+        Text("Weight", style = MaterialTheme.typography.titleLarge)
         Text(
             text = "%.1f g".format(measurement.weightGrams),
             fontSize = 72.sp,
@@ -115,11 +115,11 @@ private fun ConnectedView(
         )
 
         Button(onClick = onTare) {
-            Text("Nollställ (Tare)")
+            Text("Tare")
         }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onDisconnect) {
-            Text("Koppla från")
+            Text("Disconnect")
         }
     }
 }
@@ -149,7 +149,7 @@ private fun ScanningView(
         // Visa felmeddelande om det finns (från connectionState.Error)
         error?.let {
             Text(
-                text = "Fel: $it",
+                text = "Error: $it",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -184,10 +184,10 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
                 isScanning -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Stoppa skanning")
+                    Text("Stop scanning")
                 }
                 // Visa "Starta skanning" för både Disconnected och Error
-                else -> Text("Starta skanning")
+                else -> Text("Start scanning")
             }
         }
     }
@@ -204,13 +204,13 @@ private fun DeviceList(
 // --- SLUT ÄNDRING ---
     if (isScanning && devices.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Letar efter enheter...")
+            Text("Scanning for devices...")
         }
         // --- ÄNDRING: Använder den nya parametern här ---
     } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) { // Visa bara om inget fel visas
         // --- SLUT ÄNDRING ---
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Inga enheter hittades.")
+            Text("No devices found.")
         }
     } else {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -230,7 +230,7 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = device.name ?: "(Namnlös enhet)",
+                text = device.name ?: "(Nameless device)",
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Adress: ${device.address}", style = MaterialTheme.typography.bodySmall)

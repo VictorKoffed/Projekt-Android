@@ -52,7 +52,7 @@ fun LiveBrewScreen(
     var showFlowInfo by remember { mutableStateOf(true) }
     // --- NYTT STATE FÖR ALERT ---
     var showDisconnectedAlert by remember { mutableStateOf(false) }
-    var alertMessage by remember { mutableStateOf("Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats.") } // För att hantera Error-meddelanden
+    var alertMessage by remember { mutableStateOf("The connection to the scale was lost during recording. Recording has been stopped.") } // För att hantera Error-meddelanden
 
     // --- NY LaunchedEffect FÖR ATT UPPTÄCKA FRÅNKOPPLING ---
     LaunchedEffect(connectionState, isRecording) {
@@ -60,9 +60,9 @@ fun LiveBrewScreen(
         if (isRecording && (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error)) {
             // Spara eventuellt felmeddelande
             if (connectionState is BleConnectionState.Error) {
-                alertMessage = "Fel vid anslutning till vågen: ${connectionState.message}. Inspelningen har stoppats."
+                alertMessage = "Error connecting to the scale: ${connectionState.message}. Recording has been stopped."
             } else {
-                alertMessage = "Anslutningen till vågen bröts under inspelningen. Inspelningen har stoppats."
+                alertMessage = "The connection to the scale was lost during recording. Recording has been stopped.."
             }
             onResetRecording() // Stoppa inspelningen direkt
             showDisconnectedAlert = true // Visa sedan dialogrutan
@@ -76,7 +76,7 @@ fun LiveBrewScreen(
                 title = { Text("Live Brew") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -86,7 +86,7 @@ fun LiveBrewScreen(
                         // Även om anslutningen bryts kan man vilja spara det som spelats in hittills.
                         enabled = isRecording || isPaused
                     ) {
-                        Text("Klar")
+                        Text("Done")
                     }
                 }
             )
@@ -118,9 +118,9 @@ fun LiveBrewScreen(
             FilterChip(
                 selected = showFlowInfo,
                 onClick = { showFlowInfo = !showFlowInfo },
-                label = { Text("Visa Flöde") },
+                label = { Text("Show Flow") },
                 leadingIcon = {
-                    if (showFlowInfo) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
+                    if (showFlowInfo) Icon(Icons.Default.Check, "Visible") else Icon(Icons.Default.Close, "Hidden")
                 }
             )
             Spacer(Modifier.height(16.dp)) // Mer space före kontrollerna
@@ -146,7 +146,7 @@ fun LiveBrewScreen(
                     // Navigera tillbaka till scale-skärmen när dialogen stängs
                     navigateTo("scale") // Använd den nya parametern
                 },
-                title = { Text("Anslutning bruten") },
+                title = { Text("Connection Broken") },
                 text = { Text(alertMessage) }, // Använd state för meddelande
                 confirmButton = {
                     TextButton(onClick = {
@@ -203,19 +203,19 @@ fun StatusDisplay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Vikt", style = MaterialTheme.typography.labelMedium)
+                    Text("Weight", style = MaterialTheme.typography.labelMedium)
                     Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                 }
                 if (showFlow) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Flöde", style = MaterialTheme.typography.labelMedium)
+                        Text("Flow", style = MaterialTheme.typography.labelMedium)
                         Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                     }
                 }
             }
             if (isPaused) {
                 Spacer(Modifier.height(4.dp))
-                Text("Pausad", fontSize = 14.sp)
+                Text("Paused", fontSize = 14.sp)
             }
         }
     }
@@ -301,9 +301,9 @@ fun BrewGraph(
                 currentTimeGrid += timeGridInterval
             }
 
-            drawText("Tid", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
+            drawText("Time", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
             save(); rotate(-90f)
-            drawText("Vikt", -size.height / 2, yLabelPadding / 2 - axisLabelPaint.descent(), axisLabelPaint)
+            drawText("Weight", -size.height / 2, yLabelPadding / 2 - axisLabelPaint.descent(), axisLabelPaint)
             restore()
         }
 
@@ -352,7 +352,7 @@ fun BrewControls(
         ) {
             Icon(
                 imageVector = Icons.Default.Replay, // Rund pil ikon
-                contentDescription = "Återställ inspelning"
+                contentDescription = "Reset recording"
             )
         }
 
@@ -378,9 +378,9 @@ fun BrewControls(
                     else -> Icons.Default.PlayArrow
                 },
                 contentDescription = when {
-                    isPaused -> "Återuppta"
-                    isRecording -> "Pausa"
-                    else -> "Starta"
+                    isPaused -> "Resume"
+                    isRecording -> "Pause"
+                    else -> "Start"
                 },
                 modifier = Modifier.size(40.dp) // Större ikon
             )
@@ -424,7 +424,7 @@ fun LiveBrewScreenPreview() {
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
         var time by remember { mutableStateOf(158000L) }
-        var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Våg")) } // Starta som ansluten
+        var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale")) } // Starta som ansluten
 
         val currentWeight = ScaleMeasurement(
             weightGrams = previewSamples.lastOrNull()?.massGrams?.toFloat() ?: 0f,
@@ -451,13 +451,13 @@ fun LiveBrewScreenPreview() {
             isPaused = isPaused,
             weightAtPause = weightAtPausePreview,
             connectionState = connectionState, // Skicka med state
-            onStartClick = { isRec = true; isPaused = false; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut i preview */ },
+            onStartClick = { isRec = true; isPaused = false; connectionState = BleConnectionState.Connected("Preview Scale") /* Återanslut i preview */ },
             onPauseClick = { isPaused = true },
             onResumeClick = { isPaused = false },
             onStopAndSaveClick = { isRec = false; isPaused = false },
             onTareClick = {},
             onNavigateBack = { Log.d("Preview", "Navigate Back to Scale") }, // Går till scale
-            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Våg") /* Återanslut */ },
+            onResetRecording = { isRec = false; isPaused = false; time = 0L; connectionState = BleConnectionState.Connected("Preview Scale") /* Återanslut */ },
             navigateTo = { screen -> Log.d("Preview", "Navigate to $screen") } // Lägg till dummy navigateTo
         )
     }

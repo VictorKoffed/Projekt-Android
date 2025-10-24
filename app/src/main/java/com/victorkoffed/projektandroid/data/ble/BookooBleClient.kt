@@ -64,7 +64,7 @@ class BookooBleClient(private val context: Context) {
                 // Fel uppstod under anslutning/frånkoppling
                 Log.e("BookooBleClient", "GATT Error on connection state change for $deviceAddress. Status: $status, New state: $newState")
                 // Sätt state till Error FÖRE handleDisconnect, så UI kan reagera
-                connectionState.value = BleConnectionState.Error("GATT Fel ($status)")
+                connectionState.value = BleConnectionState.Error("GATT Error ($status)")
                 // Stäng och rensa vid fel
                 handleDisconnect(gatt) // Använd samma städmetod
             }
@@ -85,12 +85,12 @@ class BookooBleClient(private val context: Context) {
                     }
                 } else {
                     Log.e("BookooBleClient", "Weight characteristic not found for ${gatt.device.address}")
-                    connectionState.value = BleConnectionState.Error("Våg-karakteristik hittades ej")
+                    connectionState.value = BleConnectionState.Error("Scale characteristic not found")
                     handleDisconnect(gatt) // Städa upp
                 }
             } else {
                 Log.e("BookooBleClient", "Service discovery failed for ${gatt.device.address} with status: $status")
-                connectionState.value = BleConnectionState.Error("Hittade inte services ($status)")
+                connectionState.value = BleConnectionState.Error("Could not find services ($status)")
                 handleDisconnect(gatt) // Städa upp
             }
         }
@@ -105,9 +105,9 @@ class BookooBleClient(private val context: Context) {
 
         override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BookooBleClient", "Kommando skickat!")
+                Log.d("BookooBleClient", "Command sent!")
             } else {
-                Log.e("BookooBleClient", "Misslyckades att skicka kommando, status: $status")
+                Log.e("BookooBleClient", "Failed to send command, status: $status")
             }
         }
     }
@@ -177,7 +177,7 @@ class BookooBleClient(private val context: Context) {
                         gatt = newGatt // Spara den nya instansen
                         if (gatt == null) {
                             Log.e("BookooBleClient", "device.connectGatt returned null for $address.")
-                            connectionState.value = BleConnectionState.Error("Kunde inte initiera anslutning")
+                            connectionState.value = BleConnectionState.Error("Could not initiate connection")
                         } else {
                             Log.d("BookooBleClient", "connectGatt called successfully for $address. Waiting for callback...")
                         }
@@ -190,13 +190,13 @@ class BookooBleClient(private val context: Context) {
 
             } catch (e: SecurityException) {
                 Log.e("BookooBleClient", "Bluetooth permission missing for connect", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Bluetooth-rättighet saknas") }
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Bluetooth permission missing") }
             } catch (e: IllegalArgumentException) {
                 Log.e("BookooBleClient", "Invalid Bluetooth address: $address", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Ogiltig adress") }
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Invalid address") }
             } catch (e: Exception) {
                 Log.e("BookooBleClient", "Unexpected error during connect to $address", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Oväntat anslutningsfel") }
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Unexpected connection error") }
                 handleDisconnect(gatt) // Försök städa upp
             }
         }
@@ -287,7 +287,7 @@ class BookooBleClient(private val context: Context) {
         val descriptor = characteristic.getDescriptor(cccdUuid)
         if (descriptor == null) {
             Log.e("BookooBleClient", "CCCD descriptor not found for characteristic ${characteristic.uuid}")
-            connectionState.value = BleConnectionState.Error("Kunde inte aktivera notiser (descriptor saknas)")
+            connectionState.value = BleConnectionState.Error("Could not enable notifications (descriptor missing)")
             handleDisconnect(gatt)
             return
         }
@@ -297,7 +297,7 @@ class BookooBleClient(private val context: Context) {
             val notificationSet = gatt.setCharacteristicNotification(characteristic, true)
             if (!notificationSet) {
                 Log.e("BookooBleClient", "Failed to enable notifications locally for ${characteristic.uuid}")
-                connectionState.value = BleConnectionState.Error("Kunde inte aktivera notiser (lokalt)")
+                connectionState.value = BleConnectionState.Error("Could not enable notifications (local)")
                 handleDisconnect(gatt)
                 return
             }
@@ -315,14 +315,14 @@ class BookooBleClient(private val context: Context) {
 
             if (writeResult != BluetoothStatusCodes.SUCCESS) {
                 Log.e("BookooBleClient", "Failed to write CCCD descriptor for ${characteristic.uuid}. Error: $writeResult")
-                connectionState.value = BleConnectionState.Error("Kunde inte aktivera notiser (CCCD write fail: $writeResult)")
+                connectionState.value = BleConnectionState.Error("Could not enable notifications (CCCD write fail: $writeResult)")
                 handleDisconnect(gatt)
             } else {
                 Log.i("BookooBleClient", "CCCD descriptor write initiated successfully for ${characteristic.uuid}")
             }
         } catch (e: SecurityException) {
             Log.e("BookooBleClient", "Bluetooth permission missing when enabling notifications", e)
-            connectionState.value = BleConnectionState.Error("Bluetooth-rättighet saknas för notiser")
+            connectionState.value = BleConnectionState.Error("Bluetooth permission missing for notifications")
             handleDisconnect(gatt)
         }
     }
@@ -330,7 +330,7 @@ class BookooBleClient(private val context: Context) {
     private fun parseMeasurement(data: ByteArray): ScaleMeasurement? {
         // Vi behöver åtminstone upp till index 9 (BYTE 10) och rätt header
         if (data.size < 10 || data.getOrNull(0) != 0x03.toByte() || data.getOrNull(1) != 0x0B.toByte()) {
-            Log.w("BookooBleClient", "Ogiltigt eller för kort paket: ${data.toHexString()}")
+            Log.w("BookooBleClient", "Invalid or too short package: ${data.toHexString()}")
             return null
         }
 

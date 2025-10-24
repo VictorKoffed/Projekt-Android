@@ -23,7 +23,7 @@ fun MethodScreen(vm: MethodViewModel) {
     var methodToDelete by remember { mutableStateOf<Method?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Bryggmetoder") }) }
+        topBar = { TopAppBar(title = { Text("Brew Methods") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -33,12 +33,12 @@ fun MethodScreen(vm: MethodViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = { showAddDialog = true }) {
-                Text("Lägg till ny metod")
+                Text("Add new method")
             }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (methods.isEmpty()) {
-                Text("Inga metoder tillagda än.")
+                Text("No methods added yet.")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -111,7 +111,7 @@ fun MethodCard(
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Ta bort metod",
+                    contentDescription = "Delete method",
                     tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
                 )
             }
@@ -130,12 +130,12 @@ fun AddMethodDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lägg till ny metod") },
+        title = { Text("Add new method") },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Metodnamn *") },
+                label = { Text("Method Name *") },
                 singleLine = true
             )
         },
@@ -143,9 +143,9 @@ fun AddMethodDialog(
             Button(
                 onClick = { if (name.isNotBlank()) onAddMethod(name) },
                 enabled = name.isNotBlank()
-            ) { Text("Lägg till") }
+            ) { Text("Add") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -161,7 +161,7 @@ fun EditMethodDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Redigera metod") },
+        title = { Text("Edit Method") },
         text = {
             OutlinedTextField(
                 value = name,
@@ -178,9 +178,9 @@ fun EditMethodDialog(
                     }
                 },
                 enabled = name.isNotBlank()
-            ) { Text("Spara") }
+            ) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -193,8 +193,8 @@ fun DeleteMethodConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ta bort metod?") },
-        text = { Text("Är du säker på att du vill ta bort '$methodName'? Bryggningar som använde denna metod kommer att förlora kopplingen.") },
+        title = { Text("Delete method?") },
+        text = { Text("ÄAre you sure you want to delete '$methodName'? Brews that used this method will lose the connection.") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
@@ -202,6 +202,6 @@ fun DeleteMethodConfirmationDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Ta bort") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

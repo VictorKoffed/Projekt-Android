@@ -78,14 +78,14 @@ fun BrewDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (isEditing) "Redigera bryggning"
-                        else state.brew?.let { "Bryggning: ${state.bean?.name ?: "Okänd Böna"}" } ?: "Laddar..."
+                        if (isEditing) "Edit Brew"
+                        else state.brew?.let { "Brew: ${state.bean?.name ?: "Unknown Bean"}" } ?: "Loading..."
                     )
                 },
                 navigationIcon = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.cancelEditing() }) {
-                            Icon(Icons.Default.Cancel, contentDescription = "Avbryt redigering")
+                            Icon(Icons.Default.Cancel, contentDescription = "Cancel editing")
                         }
                     } else {
                         IconButton(onClick = onNavigateBack) {
@@ -96,14 +96,14 @@ fun BrewDetailScreen(
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.saveChanges() }) {
-                            Icon(Icons.Default.Save, contentDescription = "Spara ändringar")
+                            Icon(Icons.Default.Save, contentDescription = "Save changes")
                         }
                     } else {
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Edit, contentDescription = "Redigera")
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Ta bort", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -118,7 +118,7 @@ fun BrewDetailScreen(
             }
             state.error != null -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), Alignment.Center) {
-                    Text("Fel: ${state.error}", color = MaterialTheme.colorScheme.error)
+                    Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
                 }
             }
             else -> {
@@ -144,10 +144,10 @@ fun BrewDetailScreen(
                         state.metrics?.let { metrics ->
                             BrewMetricsCard(metrics = metrics)
                         } ?: Card(Modifier.fillMaxWidth()) {
-                            Text("Ingen ratio/vatten-data.", modifier = Modifier.padding(16.dp))
+                            Text("No ratio/water data.", modifier = Modifier.padding(16.dp))
                         }
 
-                        Text("Bryggförlopp", style = MaterialTheme.typography.titleMedium)
+                        Text("Brew Progress", style = MaterialTheme.typography.titleMedium)
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
@@ -161,7 +161,7 @@ fun BrewDetailScreen(
                             FilterChip(
                                 selected = showFlowLine,
                                 onClick = { showFlowLine = !showFlowLine },
-                                label = { Text("Flöde") },
+                                label = { Text("Flow") },
                                 leadingIcon = {
                                     if (showFlowLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                                 }
@@ -177,11 +177,11 @@ fun BrewDetailScreen(
                             )
                         } else {
                             Card(Modifier.fillMaxWidth()) {
-                                Text("Ingen grafdata sparad.", modifier = Modifier.padding(16.dp))
+                                Text("No graph data saved.", modifier = Modifier.padding(16.dp))
                             }
                         }
 
-                        Text("Noteringar", style = MaterialTheme.typography.titleMedium)
+                        Text("Notes", style = MaterialTheme.typography.titleMedium)
                         if (isEditing) {
                             OutlinedTextField(
                                 value = viewModel.editNotes,
@@ -202,9 +202,9 @@ fun BrewDetailScreen(
         if (showDeleteConfirmDialog && brewToDelete != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmDialog = false },
-                title = { Text("Ta bort bryggning?") },
+                title = { Text("Delete brew?") },
                 text = {
-                    Text("Är du säker på att du vill ta bort bryggningen för '${state.bean?.name ?: "denna böna"}'?")
+                    Text("ÄAre you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'?")
                 },
                 confirmButton = {
                     Button(
@@ -218,7 +218,7 @@ fun BrewDetailScreen(
                     ) { Text("Ta bort") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Avbryt") }
+                    TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
                 }
             )
         }
@@ -238,15 +238,15 @@ fun BrewSummaryCard(state: BrewDetailState) {
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Detaljer", style = MaterialTheme.typography.titleLarge)
-            DetailRow("Böna:", state.bean?.name ?: "-")
-            DetailRow("Rosteri:", state.bean?.roaster ?: "-")
-            DetailRow("Datum:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
-            DetailRow("Total tid:", if (totalTimeMillis > 0) timeString else "-")
-            DetailRow("Dos:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
-            DetailRow("Metod:", state.method?.name ?: "-")
-            DetailRow("Kvarn:", state.grinder?.name ?: "-")
-            DetailRow("Maln.grad:", state.brew?.grindSetting ?: "-")
+            Text("Details", style = MaterialTheme.typography.titleLarge)
+            DetailRow("Bean:", state.bean?.name ?: "-")
+            DetailRow("Roaster:", state.bean?.roaster ?: "-")
+            DetailRow("Date:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
+            DetailRow("Total time:", if (totalTimeMillis > 0) timeString else "-")
+            DetailRow("Dose:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
+            DetailRow("Method:", state.method?.name ?: "-")
+            DetailRow("Grinder:", state.grinder?.name ?: "-")
+            DetailRow("Grind set:", state.brew?.grindSetting ?: "-")
             DetailRow("Temp:", state.brew?.brewTempCelsius?.let { "%.1f °C".format(it) } ?: "-")
         }
     }
@@ -272,28 +272,28 @@ fun BrewEditCard(
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Redigera detaljer", style = MaterialTheme.typography.titleLarge)
-            DetailRow("Böna:", state.bean?.name ?: "-")
-            DetailRow("Datum:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
-            DetailRow("Dos:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
+            Text("Edit Details", style = MaterialTheme.typography.titleLarge)
+            DetailRow("Bean:", state.bean?.name ?: "-")
+            DetailRow("Date:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
+            DetailRow("Dose:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
             Divider(Modifier.padding(vertical = 8.dp))
             EditDropdownSelector(
-                label = "Kvarn",
+                label = "Grinder",
                 options = availableGrinders,
                 selectedOption = viewModel.editSelectedGrinder,
                 onOptionSelected = { viewModel.onEditGrinderSelected(it) },
-                optionToString = { it?.name ?: "Välj kvarn..." }
+                optionToString = { it?.name ?: "Select grinder..." }
             )
             OutlinedTextField(
                 value = viewModel.editGrindSetting,
                 onValueChange = { viewModel.onEditGrindSettingChanged(it) },
-                label = { Text("Malningsgrad") },
+                label = { Text("Grind Setting") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = viewModel.editGrindSpeedRpm,
                 onValueChange = { viewModel.onEditGrindSpeedRpmChanged(it) },
-                label = { Text("Malningshastighet (RPM)") },
+                label = { Text("Grind Speed (RPM)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -302,12 +302,12 @@ fun BrewEditCard(
                 options = availableMethods,
                 selectedOption = viewModel.editSelectedMethod,
                 onOptionSelected = { viewModel.onEditMethodSelected(it) },
-                optionToString = { it?.name ?: "Välj metod..." }
+                optionToString = { it?.name ?: "Select method..." }
             )
             OutlinedTextField(
                 value = viewModel.editBrewTempCelsius,
                 onValueChange = { viewModel.onEditBrewTempChanged(it) },
-                label = { Text("Vattentemperatur (°C)") },
+                label = { Text("Water Temperature (°C)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -331,14 +331,14 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Vatten", style = MaterialTheme.typography.labelMedium)
+                Text("Water", style = MaterialTheme.typography.labelMedium)
                 Text(
                     text = "%.1f g".format(metrics.waterUsedGrams),
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Dos", style = MaterialTheme.typography.labelMedium)
+                Text("Dose", style = MaterialTheme.typography.labelMedium)
                 Text(
                     text = "%.1f g".format(metrics.doseGrams),
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
@@ -527,11 +527,11 @@ fun BrewSamplesGraph(
 
             save(); rotate(-90f)
             // Vikt (Centrerad vertikalt i titlePaddingStart-området)
-            drawText("Vikt (g)", -(graphStartY + graphHeight / 2), titlePaddingStart / 2 + axisTitlePaint.textSize / 3, axisTitlePaint) // Justerad Y
+            drawText("Weight (g)", -(graphStartY + graphHeight / 2), titlePaddingStart / 2 + axisTitlePaint.textSize / 3, axisTitlePaint) // Justerad Y
 
             if (hasFlowData) {
                 // Flöde (Centrerad vertikalt i titlePaddingEnd-området)
-                drawText("Flöde (g/s)", -(graphStartY + graphHeight / 2), size.width - titlePaddingEnd / 2 - axisTitlePaintFlow.descent(), axisTitlePaintFlow) // Justerad Y
+                drawText("Flow (g/s)", -(graphStartY + graphHeight / 2), size.width - titlePaddingEnd / 2 - axisTitlePaintFlow.descent(), axisTitlePaintFlow) // Justerad Y
             }
             restore()
         }
@@ -570,7 +570,7 @@ fun <T> EditDropdownSelector(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Inget val") },
+                text = { Text("No selection") },
                 onClick = {
                     onOptionSelected(null)
                     expanded = false

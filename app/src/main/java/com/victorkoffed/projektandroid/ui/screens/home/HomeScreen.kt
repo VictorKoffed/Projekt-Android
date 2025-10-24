@@ -136,7 +136,7 @@ fun HomeScreen(
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Ny bryggning",
+                                contentDescription = "New brew",
                                 tint = iconColor // Sätt ikonfärgen
                             )
                         }
@@ -207,11 +207,11 @@ fun HomeScreen(
     if (showSetupWarningDialog) {
         AlertDialog(
             onDismissRequest = { showSetupWarningDialog = false },
-            title = { Text("Kan inte starta bryggning") },
-            text = { Text("Du måste först lägga till minst en böna (under 'Bean') och en bryggmetod (under 'Method') innan du kan starta en ny bryggning.") },
+            title = { Text("Cannot start brew") },
+            text = { Text("You must first add at least one bean (under 'Bean') and one brewing method (under 'Method') before you can start a new brew") },
             confirmButton = {
                 TextButton(onClick = { showSetupWarningDialog = false }) {
-                    Text("Förstått")
+                    Text("Understood")
                 }
             }
         )
@@ -264,7 +264,7 @@ fun InfoGrid(
                                     .clickable { onReloadImage() } // Klicka för ny bild
                             )
                         }
-                        else -> Text("Bild", color = Color.Gray) // Fallback
+                        else -> Text("Image", color = Color.Gray) // Fallback
                     }
                 }
             }
@@ -315,31 +315,31 @@ fun ScaleStatusCard(
 
     when (connectionState) {
         is BleConnectionState.Connected -> {
-            icon = { Icon(Icons.Default.BluetoothConnected, contentDescription = "Ansluten") }
+            icon = { Icon(Icons.Default.BluetoothConnected, contentDescription = "Connected") }
             // Försök visa enhetsnamnet, annars "Ansluten"
-            title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Ansluten"
-            subtitle = "Tryck för att koppla från"
+            title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
+            subtitle = "Tap to disconnect"
             iconColor = MaterialTheme.colorScheme.primary
             titleColor = MockupColor // <-- ANVÄND MOCKUPFÄRG HÄR
         }
         is BleConnectionState.Connecting -> {
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) } // Visa spinner
-            title = "Ansluter..."
-            subtitle = "Var god vänta"
+            title = "Connecting..."
+            subtitle = "Please wait"
             iconColor = LocalContentColor.current.copy(alpha = 0.6f)
             titleColor = LocalContentColor.current // <-- Standardfärg
         }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Fel", tint = MaterialTheme.colorScheme.error) }
-            title = "Anslutningsfel"
+            title = "Connection Error"
             subtitle = connectionState.message // Visa felmeddelandet
             iconColor = MaterialTheme.colorScheme.error
             titleColor = MaterialTheme.colorScheme.error // <-- Felfärg
         }
         BleConnectionState.Disconnected -> { // Explicit hantera Disconnected
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
-            title = "Våg frånkopplad"
-            subtitle = "Tryck för att ansluta"
+            title = "Scale disconnected"
+            subtitle = "Tap to connect"
             iconColor = LocalContentColor.current.copy(alpha = 0.6f)
             titleColor = LocalContentColor.current // <-- Standardfärg
         }
@@ -427,7 +427,7 @@ fun NoBrewsTextWithIcon(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Inga bryggningar sparade än, tryck på ",
+                "No brews saved yet, tap ",
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray) // Använder Color.Gray för hint-text
             )
             // Liten cirkel med plus-ikonen för att imitera knappen
@@ -450,7 +450,7 @@ fun NoBrewsTextWithIcon(
 
         // Rad 2: "för att skapa en."
         Text(
-            "för att skapa en.",
+            "to create one.",
             style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray),
             modifier = Modifier.padding(top = 2.dp) // Litet utrymme mellan raderna
         )
@@ -483,12 +483,12 @@ fun RecentBrewCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 Spacer(Modifier.height(4.dp))
-                Text(brewItem.beanName ?: "Okänd böna", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(brewItem.beanName ?: "Unknown bean", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.width(12.dp))
             Image(
                 painter = painterResource(id = R.mipmap.ic_launcher_foreground), // Använd mipmap (kaffebönan)
-                contentDescription = "Bryggbild",
+                contentDescription = "BryggImage",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(64.dp)

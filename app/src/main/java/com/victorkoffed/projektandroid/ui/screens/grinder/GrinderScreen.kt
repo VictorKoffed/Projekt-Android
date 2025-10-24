@@ -23,7 +23,7 @@ fun GrinderScreen(vm: GrinderViewModel) {
     var grinderToDelete by remember { mutableStateOf<Grinder?>(null) } // State för borttagning
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Kvarnar") }) }
+        topBar = { TopAppBar(title = { Text("Grinders") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -33,12 +33,12 @@ fun GrinderScreen(vm: GrinderViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(onClick = { showAddDialog = true }) {
-                Text("Lägg till ny kvarn")
+                Text("Add new grinder")
             }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (grinders.isEmpty()) {
-                Text("Inga kvarnar tillagda än.")
+                Text("No grinders added yet.")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -117,7 +117,7 @@ fun GrinderCard(
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Ta bort kvarn",
+                    contentDescription = "Delete grinder",
                     tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
                 )
             }
@@ -137,20 +137,20 @@ fun AddGrinderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lägg till ny kvarn") },
+        title = { Text("Add new grinder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar (t.ex. burrs)") })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes (e.g. burrs)") })
             }
         },
         confirmButton = {
             Button(
                 onClick = { if (name.isNotBlank()) onAddGrinder(name, notes.takeIf { it.isNotBlank() }) },
                 enabled = name.isNotBlank()
-            ) { Text("Lägg till") }
+            ) { Text("Add") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -168,7 +168,7 @@ fun EditGrinderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Redigera kvarn") },
+        title = { Text("Edit Grinder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
@@ -188,9 +188,9 @@ fun EditGrinderDialog(
                     }
                 },
                 enabled = name.isNotBlank()
-            ) { Text("Spara") }
+            ) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
@@ -203,14 +203,14 @@ fun DeleteGrinderConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ta bort kvarn?") },
-        text = { Text("Är du säker på att du vill ta bort '$grinderName'? Bryggningar som använde denna kvarn kommer att förlora kopplingen.") },
+        title = { Text("Delete grinder?") },
+        text = { Text("Are you sure you want to delete '$grinderName'? Brews that used this grinder will lose the connection.") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Ta bort") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Avbryt") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

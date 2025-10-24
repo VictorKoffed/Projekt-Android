@@ -52,10 +52,10 @@ fun BrewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bryggning") },
+                title = { Text("Brew") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka till Home")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Home")
                     }
                 }
             )
@@ -76,7 +76,7 @@ fun BrewScreen(
                     horizontalArrangement = Arrangement.SpaceBetween, // Fördelar utrymmet
                     verticalAlignment = Alignment.CenterVertically // Centrerar vertikalt
                 ) {
-                    Text("Innan bryggning", style = MaterialTheme.typography.headlineSmall)
+                    Text("Before Brew", style = MaterialTheme.typography.headlineSmall)
 
                     // --- NY KNAPP ---
                     TextButton(
@@ -89,7 +89,7 @@ fun BrewScreen(
                             modifier = Modifier.size(ButtonDefaults.IconSize) // Standard ikonstorlek
                         )
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing)) // Standard avstånd
-                        Text("Ladda senaste")
+                        Text("Load latest")
                     }
                     // --- SLUT NY KNAPP ---
                 }
@@ -98,52 +98,52 @@ fun BrewScreen(
 
                 // --- Resten av formuläret ---
                 DropdownSelector(
-                    label = "Böna *",
+                    label = "Bean *",
                     options = availableBeans,
                     selectedOption = setupState.selectedBean,
                     onOptionSelected = { vm.selectBean(it) },
-                    optionToString = { it?.name ?: "Välj böna..." }
+                    optionToString = { it?.name ?: "Select bean..." }
                 )
                 OutlinedTextField(
                     value = setupState.doseGrams,
                     onValueChange = { vm.onDoseChange(it) },
-                    label = { Text("Dos (g) *") },
+                    label = { Text("Dose (g) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 DropdownSelector(
-                    label = "Kvarn",
+                    label = "Grinder",
                     options = availableGrinders,
                     selectedOption = setupState.selectedGrinder,
                     onOptionSelected = { vm.selectGrinder(it) },
-                    optionToString = { it?.name ?: "Välj kvarn..." }
+                    optionToString = { it?.name ?: "Select grinder..." }
                 )
                 OutlinedTextField(
                     value = setupState.grindSetting,
                     onValueChange = { vm.onGrindSettingChange(it) },
-                    label = { Text("Malningsgrad") },
+                    label = { Text("Grind Setting") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = setupState.grindSpeedRpm,
                     onValueChange = { vm.onGrindSpeedChange(it) },
-                    label = { Text("Malningshastighet (RPM)") },
+                    label = { Text("Grind Speed (RPM)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 DropdownSelector(
-                    label = "Metod *",
+                    label = "Method *",
                     options = availableMethods,
                     selectedOption = setupState.selectedMethod,
                     onOptionSelected = { vm.selectMethod(it) },
-                    optionToString = { it?.name ?: "Välj metod..." }
+                    optionToString = { it?.name ?: "Select method..." }
                 )
                 OutlinedTextField(
                     value = setupState.brewTempCelsius,
                     onValueChange = { vm.onBrewTempChange(it) },
-                    label = { Text("Vattentemperatur (°C)") },
+                    label = { Text("Brew Temperature (°C)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -159,20 +159,20 @@ fun BrewScreen(
                         containerColor = buttonColor
                     )
                 ) {
-                    Text("Starta bryggning")
+                    Text("Start Brew")
                 }
             }
 
             // --- "AFTER BREW" SEKTION (VISAS BARA OM RESULTAT FINNS) ---
             if (metrics != null && samples.isNotEmpty()) {
-                Text("Efter bryggning", style = MaterialTheme.typography.headlineSmall)
+                Text("After Brew", style = MaterialTheme.typography.headlineSmall)
 
                 // Visa Ratio och Vattenmängd
                 ResultMetrics(metrics = metrics!!) // <-- DENNA FUNKTION BEHÖVER FINNAS
 
                 Spacer(Modifier.height(16.dp))
 
-                Text("Bryggförlopp", style = MaterialTheme.typography.titleMedium)
+                Text("Brew Progression", style = MaterialTheme.typography.titleMedium)
                 // Använd BrewGraph från LiveBrewScreen (se till att den är i rätt package eller flytta den)
                 com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph( // <-- Fullständig sökväg om den är i samma package
                     samples = samples,
@@ -191,7 +191,7 @@ fun BrewScreen(
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("Ny bryggning")
+                    Text("New Brew")
                 }
             }
         }
@@ -220,7 +220,7 @@ fun ResultMetrics(metrics: BrewMetrics) {
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Vatten", style = MaterialTheme.typography.labelMedium)
+                Text("Water", style = MaterialTheme.typography.labelMedium)
                 Text(
                     text = "%.1f g".format(metrics.waterUsedGrams),
                     style = MaterialTheme.typography.bodyLarge,
@@ -228,7 +228,7 @@ fun ResultMetrics(metrics: BrewMetrics) {
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Dos", style = MaterialTheme.typography.labelMedium)
+                Text("Dose", style = MaterialTheme.typography.labelMedium)
                 Text(
                     text = "%.1f g".format(metrics.doseGrams),
                     style = MaterialTheme.typography.bodyLarge,
