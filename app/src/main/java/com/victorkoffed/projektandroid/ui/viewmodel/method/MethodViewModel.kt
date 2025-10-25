@@ -4,17 +4,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject // <-- NY IMPORT
 
 /**
  * ViewModel för hantering av bryggmetoder (Methods).
  *
  * Använder [CoffeeRepository] för all datalagerinteraktion.
  */
-class MethodViewModel(private val repository: CoffeeRepository) : ViewModel() {
+@HiltViewModel // <-- NY ANNOTERING
+class MethodViewModel @Inject constructor( // <-- NYTT: @Inject constructor
+    private val repository: CoffeeRepository // Injiceras av Hilt
+) : ViewModel() {
 
     /**
      * Exponerar alla lagrade [Method]-objekt som en [StateFlow].

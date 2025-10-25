@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Date
+import javax.inject.Inject // <-- NY IMPORT
 
 // Data class för att förenkla visning av en bryggning i listan, inkluderar bönans namn.
 data class RecentBrewItem(
@@ -22,9 +24,10 @@ data class RecentBrewItem(
 /**
  * ViewModel för Hemskärmen. Tillhandahåller statistik och de senaste bryggningarna.
  */
-class HomeViewModel(
-    repository: CoffeeRepository,
-    private val themePreferenceManager: ThemePreferenceManager // <-- NYTT ARGUMENT
+@HiltViewModel // <-- NY ANNOTERING
+class HomeViewModel @Inject constructor( // <-- NYTT: @Inject constructor
+    repository: CoffeeRepository, // Injiceras av Hilt
+    private val themePreferenceManager: ThemePreferenceManager // Injiceras av Hilt
 ) : ViewModel() {
 
     // Observera det aktuella mörkerläge-valet i ViewModel

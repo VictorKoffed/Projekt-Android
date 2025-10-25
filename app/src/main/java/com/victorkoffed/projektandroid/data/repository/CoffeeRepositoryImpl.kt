@@ -8,13 +8,18 @@ import com.victorkoffed.projektandroid.data.db.CoffeeDao
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Konkret implementation av [CoffeeRepository].
  * Denna klass är det enda ansvarsområdet för att hämta data från [CoffeeDao] (Room Database).
  * Den fungerar som datalagret för domänen och delegerar alla operationer direkt till DAO:n.
  */
-class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {
+@Singleton
+class CoffeeRepositoryImpl @Inject constructor(
+    private val dao: CoffeeDao
+) : CoffeeRepository {
     // --- Kvarn (Grinder) ---
     override fun getAllGrinders(): Flow<List<Grinder>> = dao.getAllGrinders()
     override suspend fun addGrinder(grinder: Grinder) = dao.insertGrinder(grinder)

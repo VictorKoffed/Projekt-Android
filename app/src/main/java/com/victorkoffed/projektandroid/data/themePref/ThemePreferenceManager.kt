@@ -2,16 +2,22 @@ package com.victorkoffed.projektandroid.data.themePref
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import androidx.core.content.edit
 
 /**
  * Hanterar lagring och läsning av användarens manuella val av mörkt/ljust läge.
  * Använder SharedPreferences för enkel beständighet och StateFlow för att Compose ska kunna observera ändringar.
  */
-class ThemePreferenceManager(context: Context) {
+@Singleton
+class ThemePreferenceManager @Inject constructor(
+    @ApplicationContext context: Context
+) {
 
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("theme_prefs", Context.MODE_PRIVATE)

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -12,13 +13,17 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject // <-- NY IMPORT
 
 /**
  * ViewModel för hantering av Kaffebönor.
  * Huvudansvaret är att tillhandahålla listan över alla bönor och hantera tillägg av nya.
  * (Redigering/Borttagning hanteras nu i BeanDetailViewModel).
  */
-class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
+@HiltViewModel // <-- NY ANNOTERING
+class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
+    private val repository: CoffeeRepository // Injiceras av Hilt
+) : ViewModel() {
 
     /**
      * Exponerar ett StateFlow av alla bönor från databasen.

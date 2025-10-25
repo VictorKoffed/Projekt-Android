@@ -8,6 +8,9 @@ import com.victorkoffed.projektandroid.data.ble.BookooBleClient
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -18,9 +21,13 @@ import kotlinx.coroutines.flow.scan
  * Implementation av [ScaleRepository] som använder [BookooBleClient] för BLE-kommunikation.
  * Ansvarar för att kontrollera behörigheter och transformera råa BLE-data till domänmodeller.
  */
-class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository {
+@Singleton
+class BookooScaleRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ScaleRepository {
 
-    private val client = BookooBleClient(context)
+    // Initieras lazily så att Context finns när den skapas via Hilt
+    private val client: BookooBleClient by lazy { BookooBleClient(context) }
 
     /**
      * Startar BLE-skanning och samlar skanningsresultat till en Flow<List<DiscoveredDevice>>.
@@ -28,8 +35,9 @@ class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository 
      */
     override fun startScanDevices(): Flow<List<DiscoveredDevice>> {
         // Kontrollera nödvändig behörighet (BLUETOOTH_SCAN) innan skanning initieras.
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            // Om behörighet saknas, skicka ett fel via Flow.
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
             return flow { throw SecurityException("Missing BLUETOOTH_SCAN permission.") }
         }
 
@@ -42,19 +50,11 @@ class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository 
                     rssi = result.rssi
                 )
             }
-            // Steg 2: Använd 'scan' för att bygga en växande lista med unika enheter.
+            // Steg 2: Bygg en växande lista med unika enheter och uppdatera RSSI vid dubblett.
             .scan(emptyList()) { acc, newDevice ->
                 val mutable = acc.toMutableList()
-                val existing = mutable.find { it.address == newDevice.address }
-                if (existing != null) {
-                    // Om enheten redan finns, uppdatera dess RSSI/information.
-                    val index = mutable.indexOf(existing)
-                    mutable[index] = newDevice
-                } else {
-                    // Om enheten är ny, lägg till den i listan.
-                    mutable.add(newDevice)
-                }
-                // Sortera listan efter signalstyrka (RSSI) för att visa de närmaste först.
+                val idx = mutable.indexOfFirst { it.address == newDevice.address }
+                if (idx >= 0) mutable[idx] = newDevice else mutable.add(newDevice)
                 mutable.sortedByDescending { it.rssi }
             }
     }
