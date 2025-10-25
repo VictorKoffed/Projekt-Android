@@ -45,7 +45,6 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. The auto connect BLE dont work.
 2. Clean up warnings and refactor
-4. Check comments
 
 ##  ToDo List (Future Version 0.2)
 
