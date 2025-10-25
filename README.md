@@ -51,7 +51,13 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 1. Data migration to new device? OR add a cloud database firebase?
 2. Archive old beans and brews to remove them from home?
 3. Add some templates for methods and info about them and pictures etc?
-5. Implement the graph as a module for more modular code?
+4. Implement the graph as a module for more modular code?
+5. Du använder för närvarande manuella ViewModel Factories (...ViewModelFactory.kt) för att injicera CoffeeRepository och ScaleRepository. 
+Detta fungerar, men i större projekt blir det omständligt. Att integrera ett modernt DI-ramverk som Hilt skulle automatisera beroendehanteringen, 
+förenkla MainActivity.kt och förbättra testbarheten.
+6. I BrewDetailScreen.kt skickas en bild-URI tillbaka via navBackStackEntry.savedStateHandle. Detta är en giltig Compose Navigation-metod men kan 
+förenklas/göras säkrare genom att använda Hilt/Koin för att injicera en SavedStateHandle i en CameraViewModel eller genom att använda Navigation-bibliotekets 
+specifika API för resultathantering.
 
 ## 👤 Author
 
