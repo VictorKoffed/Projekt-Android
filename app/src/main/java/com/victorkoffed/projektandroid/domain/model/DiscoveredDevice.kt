@@ -1,10 +1,11 @@
 package com.victorkoffed.projektandroid.domain.model
 
 /**
- * Representerar en hittad BLE-enhet under scanning.
- * - name kan vara null om enheten inte annonserar namn.
- * - address är MAC-adressen (unik identifierare).
- * - rssi är signalstyrkan (högre = närmare, typiskt negativt värde).
+ * Representerar en hittad BLE-enhet under skanning.
+ *
+ * @property name Enhetens annonserade namn (kan vara null).
+ * @property address Enhetens unika MAC-adress (identifierare).
+ * @property rssi Signalstyrka i dBm (högre, dvs. närmare noll, betyder starkare signal).
  */
 data class DiscoveredDevice(
     val name: String?,

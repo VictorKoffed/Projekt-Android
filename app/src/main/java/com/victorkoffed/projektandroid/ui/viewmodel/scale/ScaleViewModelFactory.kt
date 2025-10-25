@@ -7,7 +7,8 @@ import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 
 /**
- * Factory for creating ScaleViewModel instances with multiple repository dependencies.
+ * Fabrik för att skapa ScaleViewModel-instanser.
+ * Hanterar beroendeinjektion av Application och de två repository-klasserna.
  */
 class ScaleViewModelFactory(
     private val application: Application,
@@ -17,10 +18,10 @@ class ScaleViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ScaleViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            // Skickar in alla tre beroenden till ScaleViewModel
+            // Initialiserar ScaleViewModel med alla nödvändiga beroenden.
             return ScaleViewModel(application, scaleRepository, coffeeRepository) as T
         }
+        // Kasta undantag om en okänd ViewModel-klass försöker skapas via denna fabrik.
         throw IllegalArgumentException("Unknown ViewModel class for ScaleViewModelFactory")
     }
 }
-

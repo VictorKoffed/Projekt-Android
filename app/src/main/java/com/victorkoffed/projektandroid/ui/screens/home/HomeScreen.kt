@@ -78,24 +78,20 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 
-// Hårdkodad färg för MockupColor har tagits bort och ersatts av MaterialTheme.colorScheme.primary
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     homeVm: HomeViewModel,
     coffeeImageVm: CoffeeImageViewModel,
     scaleVm: ScaleViewModel,
-    // --- NY PARAMETER ---
-    snackbarHostState: SnackbarHostState,
-    // --- SLUT NY PARAMETER ---
-    navigateToScreen: (String) -> Unit, // Denna tar emot en Rutt-sträng
-    onNavigateToBrewSetup: () -> Unit,
-    onBrewClick: (Long) -> Unit,
-    availableBeans: List<Bean>,
-    availableMethods: List<Method>
+    snackbarHostState: SnackbarHostState, // State för Snackbar (för felhantering)
+    navigateToScreen: (String) -> Unit, // Generell navigations-callback
+    onNavigateToBrewSetup: () -> Unit, // Callback för att starta ny bryggning
+    onBrewClick: (Long) -> Unit, // Callback för att visa bryggdetaljer
+    availableBeans: List<Bean>, // Data för att kontrollera förutsättningar
+    availableMethods: List<Method> // Data för att kontrollera förutsättningar
 ) {
-    // Hämta states från ViewModels
+    // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
     val totalBrews by homeVm.totalBrewCount.collectAsState()
     val uniqueBeans by homeVm.uniqueBeanCount.collectAsState()
@@ -105,53 +101,52 @@ fun HomeScreen(
     // States för slumpmässig bild
     val imageUrl by coffeeImageVm.imageUrl
     val imageLoading by coffeeImageVm.loading
-    val imageError by coffeeImageVm.error // Fel från VM
+    val imageError by coffeeImageVm.error
 
-    // State för den formaterade "tid sedan"-strängen
+    // Lokalt state för den formaterade "tid sedan"-strängen
     var timeSinceLastCoffee by remember { mutableStateOf<String?>("...") }
 
-    // --- Hämta connection state - MED INITIALVÄRDE ---
+    // Hämta connection state från ScaleViewModel. Använder replayCache för att undvika null initialvärde.
     val scaleConnectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
     )
-    // --- SLUT ÄNDRING ---
 
-    // --- STATE FÖR VARNINGSDIALOG ---
+    // State för att visa varning om setup saknas (kaffeböna/metod)
     var showSetupWarningDialog by remember { mutableStateOf(false) }
-    // --- SLUT ---
 
-    // --- NYTT: Scope för Snackbar ---
     val scope = rememberCoroutineScope()
-    // --- SLUT NYTT ---
 
-    // Logik för att avgöra om bryggning kan startas
+    // Logik: En bryggning får endast startas om minst en böna och en metod finns.
     val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
 
-    // Åtgärd för att starta bryggning eller visa varning
+    // Definierar den villkorliga åtgärden för att starta bryggning
     val startBrewAction = {
         if (isBrewSetupEnabled) {
-            onNavigateToBrewSetup() // Denna navigerar nu med NavController
+            onNavigateToBrewSetup()
         } else {
-            showSetupWarningDialog = true
+            showSetupWarningDialog = true // Visa varning om setup saknas
         }
     }
 
-    // Effekt för att hämta slumpmässig bild
+    // --- Launched Effects (Sid-effekter) ---
+
+    // 1. Ladda slumpmässig bild vid första laddning
     LaunchedEffect(Unit) {
         if (imageUrl == null) {
             coffeeImageVm.loadRandomCoffeeImage()
         }
     }
 
-    // Effekt för att uppdatera "tid sedan"-strängen
+    // 2. Uppdatera "tid sedan" strängen varje minut
     LaunchedEffect(lastBrewTime) {
+        // En loop som körs kontinuerligt så länge composable är aktiv
         while (true) {
             timeSinceLastCoffee = formatTimeSince(lastBrewTime)
-            delay(60000) // Vänta en minut
+            delay(60000) // Vänta en minut (60 sekunder)
         }
     }
 
-    // --- NYTT: Effekt för att visa Snackbar vid bildfel ---
+    // 3. Visa Snackbar vid bildfel
     LaunchedEffect(imageError) {
         if (imageError != null) {
             scope.launch {
@@ -159,17 +154,15 @@ fun HomeScreen(
                     message = "Image Error: $imageError"
                 )
             }
-            // Nollställ felet i ViewModel så det inte visas igen
+            // Nollställ felet i ViewModel efter visning för att undvika upprepning
             coffeeImageVm.clearError()
         }
     }
-    // --- SLUT NYTT ---
 
     Scaffold(
-        // --- Använder temats bakgrundsfärg ---
-        containerColor = MaterialTheme.colorScheme.background, // FIX: Use Theme Color
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar( // ÄNDRAD TILL TopAppBar för vänsterjustering
+            TopAppBar(
                 title = { Text("Home") },
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Implement Menu */ }) {
@@ -177,16 +170,16 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // --- Logik för "Lägg till bryggning"-knappen ---
-                    val buttonColor = MaterialTheme.colorScheme.primary // Använder temats primärfärg
-                    val iconColor = MaterialTheme.colorScheme.onPrimary // Använder temats onPrimary färg (svart/vitt)
+                    // Knapp för att starta ny bryggning
+                    val buttonColor = MaterialTheme.colorScheme.primary
+                    val iconColor = MaterialTheme.colorScheme.onPrimary
 
                     Surface(
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(38.dp) // ÖKAD STORLEK
+                            .size(38.dp)
                             .clip(CircleShape)
-                            // Klicka kör startBrewAction
+                            // Klicket utlöser den villkorliga startBrewAction
                             .clickable(onClick = startBrewAction),
                         color = buttonColor,
                         shape = CircleShape
@@ -196,13 +189,11 @@ fun HomeScreen(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "New brew",
                                 tint = iconColor,
-                                modifier = Modifier.size(28.dp) // ÖKAD IKONSTORLEK
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                     }
-                    // --- SLUT PÅ "Lägg till bryggning" ---
                 },
-                // --- Vit bakgrundsfärg för TopAppBar ---
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface // Vit bakgrund
                 )
@@ -218,21 +209,19 @@ fun HomeScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
         ) {
             item {
-                // Skicka med all data till InfoGrid
+                // Rutnät för statistik och statuskort
                 InfoGrid(
                     totalBrews = totalBrews,
                     uniqueBeans = uniqueBeans,
                     availableWeight = availableWeight,
                     imageUrl = imageUrl,
                     imageLoading = imageLoading,
-                    // --- ÄNDRING: Skicka med felet ---
                     imageError = imageError,
-                    // --- SLUT ÄNDRING ---
                     timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState,
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
-                    // --- KORRIGERAD NAVIGERING HÄR ---
-                    onScaleCardClick = { navigateToScreen(Screen.ScaleConnect.route) } // Använd korrekt rutt
+                    // Navigering till våganslutningsskärmen
+                    onScaleCardClick = { navigateToScreen(Screen.ScaleConnect.route) }
                 )
             }
             item {
@@ -242,26 +231,28 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+            // Villkorlig rendering: Visa listan eller en placeholder
             if (recentBrews.isEmpty()) {
                 item {
                     NoBrewsTextWithIcon(
                         modifier = Modifier.padding(vertical = 16.dp),
-                        onStartBrewClick = startBrewAction // UPPDATERAD: Använd conditional action
+                        onStartBrewClick = startBrewAction // Använd den villkorliga åtgärden
                     )
                 }
             }
             else {
+                // Lista över de senaste bryggningarna
                 items(recentBrews) { brewItem ->
                     RecentBrewCard(
                         brewItem = brewItem,
-                        onClick = { onBrewClick(brewItem.brew.id) } // Denna navigerar nu via NavController
+                        onClick = { onBrewClick(brewItem.brew.id) }
                     )
                 }
             }
         }
     }
 
-    // --- Dialogruta för setup-varning ---
+    // Dialogruta som visas om användaren försöker starta en bryggning utan nödvändig setup
     if (showSetupWarningDialog) {
         AlertDialog(
             onDismissRequest = { showSetupWarningDialog = false },
@@ -274,10 +265,13 @@ fun HomeScreen(
             }
         )
     }
-    // --- SLUT PÅ DIALOG ---
 }
 
-// Rutnät för infokorten (Tematiska justeringar)
+// --- InfoGrid och InfoCards ---
+
+/**
+ * Rutnät för infokorten som visar nyckelstatistik och status.
+ */
 @Composable
 fun InfoGrid(
     totalBrews: Int,
@@ -285,34 +279,32 @@ fun InfoGrid(
     availableWeight: Double,
     imageUrl: String?,
     imageLoading: Boolean,
-    imageError: String?, // <-- Ta emot felet
+    imageError: String?,
     timeSinceLastCoffee: String,
     scaleConnectionState: BleConnectionState,
     onReloadImage: () -> Unit,
-    onScaleCardClick: () -> Unit // Denna kör navigateToScreen med korrekt rutt
+    onScaleCardClick: () -> Unit
 ) {
     val firstRowHeight = 160.dp
     val otherRowHeight = 100.dp
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // --- Första raden ---
+        // Första raden: Bild och vågens status
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Kort 1: Slumpmässig bild
             InfoCard(modifier = Modifier.weight(1f).height(firstRowHeight)) {
                 Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                     when {
                         imageLoading -> CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                        // --- ÄNDRING: Använder tematiska färger för ikoner ---
                         imageError != null -> {
+                            // Visa felikon och en knapp för att ladda om
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                // Använder temats onSurfaceVariant som en gråton
                                 Icon(Icons.Default.Warning, "Error loading image", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 IconButton(onClick = onReloadImage, modifier= Modifier.size(32.dp)) {
                                     Icon(Icons.Default.Refresh, "Reload")
                                 }
                             }
                         }
-                        // --- SLUT ÄNDRING ---
                         imageUrl != null -> {
                             AsyncImage(
                                 model = imageUrl,
@@ -321,33 +313,35 @@ fun InfoGrid(
                                 modifier = Modifier.fillMaxSize().clickable { onReloadImage() }
                             )
                         }
-                        else -> Text("Image", color = MaterialTheme.colorScheme.onSurfaceVariant) // FIX: Use Theme Color
+                        else -> Text("Image", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
-            // Kort 2: Vågens status
+            // Kort 2: Vågens status (klickbar)
             ScaleStatusCard(
                 connectionState = scaleConnectionState,
-                onClick = onScaleCardClick, // Denna skickas vidare från InfoGrid-anropet
+                onClick = onScaleCardClick,
                 modifier = Modifier.weight(1f).height(firstRowHeight)
             )
         }
 
-        // --- Andra raden ---
+        // Andra och tredje raden: Statistik
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = totalBrews.toString(), subtitle = "Brews", modifier = Modifier.weight(1f).height(otherRowHeight))
             InfoCard(title = timeSinceLastCoffee, subtitle = "Since last coffee", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
-        // --- Tredje raden ---
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = uniqueBeans.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
+            // Använd %.0f g för att formatera vikt utan decimaler (inte specificerat, men vanligare för totalvikt)
             InfoCard(title = "%.0f g".format(availableWeight), subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
     }
 }
 
-// Composable för Vågstatus-kortet (Tematiska justeringar)
+/**
+ * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
+ */
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
@@ -372,8 +366,8 @@ fun ScaleStatusCard(
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
             title = "Connecting..."
             subtitle = "Please wait"
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant // FIX: Use Theme Color
-            titleColor = MaterialTheme.colorScheme.onSurface // FIX: Use Theme Color
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+            titleColor = MaterialTheme.colorScheme.onSurface
         }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
@@ -386,8 +380,8 @@ fun ScaleStatusCard(
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
             subtitle = "Tap to connect"
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant // FIX: Use Theme Color
-            titleColor = MaterialTheme.colorScheme.onSurface // FIX: Use Theme Color
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+            titleColor = MaterialTheme.colorScheme.onSurface
         }
     }
 
@@ -405,19 +399,22 @@ fun ScaleStatusCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                // Tvingar ikonen att använda den dynamiskt valda färgen
                 CompositionLocalProvider(LocalContentColor provides iconColor) {
                     icon()
                 }
             }
             Spacer(Modifier.height(4.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = titleColor)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) // FIX: Use Theme Color
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }
 
 
-// InfoCard (Tematiska justeringar)
+/**
+ * Generisk baskomponent för informationskort.
+ */
 @Composable
 fun InfoCard(
     modifier: Modifier = Modifier,
@@ -441,22 +438,25 @@ fun InfoCard(
             if (content != null) { content() }
             else if (title != null) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary)
-                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) } // FIX: Use Theme Color
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) }
             }
         }
     }
 }
 
-// NoBrewsTextWithIcon (Tematiska justeringar)
+/**
+ * Placeholder-text som visas när inga bryggningar finns sparade.
+ */
 @Composable
 fun NoBrewsTextWithIcon(
     modifier: Modifier = Modifier,
-    onStartBrewClick: () -> Unit // Ändrad parameter för att ta emot den villkorliga åtgärden
+    onStartBrewClick: () -> Unit
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onStartBrewClick) // Använder den villkorliga åtgärden
+            // Gör hela ytan klickbar för att starta bryggning
+            .clickable(onClick = onStartBrewClick)
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -465,11 +465,11 @@ fun NoBrewsTextWithIcon(
         ) {
             Text(
                 "No brews saved yet, tap ",
-                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) // FIX: Use Theme Color
+                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
             )
             Surface(
                 modifier = Modifier
-                    .size(32.dp) // ÄNDRAD: ÖKAD STORLEK
+                    .size(32.dp)
                     .clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary
             ) {
@@ -477,22 +477,24 @@ fun NoBrewsTextWithIcon(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary, // FIX: Use Theme Color
-                        modifier = Modifier.size(24.dp) // ÄNDRAD: ÖKAD IKONSTORLEK
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         }
         Text(
             "to create one.",
-            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)), // FIX: Use Theme Color
+            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)),
             modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
 
 
-// RecentBrewCard (Tematiska justeringar)
+/**
+ * Kortkomponent för att visa en nyligen genomförd bryggning.
+ */
 @Composable
 fun RecentBrewCard(
     brewItem: RecentBrewItem,
@@ -513,12 +515,13 @@ fun RecentBrewCard(
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) // FIX: Use Theme Color
+                Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
                 Text(brewItem.beanName ?: "Unknown bean", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.width(12.dp))
 
+            // Bild eller standardikon
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -533,6 +536,7 @@ fun RecentBrewCard(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
+                    // Visar en standardikon om ingen bild finns
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                         contentDescription = "Brew Image",
@@ -545,7 +549,9 @@ fun RecentBrewCard(
     }
 }
 
-// formatTimeSince (Oförändrad)
+/**
+ * Hjälpfunktion för att formatera tiden som gått sedan senaste bryggningen.
+ */
 private fun formatTimeSince(lastBrewTime: Date?): String? {
     if (lastBrewTime == null) return null
 
@@ -557,6 +563,7 @@ private fun formatTimeSince(lastBrewTime: Date?): String? {
     val diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis)
     val diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis)
 
+    // Returnerar den största relevanta tidsenheten
     return when {
         diffSeconds < 60 -> "< 1 min"
         diffMinutes < 60 -> "$diffMinutes min"

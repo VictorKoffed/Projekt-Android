@@ -8,15 +8,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.Date
 
-// Din SQL "PRAGMA foreign_keys = ON;" hanteras av @ForeignKey-annotationerna.
-
 /**
- * 1) Grinder
- * Lagrar information om en kaffekvarn.
+ * 1) Grinder (Kvarn)
+ * Lagrar information om en specifik kaffekvarn.
  */
 @Entity(
     tableName = "Grinder",
-    indices = [Index(value = ["name"], unique = true)] // Säkerställer unika namn
+    // Skapar ett unikt index på namnet för att förhindra dubbletter.
+    indices = [Index(value = ["name"], unique = true)]
 )
 data class Grinder(
     @PrimaryKey(autoGenerate = true)
@@ -28,11 +27,12 @@ data class Grinder(
 )
 
 /**
- * 2) Method
- * Lagrar bryggmetoder (t.ex. "V60", "Aeropress").
+ * 2) Method (Bryggmetod)
+ * Lagrar namnen på bryggmetoder (t.ex. "V60", "Aeropress").
  */
 @Entity(
     tableName = "Method",
+    // Säkerställer unika metoder.
     indices = [Index(value = ["name"], unique = true)]
 )
 data class Method(
@@ -44,12 +44,13 @@ data class Method(
 )
 
 /**
- * 3) Bean
- * Lagrar information om en kaffeböna/påse.
+ * 3) Bean (Kaffeböna/Påse)
+ * Lagrar information och lagersaldo för en specifik kaffeböna.
  */
 @Entity(
     tableName = "Bean",
-    indices = [Index(value = ["remaining_weight_g"])] // Index för att snabbt hitta bönor
+    // Index för snabb sökning/filtrering baserat på återstående vikt.
+    indices = [Index(value = ["remaining_weight_g"])]
 )
 data class Bean(
     @PrimaryKey(autoGenerate = true)
@@ -59,47 +60,53 @@ data class Bean(
     val name: String,
     val roaster: String?,
 
-    @ColumnInfo(name = "roast_date") // Vi använder en TypeConverter för att lagra Date som Long
+    @ColumnInfo(name = "roast_date")
+    // Date konverteras till Long via Converters.kt.
     val roastDate: Date?,
 
     @ColumnInfo(name = "initial_weight_g")
     val initialWeightGrams: Double?,
 
     @ColumnInfo(name = "remaining_weight_g")
+    // Standardvärdet garanterar att fältet aldrig är null i databasen.
     val remainingWeightGrams: Double = 0.0,
 
     val notes: String?
 )
 
 /**
- * 4) Brew
- * Lagrar en enskild bryggnings-session.
+ * 4) Brew (Bryggning)
+ * Lagrar en enskild bryggningssession och dess parametrar.
  */
 @Entity(
     tableName = "Brew",
     foreignKeys = [
+        // Relation till Bean. Om en böna raderas, ska bryggningen också raderas (CASCADE).
         ForeignKey(
             entity = Bean::class,
             parentColumns = ["bean_id"],
             childColumns = ["bean_id"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.CASCADE // ÄNDRAD FRÅN ForeignKey.RESTRICT
+            onDelete = ForeignKey.CASCADE
         ),
+        // Relation till Grinder. Om kvarn raderas, sätts grinder_id till NULL (SET_NULL).
         ForeignKey(
             entity = Grinder::class,
             parentColumns = ["grinder_id"],
             childColumns = ["grinder_id"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.SET_NULL // Nollställer om kvarn raderas
+            onDelete = ForeignKey.SET_NULL
         ),
+        // Relation till Method. Om metod raderas, sätts method_id till NULL (SET_NULL).
         ForeignKey(
             entity = Method::class,
             parentColumns = ["method_id"],
             childColumns = ["method_id"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.SET_NULL // Nollställer om metod raderas
+            onDelete = ForeignKey.SET_NULL
         )
     ],
+    // Index på Foreign Keys för snabba JOINs
     indices = [
         Index(value = ["bean_id"]),
         Index(value = ["grinder_id"]),
@@ -133,32 +140,33 @@ data class Brew(
     val brewTempCelsius: Double?,
 
     @ColumnInfo(name = "started_at")
-    val startedAt: Date = Date(), // Sätts automatiskt till "nu"
+    val startedAt: Date = Date(),
 
     val notes: String?,
 
-    // --- NYTT FÄLT ---
+    // Lagrar en URI till bilden för den specifika bryggningen.
     @ColumnInfo(name = "image_uri")
     val imageUri: String? = null
-    // --- SLUT NYTT FÄLT ---
 )
 
 /**
- * 4b) BrewSample
- * Lagrar rådatan (tid/massa) från vågen för en specifik bryggning.
+ * 4b) BrewSample (Mätpunkt)
+ * Lagrar rådata (tid, massa, flöde) från vågen för en specifik bryggning.
  */
 @Entity(
     tableName = "BrewSample",
     foreignKeys = [
+        // Relation till Brew. Om bryggningen raderas, raderas alla samples (CASCADE).
         ForeignKey(
             entity = Brew::class,
             parentColumns = ["brew_id"],
             childColumns = ["brew_id"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.CASCADE // Raderar samples om bryggning raderas
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["brew_id", "t_ms"])] // Supersnabbt att hämta grafdata
+    // Sammansatt index för att snabbt hämta och sortera tidsseriedata.
+    indices = [Index(value = ["brew_id", "t_ms"])]
 )
 data class BrewSample(
     @PrimaryKey(autoGenerate = true)
@@ -169,27 +177,25 @@ data class BrewSample(
     val brewId: Long,
 
     @ColumnInfo(name = "t_ms")
-    val timeMillis: Long, // Millisekunder från start
+    val timeMillis: Long, // Tid i millisekunder från bryggningens start
 
     @ColumnInfo(name = "mass_g")
-    val massGrams: Double, // Kumulativ massa
+    val massGrams: Double, // Kumulativ massa i gram
 
-    // --- UPPDATERAD DEL ---
     @ColumnInfo(name = "flow_rate_gs")
-    val flowRateGramsPerSecond: Double?
-    // --- SLUT PÅ UPPDATERING ---
+    val flowRateGramsPerSecond: Double? // Flödeshastighet i gram per sekund
 )
 
 /**
- * View: BrewMetrics
- * En virtuell tabell som beräknar ratio och totalt vatten.
- * Detta motsvarar din CREATE VIEW-sats.
+ * View: BrewMetrics (Beräknade Mått)
+ * En virtuell tabell som beräknar nyckeltal som totalt vatten och ratio.
+ * Används för att undvika komplexa beräkningar i Kotlin-koden.
  */
 @DatabaseView("""
     SELECT
         b.brew_id,
         b.dose_g AS doseGrams,
-        -- FIX: Hämta mass_g från det sample som har högst t_ms (det sista)
+        -- Subquery: Hämtar mass_g från den BrewSample som har högst t_ms för aktuell brew_id (sista mätningen).
         (
             SELECT s.mass_g 
             FROM BrewSample s 
@@ -197,9 +203,9 @@ data class BrewSample(
             ORDER BY s.t_ms DESC 
             LIMIT 1
         ) AS waterUsedGrams,
+        -- Beräknar ratio (vatten / dos). Returnerar NULL om dosen är noll för att undvika division med noll.
         CASE 
             WHEN b.dose_g > 0 THEN (
-                -- Använd samma subquery för att beräkna ration
                 SELECT s.mass_g 
                 FROM BrewSample s 
                 WHERE s.brew_id = b.brew_id 
@@ -209,12 +215,15 @@ data class BrewSample(
             ELSE NULL 
         END AS ratio
     FROM Brew b
+    -- Måste gruppera på brew_id eftersom vi använder en aggregeringsfunktion (subquery) per bryggning.
     GROUP BY b.brew_id
 """)
 data class BrewMetrics(
     @ColumnInfo(name = "brew_id")
     val brewId: Long,
     val doseGrams: Double,
+    // total mängd vatten (eller kaffe) från sista mätpunkten.
     val waterUsedGrams: Double,
+    // Vatten/Doserings-ratio.
     val ratio: Double?
 )

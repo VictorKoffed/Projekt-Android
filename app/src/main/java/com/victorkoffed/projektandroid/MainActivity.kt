@@ -22,12 +22,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar // <--- NY
-import androidx.compose.material3.SnackbarData // <--- NY
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable // <--- NY
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -76,53 +76,58 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModelFactory
 import kotlinx.coroutines.launch
 
-// --- ÅTERSTÄLLD DATA CLASS för navigationsalternativ ---
+// Dataklass som definierar varje objekt i bottennavigeringen.
 data class NavItem(
     val label: String,
     val screenRoute: String,
-    val selectedIcon: ImageVector, // Filled ikon
-    val unselectedIcon: ImageVector // Outlined ikon
+    val selectedIcon: ImageVector, // Ikon när objektet är valt.
+    val unselectedIcon: ImageVector // Ikon när objektet inte är valt.
 )
-// --- SLUT ÅTERSTÄLLD ---
 
-// --- NY TOPPNIVÅ KOMPONENT FÖR TEMATISK SNACKBAR (Återanvändbar) ---
+/**
+ * Anpassad Snackbar-komponent som använder appens MaterialTheme färger.
+ * Detta ger ett konsekvent utseende.
+ */
 @Composable
 fun ThemedSnackbar(data: SnackbarData) {
-    // Använder temats primärfärg (CoffeeBrown) som bakgrund
     Snackbar(
         snackbarData = data,
-        containerColor = MaterialTheme.colorScheme.primary, // DCC7AA
-        contentColor = MaterialTheme.colorScheme.onPrimary, // Black
-        actionColor = MaterialTheme.colorScheme.onPrimary // Black
+        // Använder primärfärgen (DCC7AA) som bakgrund
+        containerColor = MaterialTheme.colorScheme.primary,
+        // Använder onPrimary (Svart) som textfärg
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        actionColor = MaterialTheme.colorScheme.onPrimary
     )
 }
-// --- SLUT NY TOPPNIVÅ KOMPONENT ---
 
-// REMOVED: val MockupColor = Color(0xFFDCC7AA)
-
+/**
+ * Huvudaktiviteten i applikationen.
+ * Hanterar Compose-navigeringen och instansierar alla ViewModels via deras fabriker.
+ */
 class MainActivity : ComponentActivity() {
 
-    // --- View Model definitioner ---
+    // Instanser av ViewModels. Används för att injicera till Compose-funktioner via "viewModel()" i NavHost.
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
     private lateinit var methodVm: MethodViewModel
     private lateinit var brewVm: BrewViewModel
     private lateinit var homeVm: HomeViewModel
+    // ViewModels som initialiseras via delegation och är tillgängliga för hela aktiviteten.
     private val coffeeImageVm: CoffeeImageViewModel by viewModels()
 
-    // --- NYTT: Håll i appen för att skapa factories ---
+    // Referens till applikationsinstansen för att komma åt repositories.
     private lateinit var app: CoffeeJournalApplication
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- Hämta repositories och skapa ViewModels ---
-        app = application as CoffeeJournalApplication // <-- SPARA app-instansen
+        // Hämta repositories och ViewModels från Application-instansen.
+        app = application as CoffeeJournalApplication
         val coffeeRepository = app.coffeeRepository
-        val scaleRepository = BookooScaleRepositoryImpl(this)
+        val scaleRepository = BookooScaleRepositoryImpl(this) // Specifik implementering för Bookoo Scale
 
-        // --- Instansiera ViewModels via Factories ---
+        // Instansiera ViewModels med korrekta beroenden.
         val scaleViewModelFactory = ScaleViewModelFactory(app, scaleRepository, coffeeRepository)
         scaleVm = ViewModelProvider(this, scaleViewModelFactory)[ScaleViewModel::class.java]
         val grinderViewModelFactory = GrinderViewModelFactory(coffeeRepository)
@@ -139,11 +144,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProjektAndroidTheme {
-                // --- NYTT: NavController och state för bottenmenyn ---
+                // Konfigurerar Compose-navigering
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
+                // Definierar objekten i bottenmenyn.
                 val navItems = listOf(
                     NavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
                     NavItem("Bean", Screen.BeanList.route, Icons.Filled.Coffee, Icons.Outlined.Coffee),
@@ -151,25 +157,24 @@ class MainActivity : ComponentActivity() {
                     NavItem("Grinder", Screen.GrinderList.route, Icons.Filled.Settings, Icons.Outlined.Settings)
                 )
 
-                // Lista över rutter som ska visa bottenmenyn
+                // Enkel lista över rutter som ska visa bottenmenyn.
                 val bottomBarRoutes = navItems.map { it.screenRoute }
 
-                // --- Hämta globala states ---
+                // Observerar state för tillgängliga bönor, metoder och våganslutning.
                 val availableBeans by brewVm.availableBeans.collectAsState()
                 val availableMethods by brewVm.availableMethods.collectAsState()
                 val scaleConnectionState by scaleVm.connectionState.collectAsState(
                     initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
                 )
 
-                // --- NYTT: SnackbarHostState och Scope ---
+                // State och scope för att visa SnackBar med meddelanden.
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
-                // --- SLUT NYTT ---
 
-                // --- NYTT: Scaffold hanterar nu bottenmenyn ---
+                // Scaffold sätter upp den grundläggande layoutstrukturen (TopBar, BottomBar, Content).
                 Scaffold(
                     bottomBar = {
-                        // Visa bara bottenmenyn om vi är på en av huvudskärmarna
+                        // Visar NavigationBar om den aktuella rutten är en av huvudmenyskärmarna.
                         if (bottomBarRoutes.contains(currentRoute)) {
                             NavigationBar {
                                 navItems.forEach { item ->
@@ -184,14 +189,15 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(item.label) },
                                         selected = isSelected,
                                         onClick = {
+                                            // Navigerar till vald skärm.
                                             navController.navigate(item.screenRoute) {
-                                                // Pop up to the start destination to avoid building a large stack
+                                                // Förhindrar att navigeringsstacken byggs upp för stora
                                                 popUpTo(navController.graph.startDestinationId)
                                                 launchSingleTop = true
                                             }
                                         },
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
+                                            selectedIconColor = MaterialTheme.colorScheme.primary,
                                             selectedTextColor = Color.Black,
                                             unselectedIconColor = Color.Black,
                                             unselectedTextColor = Color.Black,
@@ -202,22 +208,21 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     },
-                    // --- NYTT: Lade till snackbarHost med anpassad tematik ---
+                    // Visar meddelanden över innehållet (t.ex. vid fel eller bekräftelse).
                     snackbarHost = {
                         SnackbarHost(
                             snackbarHostState,
                             snackbar = { snackbarData ->
-                                ThemedSnackbar(snackbarData) // <--- ANVÄNDER DEN CENTRALISERADE KOMPONENTEN
+                                ThemedSnackbar(snackbarData) // Använder den tematiska SnackBar-komponenten.
                             }
                         )
                     }
-                    // --- SLUT NYTT ---
                 ) { innerPadding ->
-                    // --- NYTT: NavHost ersätter AnimatedContent ---
+                    // NavHost hanterar bytet av Compose-skärmar baserat på aktuell rutt.
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
-                        modifier = Modifier.padding(innerPadding) // Applicera padding från Scaffold
+                        modifier = Modifier.padding(innerPadding) // Applicerar padding från Scaffold (inklusive BottomBar).
                     ) {
 
                         // --- Home ---
@@ -226,9 +231,7 @@ class MainActivity : ComponentActivity() {
                                 homeVm = homeVm,
                                 coffeeImageVm = coffeeImageVm,
                                 scaleVm = scaleVm,
-                                // --- NYTT: Skicka med snackbarHostState ---
-                                snackbarHostState = snackbarHostState,
-                                // --- SLUT NYTT ---
+                                snackbarHostState = snackbarHostState, // Skickar med state för att visa SnackBar
                                 navigateToScreen = { screenName -> navController.navigate(screenName) },
                                 onNavigateToBrewSetup = {
                                     brewVm.clearBrewResults()
@@ -262,41 +265,43 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- Flöde för ny bryggning ---
+                        // --- Flöde för ny bryggning (Setup) ---
                         composable(Screen.BrewSetup.route) {
                             BrewScreen(
                                 vm = brewVm,
                                 completedBrewId = null,
                                 scaleConnectionState = scaleConnectionState,
-                                onStartBrewClick = { setupState ->
+                                onStartBrewClick = {
                                     brewVm.clearBrewResults()
                                     navController.navigate(Screen.LiveBrew.route)
                                 },
                                 onSaveWithoutGraph = {
+                                    // Använd aktivitetens scope för att spara.
                                     lifecycleScope.launch {
                                         val newBrewId = brewVm.saveBrewWithoutSamples()
                                         if (newBrewId != null) {
-                                            // Navigera till detalj och rensa setup-skärmen från stacken
+                                            // Navigera till detaljskärm och rensa setup-skärmen från stacken.
                                             navController.navigate(Screen.BrewDetail.createRoute(newBrewId)) {
                                                 popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                             }
                                         } else {
                                             Log.e("MainActivity", "Kunde inte spara bryggning utan graf.")
-                                            // --- NYTT: Visa felmeddelande ---
+                                            // Visa SnackBar vid fel.
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Could not save brew. Check inputs.")
                                             }
-                                            // --- SLUT NYTT ---
                                         }
                                     }
                                 },
                                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
-                                onClearResult = { },
+                                onClearResult = { /* No-op */ },
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
 
+                        // --- Flöde för ny bryggning (Live) ---
                         composable(Screen.LiveBrew.route) {
+                            // Samlar in all nödvändig state för vågen.
                             val samples by scaleVm.recordedSamplesFlow.collectAsState()
                             val time by scaleVm.recordingTimeMillis.collectAsState()
                             val isRecording by scaleVm.isRecording.collectAsState()
@@ -318,26 +323,26 @@ class MainActivity : ComponentActivity() {
                                 onPauseClick = { scaleVm.pauseRecording() },
                                 onResumeClick = { scaleVm.resumeRecording() },
                                 onStopAndSaveClick = {
+                                    // Använd aktivitetens scope för att stoppa och spara.
                                     lifecycleScope.launch {
                                         val currentSetup = brewVm.getCurrentSetup()
                                         val savedBrewId = scaleVm.stopRecordingAndSave(currentSetup)
                                         if (savedBrewId != null) {
-                                            // Navigera till detalj och rensa setup-skärmen från stacken
+                                            // Navigera till detaljskärm och rensa LiveBrew/BrewSetup från stacken.
                                             navController.navigate(Screen.BrewDetail.createRoute(savedBrewId)) {
                                                 popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                             }
                                         } else {
                                             Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
-                                            // --- NYTT: Visa fel om det finns ett (från ScaleVM) ---
+                                            // Visar felmeddelande från ScaleVM om inspelningen misslyckades.
                                             val errorMsg = scaleVm.error.value
                                             if(errorMsg != null) {
                                                 scope.launch {
                                                     snackbarHostState.showSnackbar(errorMsg)
-                                                    scaleVm.clearError() // Nollställ felet
+                                                    scaleVm.clearError() // Nollställ felet efter visning.
                                                 }
                                             }
-                                            // --- SLUT NYTT ---
-                                            navController.popBackStack() // Gå tillbaka till BrewSetup
+                                            navController.popBackStack() // Gå tillbaka till BrewSetup.
                                         }
                                     }
                                 },
@@ -358,26 +363,22 @@ class MainActivity : ComponentActivity() {
                                 BrewDetailScreen(
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
-                                    // --- ÄNDRING: Implementera helskärmsnavigering ---
+                                    // Navigerar till helskärmsvy. URI:n måste URL-kodas för att skickas som argument.
                                     onNavigateToImageFullscreen = { uri ->
-                                        // Måste URL-koda URI:n
                                         val encodedUri = Uri.encode(uri)
                                         navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
                                     },
-                                    // --- SLUT ÄNDRING ---
-
-                                    // NYTT: Hämta VM scoped till denna route
+                                    // Använder 'viewModel' med en unik nyckel och fabrik, vilket säkerställer
+                                    // att BrewDetailViewModel är scope:ad till denna specifika route.
                                     viewModel = viewModel(
-                                        key = "brewDetail_$brewId", // Unik nyckel för denna bryggning
+                                        key = "brewDetail_$brewId",
                                         factory = BrewDetailViewModelFactory(app.coffeeRepository, brewId)
                                     ),
-
-                                    // NYTT: Skicka med backStackEntry för att ta emot resultat
+                                    // Skickar med backStackEntry för att kunna ta emot resultat (t.ex. bild-URI från CameraScreen).
                                     navBackStackEntry = backStackEntry
                                 )
                             } else {
-                                // Detta ska inte hända om navigeringen görs rätt
-                                Text("Error: Brew ID missing.") // <--- KORRIGERAD
+                                Log.e("MainActivity", "Brew ID saknas vid navigering till BrewDetail.")
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
@@ -388,6 +389,7 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val beanId = backStackEntry.arguments?.getLong("beanId")
                             if (beanId != null) {
+                                // BeanViewModel tillhandahålls redan på Activity-nivå.
                                 BeanDetailScreen(
                                     beanId = beanId,
                                     onNavigateBack = { navController.popBackStack() },
@@ -396,8 +398,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             } else {
-                                // Detta ska inte hända
-                                Text("Error: Bean ID missing.") // <--- KORRIGERAD
+                                Log.e("MainActivity", "Bean ID saknas vid navigering till BeanDetail.")
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
@@ -406,7 +407,7 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.Camera.route) {
                             CameraScreen(
                                 onImageCaptured = { uri ->
-                                    // Skicka tillbaka URI:n till föregående skärm (BrewDetail)
+                                    // Sparar den fångade URI:n i SavedStateHandle för föregående skärm (BrewDetail)
                                     navController.previousBackStackEntry
                                         ?.savedStateHandle
                                         ?.set("captured_image_uri", uri.toString())
@@ -416,13 +417,13 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- NYTT: Helskärmsvy för bild ---
+                        // --- Helskärmsvy för bild ---
                         composable(
                             route = Screen.ImageFullscreen.route,
                             arguments = listOf(navArgument("uri") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val encodedUri = backStackEntry.arguments?.getString("uri")
-                            val uri = encodedUri?.let { Uri.decode(it) } // Avkoda URI:n
+                            val uri = encodedUri?.let { Uri.decode(it) } // Avkodar URI:n
 
                             if (uri != null) {
                                 FullscreenImageScreen(
@@ -430,13 +431,12 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             } else {
-                                Log.e("MainActivity", "Error: URI argument for FullscreenImageScreen missing or invalid.")
+                                Log.e("MainActivity", "URI-argument för FullscreenImageScreen saknas eller är ogiltigt.")
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
-                        // --- SLUT NYTT ---
-                    } // Slut på NavHost
-                } // Slut på Scaffold
+                    }
+                }
             }
         }
     }

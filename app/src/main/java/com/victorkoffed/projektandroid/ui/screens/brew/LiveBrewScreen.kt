@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.max
 
-@OptIn(ExperimentalMaterial3Api::class) // Se till att denna finns
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveBrewScreen(
     samples: List<BrewSample>,
@@ -81,7 +81,7 @@ fun LiveBrewScreen(
     isPaused: Boolean,
     weightAtPause: Float?,
     connectionState: BleConnectionState,
-    countdown: Int?, // <-- NEW PARAMETER
+    countdown: Int?, // Aktuell nedräkning (null om inte aktiv)
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
@@ -91,33 +91,31 @@ fun LiveBrewScreen(
     onResetRecording: () -> Unit,
     navigateTo: (String) -> Unit
 ) {
-    var showFlowInfo by remember { mutableStateOf(true) } // Denna styr nu bara textvisningen
+    // Styr visningen av flödesdata i StatusDisplay
+    var showFlowInfo by remember { mutableStateOf(true) }
     var showDisconnectedAlert by remember { mutableStateOf(false) }
-    var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") } // Mer generell starttext
+    var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
 
-    // --- CHANGED LaunchedEffect ---
-    // ALWAYS checks connectionState when we are on this screen
+    // Övervakar anslutningsstatus och reagerar på avbrott/fel
     LaunchedEffect(connectionState) {
-        // Om vi tappar anslutning (oavsett inspelningsstatus)
         if (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) {
-            // Sätt specifikt felmeddelande om det är ett Error-state
+            // Sätt specifikt felmeddelande
             alertMessage = if (connectionState is BleConnectionState.Error) {
                 "Error connecting to the scale: ${connectionState.message}."
             } else {
                 "The connection to the scale was lost."
             }
-            // If recording or countdown was in progress, add info that it has been stopped
+            // Om vi spelade in, pausa/återställ inspelningen och informera användaren
             if (isRecording || isPaused || countdown != null) {
                 alertMessage += " Recording has been stopped."
-                onResetRecording() // Reset recording/countdown
+                onResetRecording() // Återställ inspelning/nedräkning i VM
             }
-            showDisconnectedAlert = true // Always show the dialog on disconnect/error
+            showDisconnectedAlert = true // Visa alltid dialogen vid fel/frånkoppling
         } else {
-            // If we connect again (or were connected from the start), hide the dialog
+            // Dölj dialogen om anslutningen återupprättas eller är stabil
             showDisconnectedAlert = false
         }
     }
-    // --- END CHANGED LaunchedEffect ---
 
     Scaffold(
         topBar = {
@@ -131,7 +129,7 @@ fun LiveBrewScreen(
                 actions = {
                     TextButton(
                         onClick = onStopAndSaveClick,
-                        // --- CHANGED: Enable even if paused OR counting down (to cancel) ---
+                        // Aktivera om inspelning/paus/nedräkning pågår, så att användaren kan avbryta och spara
                         enabled = isRecording || isPaused || countdown != null
                     ) {
                         Text("Done")
@@ -147,24 +145,28 @@ fun LiveBrewScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Visar tid, vikt, flöde eller nedräkning
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
+                // Visa vikt vid paus om 'weightAtPause' finns, annars nuvarande mätning
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
-                showFlow = showFlowInfo, // Skicka med för textvisning
-                countdown = countdown // <-- NEW PARAMETER
+                showFlow = showFlowInfo,
+                countdown = countdown
             )
-            Spacer(Modifier.height(16.dp)) // <-- Använder korrekt Spacer från layout.*
-            BrewGraph( // <-- Använder den förenklade BrewGraph nedan
+            Spacer(Modifier.height(16.dp))
+            // Grafen visar endast viktlinjen i Live Brew-läge för att förenkla UI
+            BrewGraph(
                 samples = samples,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(vertical = 8.dp)
             )
-            Spacer(Modifier.height(8.dp)) // <-- Använder korrekt Spacer
+            Spacer(Modifier.height(8.dp))
 
+            // FilterChip för att växla Flow-visning i StatusDisplay
             FilterChip(
                 selected = showFlowInfo,
                 onClick = { showFlowInfo = !showFlowInfo },
@@ -182,13 +184,14 @@ fun LiveBrewScreen(
                 )
             )
 
-            Spacer(Modifier.height(16.dp)) // <-- Använder korrekt Spacer
+            Spacer(Modifier.height(16.dp))
 
+            // Kontrollknappar (Start/Paus/Återuppta/Nollställ/Tara)
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
                 isConnected = connectionState is BleConnectionState.Connected,
-                countdown = countdown, // <-- NEW PARAMETER
+                countdown = countdown,
                 onStartClick = onStartClick,
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
@@ -197,19 +200,19 @@ fun LiveBrewScreen(
             )
         }
 
+        // Dialog vid anslutningsfel
         if (showDisconnectedAlert) {
             AlertDialog(
                 onDismissRequest = {
-                    // Stäng dialogen men navigera bara om vi inte redan är på scale-skärmen
                     showDisconnectedAlert = false
-                    navigateTo(Screen.ScaleConnect.route) // KORRIGERING: Använd korrekt rutt
+                    navigateTo(Screen.ScaleConnect.route)
                 },
                 title = { Text("Connection Broken") },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        navigateTo(Screen.ScaleConnect.route) // KORRIGERING: Använd korrekt rutt
+                        navigateTo(Screen.ScaleConnect.route) // Navigera till anslutningsskärmen
                     }) {
                         Text("OK")
                     }
@@ -227,9 +230,10 @@ fun StatusDisplay(
     currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
-    showFlow: Boolean, // Används för textvisning
-    countdown: Int? // <-- NEW PARAMETER
+    showFlow: Boolean,
+    countdown: Int?
 ) {
+    // Formatering av tid, vikt och flöde
     val timeString = remember(currentTimeMillis) {
         val minutes = (currentTimeMillis / 1000 / 60).toInt()
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
@@ -243,24 +247,24 @@ fun StatusDisplay(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                // --- NY: Sätt en färg för nedräkning ---
+                // Sätt färg baserat på status: Nedräkning, Paus, Inspelning, eller inaktiv
                 countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-                isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // FIX: Use Theme Color
+                isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 isRecording -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // FIX: Use Theme Color
+                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             }
         )
     ) {
         Column(
-            // --- CHANGED: Added minHeight and VerticalArrangement.Center ---
             modifier = Modifier
                 .padding(vertical = 16.dp)
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 180.dp), // Give it a height so it doesn't jump
+                // Fast minsta höjd för att förhindra hopp när innehållet byts
+                .defaultMinSize(minHeight = 180.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center // Center the content
+            verticalArrangement = Arrangement.Center
         ) {
-            // --- NEW: Show countdown if active ---
+            // Visa nedräkning om 'countdown' har ett värde
             if (countdown != null) {
                 Text(
                     text = "Starting in...",
@@ -274,7 +278,7 @@ fun StatusDisplay(
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             } else {
-                // --- Otherwise, show the normal view ---
+                // Visa normala mätvärden
                 Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -286,6 +290,7 @@ fun StatusDisplay(
                         Text("Weight", style = MaterialTheme.typography.labelMedium)
                         Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                     }
+                    // Visa flödesdata endast om showFlow är sann
                     if (showFlow) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Flow", style = MaterialTheme.typography.labelMedium)
@@ -308,16 +313,17 @@ fun StatusDisplay(
 fun BrewGraph(
     samples: List<BrewSample>,
     modifier: Modifier = Modifier
-    // NO OTHER PARAMETERS HERE!
 ) {
+    // Denna graf är avsiktligt förenklad jämfört med BrewDetailScreen.
+    // Den visar endast VILTLINJEN för att minska komplexiteten i realtid.
     val density = LocalDensity.current
 
-    // Tematiska Färger
-    val graphLineColor = MaterialTheme.colorScheme.tertiary // Our "WeightBlack"
-    val textColor = MaterialTheme.colorScheme.onBackground.toArgb() // Black/white text color
-    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant // Gray tone for axes
-    val gridLineColor = Color.LightGray // Let this be light gray as it is a weak separator
+    val graphLineColor = MaterialTheme.colorScheme.tertiary
+    val textColor = MaterialTheme.colorScheme.onBackground.toArgb()
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val gridLineColor = Color.LightGray
 
+    // Paint-objekt för textetiketter (används i nativeCanvas)
     val textPaint = remember {
         android.graphics.Paint().apply {
             color = textColor
@@ -325,6 +331,7 @@ fun BrewGraph(
             textSize = 10.sp.value * density.density
         }
     }
+    // Paint-objekt för axeltitlar
     val axisLabelPaint = remember {
         android.graphics.Paint().apply {
             color = textColor
@@ -333,6 +340,7 @@ fun BrewGraph(
             isFakeBoldText = true
         }
     }
+    // PathEffect för att rita prickade linjer
     val gridLinePaint = remember {
         Stroke(
             width = 1f,
@@ -345,13 +353,16 @@ fun BrewGraph(
         val xLabelPadding = 24.dp.toPx()
         val yLabelPadding = 24.dp.toPx()
 
+        // Grafens rityta
         val graphWidth = size.width - yLabelPadding - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
 
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
 
-        // Scaling (time and mass only)
+        // Skalning för tid och vikt
+        // maxTime rundas upp till närmaste 60 sekunder (1 min), med en marginal på 5%
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
+        // maxMass rundas upp till närmaste 50g, med en marginal på 10%
         val actualMaxMass = samples
             .maxOfOrNull { it.massGrams }
             ?.toFloat() ?: 1f
@@ -360,9 +371,8 @@ fun BrewGraph(
         val xAxisY = size.height - xLabelPadding
         val yAxisX = yLabelPadding
 
-        // Draw grid and labels (weight and time only)
         drawContext.canvas.nativeCanvas.apply {
-            // Weight (Y-axis)
+            // Rita rutnät och etiketter för Vikt (Y-axel)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -374,12 +384,13 @@ fun BrewGraph(
                     strokeWidth = gridLinePaint.width,
                     pathEffect = gridLinePaint.pathEffect
                 )
+                // Rita viktetikett vid sidan av rutnätslinjen
                 drawText("${currentMassGrid.toInt()}g", yLabelPadding / 2, y + textPaint.textSize / 3, textPaint)
                 currentMassGrid += massGridInterval
             }
 
-            // Time (X-axis)
-            val timeGridInterval = 30000f
+            // Rita rutnät och etiketter för Tid (X-axel)
+            val timeGridInterval = 30000f // 30 sekunder
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
                 val x = yAxisX + (currentTimeGrid / maxTime) * graphWidth
@@ -390,12 +401,13 @@ fun BrewGraph(
                     strokeWidth = gridLinePaint.width,
                     pathEffect = gridLinePaint.pathEffect
                 )
+                // Rita tids-etikett under rutnätslinjen
                 val timeSec = (currentTimeGrid / 1000).toInt()
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
 
-            // Axis titles (weight and time only)
+            // Rita axeltitlar
             drawText("Time", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
             withSave {
                 rotate(-90f)
@@ -408,11 +420,11 @@ fun BrewGraph(
             }
         }
 
-        // Draw axes (left Y and X only)
-        drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY)) // Y FIX: Use Theme Color
-        drawLine(axisColor, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY)) // X FIX: Use Theme Color
+        // Rita axellinjer (vänster Y och botten X)
+        drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY))
+        drawLine(axisColor, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY))
 
-        // Draw ONLY the weight line
+        // Rita endast viktkurvan
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
@@ -427,11 +439,11 @@ fun BrewGraph(
                     path.lineTo(clampedX, clampedY)
                 }
             }
-            drawPath(path = path, color = graphLineColor, style = Stroke(width = 2.dp.toPx())) // FIX: Use Theme Color
+            drawPath(path = path, color = graphLineColor, style = Stroke(width = 2.dp.toPx()))
         }
     }
 }
-// --- END OF SIMPLIFIED BrewGraph ---
+// --- SLUT FÖRENKLAD BrewGraph ---
 
 
 // --- BrewControls (UPPDATERAD) ---
@@ -440,14 +452,14 @@ fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
     isConnected: Boolean,
-    countdown: Int?, // <-- NEW PARAMETER
+    countdown: Int?,
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
     onTareClick: () -> Unit,
     onResetClick: () -> Unit
 ) {
-    // --- NEW: Check if we are busy with countdown ---
+    // Kontrollera om UI är upptaget med en nedräkning
     val isBusy = countdown != null
 
     Row(
@@ -455,9 +467,10 @@ fun BrewControls(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Återställ (Replay) knapp
         IconButton(
             onClick = onResetClick,
-            // --- CHANGED: Disable during countdown ---
+            // Aktivera endast om inspelning eller paus pågår, och inte under nedräkning
             enabled = (isRecording || isPaused) && !isBusy
         ) {
             Icon(
@@ -465,23 +478,23 @@ fun BrewControls(
                 contentDescription = "Reset recording"
             )
         }
+        // Huvudknapp (Start/Paus/Återuppta)
         Button(
             onClick = {
                 when {
                     isPaused -> onResumeClick()
                     isRecording -> onPauseClick()
-                    else -> onStartClick() // Denna startar nu sekvensen i VM
+                    else -> onStartClick() // Startar sekvensen (som kan inkludera nedräkning)
                 }
             },
             modifier = Modifier.size(72.dp),
             contentPadding = PaddingValues(0.dp),
-            // --- CHANGED: Disable during countdown ---
+            // Endast aktiv om vågen är ansluten och inte under nedräkning
             enabled = isConnected && !isBusy
         ) {
             Icon(
                 imageVector = when {
-                    // --- NYTT: Visa timer-ikon vid nedräkning ---
-                    isBusy -> Icons.Default.Timer
+                    isBusy -> Icons.Default.Timer // Timerikon vid nedräkning
                     isPaused -> Icons.Default.PlayArrow
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
@@ -495,9 +508,10 @@ fun BrewControls(
                 modifier = Modifier.size(40.dp)
             )
         }
+        // Tara-knapp (T)
         OutlinedButton(
             onClick = onTareClick,
-            // --- CHANGED: Disable during countdown ---
+            // Endast aktiv när vågen är ansluten och ingen inspelning/paus/nedräkning pågår
             enabled = isConnected && !isRecording && !isPaused && !isBusy,
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
@@ -516,7 +530,7 @@ fun BrewControls(
 @Composable
 fun LiveBrewScreenPreview() {
     ProjektAndroidTheme {
-        // ... (samma previewSamples som innan) ...
+        // Skapar simulerade sample-data för grafen
         val previewSamples = remember {
             listOf(
                 BrewSample(brewId = 1, timeMillis = 0, massGrams = 0.0, flowRateGramsPerSecond = 0.0),
@@ -527,14 +541,16 @@ fun LiveBrewScreenPreview() {
                 BrewSample(brewId = 1, timeMillis = 180000, massGrams = 420.0, flowRateGramsPerSecond = 1.5)
             )
         }
+        // Lokalt state för preview-simulering
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
         var time by remember { mutableLongStateOf(0L) }
         var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale")) }
-        var countdown by remember { mutableStateOf<Int?>(null) } // <-- NEW PREVIEW STATE
+        var countdown by remember { mutableStateOf<Int?>(null) } // Hanterar nedräkningsstate i preview
 
         val scope = rememberCoroutineScope()
 
+        // Logik för att simulera mätningar under inspelning/paus
         val nextSample = remember(isRec, isPaused, time) { previewSamples.find { it.timeMillis >= time } }
         val lastSample = remember { previewSamples.last() }
 
@@ -556,9 +572,9 @@ fun LiveBrewScreenPreview() {
             isPaused = isPaused,
             weightAtPause = weightAtPausePreview,
             connectionState = connectionState,
-            countdown = countdown, // <-- SEND WITH
+            countdown = countdown,
             onStartClick = {
-                // Simulera nedräkningen i preview
+                // Simulera nedräkning i Preview
                 scope.launch {
                     countdown = 3
                     delay(1000)

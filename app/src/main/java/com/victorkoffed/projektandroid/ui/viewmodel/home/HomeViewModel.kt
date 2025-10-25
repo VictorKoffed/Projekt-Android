@@ -11,24 +11,25 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.Date
 
-// Data class för att hålla data som behövs för en bryggning i listan
+// Data class för att förenkla visning av en bryggning i listan, inkluderar bönans namn.
 data class RecentBrewItem(
     val brew: Brew,
-    val beanName: String? // Lägg till bönans namn för enkel visning
+    val beanName: String?
 )
 
 /**
- * ViewModel for the Home screen.
+ * ViewModel för Hemskärmen. Tillhandahåller statistik och de senaste bryggningarna.
  */
 class HomeViewModel(repository: CoffeeRepository) : ViewModel() {
 
-    // Hämta de 5 senaste bryggningarna
+    // StateFlow för de 5 senaste bryggningarna, mappade med respektive bönas namn.
     val recentBrews: StateFlow<List<RecentBrewItem>> = repository.getAllBrews()
-        .map { brews -> brews.take(5) } // Begränsa till de 5 senaste
-        .combine(repository.getAllBeans()) { brews, beans -> // Kombinera med bönlistan
+        .map { brews -> brews.take(5) } // Begränsa dataströmmen till de 5 senaste bryggningarna.
+        .combine(repository.getAllBeans()) { brews, beans ->
+            // Kombinera bryggningarna med bönlistan för att slå upp bönans namn (beanName).
             brews.map { brew ->
-                val bean = beans.find { it.id == brew.beanId } // Hitta matchande böna
-                RecentBrewItem(brew = brew, beanName = bean?.name) // Skapa objektet för listan
+                val bean = beans.find { it.id == brew.beanId }
+                RecentBrewItem(brew = brew, beanName = bean?.name)
             }
         }
         .stateIn(
@@ -37,30 +38,27 @@ class HomeViewModel(repository: CoffeeRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    // Antal bryggningar totalt
+    // StateFlow för det totala antalet genomförda bryggningar.
     val totalBrewCount: StateFlow<Int> = repository.getAllBrews()
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Antal unika bönor
+    // StateFlow för antalet unika bönor som registrerats, baserat på namn.
     val uniqueBeanCount: StateFlow<Int> = repository.getAllBeans()
-        .map { beans -> beans.distinctBy { it.name }.size } // Räkna unika namn
+        .map { beans -> beans.distinctBy { it.name }.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Total vikt av tillgängliga bönor
+    // StateFlow för total kvarvarande vikt (i gram) av alla registrerade bönor.
     val totalAvailableBeanWeight: StateFlow<Double> = repository.getAllBeans()
-        .map { beans -> beans.sumOf { it.remainingWeightGrams } } // Summera kvarvarande vikt
+        .map { beans -> beans.sumOf { it.remainingWeightGrams } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // --- NYTT StateFlow för senaste bryggtiden ---
+    // StateFlow för tidpunkten då den *senaste* bryggningen startade.
     val lastBrewTime: StateFlow<Date?> = repository.getAllBrews()
-        .map { brews -> brews.firstOrNull()?.startedAt } // Hämta 'startedAt' från den första (senaste)
+        .map { brews -> brews.firstOrNull()?.startedAt } // Repository returnerar de senaste först.
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null // Börja med null
+            initialValue = null
         )
-    // --- SLUT PÅ NYTT ---
-
-    // TODO: Hämta data för "Connected status"
 }

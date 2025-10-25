@@ -66,6 +66,7 @@ fun CameraScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    // State för att spåra om vi har nödvändig kamerarättighet
     var hasCamPermission by remember { mutableStateOf(false) }
 
     // Launcher för att fråga om kamerarättighet
@@ -75,7 +76,7 @@ fun CameraScreen(
             if (granted) {
                 hasCamPermission = true
             } else {
-                // Användaren nekade. Gå tillbaka.
+                // Om användaren nekar, avbryt och gå tillbaka.
                 onNavigateBack()
             }
         }
@@ -83,23 +84,23 @@ fun CameraScreen(
 
     // Körs när composable visas första gången
     LaunchedEffect(key1 = true) {
-        // Kontrollera om vi redan har rättighet
+        // Kontrollera om rättigheten redan finns
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             hasCamPermission = true
         } else {
-            // Fråga om rättighet
+            // Fråga om rättighet om den saknas
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    // Visa kameravyn om vi har rättighet, annars en laddnings- eller felvy
+    // Villkorlig rendering baserat på rättighetsstatus
     if (hasCamPermission) {
         CameraCaptureScreen(
             onImageCaptured = onImageCaptured,
             onNavigateBack = onNavigateBack
         )
     } else {
-        // Kan visa en spinner eller text här medan vi väntar på svar från permissionLauncher
+        // En enkel placeholder under tiden vi väntar på användarens svar
         Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             Text("Waiting for camera permission...", color = Color.White)
         }
@@ -108,6 +109,7 @@ fun CameraScreen(
 
 /**
  * Själva kameravyn som visas när rättigheter har beviljats.
+ * Denna composable hanterar CameraX's livscykelbindning och UI-interaktioner.
  */
 @Composable
 private fun CameraCaptureScreen(
@@ -116,77 +118,73 @@ private fun CameraCaptureScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    // val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) } // <-- BORTTAGEN
 
+    // State för att växla mellan främre och bakre kamera
     var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
+
+    // Skapa och kom ihåg ImageCapture use case (för att ta bilden)
     val imageCapture = remember { ImageCapture.Builder().build() }
-    val cameraSelector = remember(lensFacing, CameraSelector.Builder().requireLensFacing(lensFacing)::build)
+    val cameraSelector = remember(lensFacing) { CameraSelector.Builder().requireLensFacing(lensFacing).build() }
 
-    // --- NYTT: Kom ihåg PreviewView och CameraControl ---
+    // Kom ihåg PreviewView (Android View) som ska visa kameraströmmen
     val previewView = remember { PreviewView(context) }
+    // State för att hålla referensen till CameraControl, nödvändigt för fokus och zoom
     var cameraControl: CameraControl? by remember { mutableStateOf(null) }
-    // --- SLUT NYTT ---
 
-    // --- NYTT: LaunchedEffect för att binda CameraX ---
-    // Denna körs när composable startar och varje gång lensFacing ändras
+    // Binda CameraX use cases till Composables livscykel
+    // Körs varje gång 'lensFacing' ändras
     LaunchedEffect(lensFacing) {
-        val cameraProvider = context.getCameraProvider() // Använd suspend-hjälpfunktionen
+        val cameraProvider = context.getCameraProvider() // Hämta ProcessCameraProvider asynkront
         val preview = Preview.Builder().build().also {
+            // Koppla Preview use case till PreviewView's SurfaceProvider
             it.surfaceProvider = previewView.surfaceProvider
         }
 
         try {
-            // Avbinda allt och bind sedan om
+            // Avbinda alla tidigare use cases innan ombindning
             cameraProvider.unbindAll()
-            val camera = cameraProvider.bindToLifecycle( // Spara referensen till kameran
+            // Bind use cases till lifecycleOwner
+            val camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
                 preview,
                 imageCapture
             )
-            cameraControl = camera.cameraControl // Spara cameraControl för tap-to-focus
+            // Uppdatera CameraControl-referensen
+            cameraControl = camera.cameraControl
         } catch (e: Exception) {
             Log.e("CameraScreen", "Use case binding failed", e)
         }
     }
-    // --- SLUT NYTT ---
 
-
-    // Box som täcker hela skärmen
+    // Box som täcker hela skärmen (kameravyn + kontroller)
     Box(modifier = Modifier.fillMaxSize()) {
-        // AndroidView som håller CameraX PreviewView
+        // Integrerar Android View (PreviewView) i Compose
         AndroidView(
-            factory = { previewView }, // <-- ANVÄND DEN IHÅGKOMNA PREVIEWVIEW
+            factory = { previewView },
             modifier = Modifier
                 .fillMaxSize()
-                // --- NYTT: Lade till tap-to-focus ---
+                // Implementerar "Tap-to-focus" med pointerInput
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         cameraControl?.let {
+                            // Konvertera skärmkoordinater till en MeteringPoint
                             val meteringPoint = previewView.meteringPointFactory
                                 .createPoint(offset.x, offset.y)
                             val action = FocusMeteringAction.Builder(meteringPoint).build()
+                            // Utför fokus och mätning (exponering) vid tryck
                             it.startFocusAndMetering(action)
                         }
                     }
                 }
-            // --- SLUT NYTT ---
         )
 
-        // --- BORTTAGEN: Knapp för att gå tillbaka (uppe i vänstra hörnet) ---
-        // IconButton(
-        //     onClick = onNavigateBack,
-        //     modifier = Modifier
-        //         .align(Alignment.TopStart)
-        //         ...
-        // ) { ... }
-        // --- SLUT BORTTAGEN ---
-
-        // Box för kontrollerna (längst ner)
+        // Kontrollpanelen längst ner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
+                // Halvgenomskinlig bakgrund för bättre kontrast
                 .background(Color.Black.copy(alpha = 0.5f))
                 .padding(32.dp),
             contentAlignment = Alignment.Center
@@ -196,7 +194,7 @@ private fun CameraCaptureScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Knapp för att byta kamera (Oförändrad)
+                // Knapp för att byta mellan främre/bakre kamera
                 IconButton(onClick = {
                     lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
                         CameraSelector.LENS_FACING_FRONT
@@ -207,7 +205,7 @@ private fun CameraCaptureScreen(
                     Icon(Icons.Default.Cameraswitch, contentDescription = "Switch Camera", tint = Color.White)
                 }
 
-                // Avtryckare (Oförändrad)
+                // Avtryckare: Större och central
                 IconButton(
                     onClick = {
                         takePhoto(
@@ -226,18 +224,17 @@ private fun CameraCaptureScreen(
                     Icon(Icons.Default.PhotoCamera, contentDescription = "Take Picture", tint = Color.Black)
                 }
 
-                // --- ÄNDRAD: Byt ut Spacer mot "Tillbaka"-knappen ---
+                // Knapp för att navigera tillbaka
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
-                // --- SLUT ÄNDRAD ---
             }
         }
     }
 }
 
 /**
- * Hjälpfunktion för att ta en bild och spara den.
+ * Hjälpfunktion för att ta en bild med ImageCapture use case och spara den i en fil.
  */
 private fun takePhoto(
     context: Context,
@@ -246,16 +243,19 @@ private fun takePhoto(
     onImageCaptured: (Uri) -> Unit,
     onError: (ImageCaptureException) -> Unit
 ) {
-    // Skapa en unik fil för bilden i appens cache-katalog
+    // Skapa en unik fil för bilden i appens cache-katalog.
+    // CacheDir används för att undvika att behöva externa lagringsrättigheter (WRITE_EXTERNAL_STORAGE).
     val photoFile = File(
-        context.cacheDir, // Använder cacheDir, ingen lagringsrättighet behövs
+        context.cacheDir,
         SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(System.currentTimeMillis()) + ".jpg"
     )
 
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+    // Utför själva bildtagningen asynkront
     imageCapture.takePicture(outputOptions, executor, object : ImageCapture.OnImageSavedCallback {
         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+            // Använd den returnerade URI:n om den finns, annars URI:n från den skapade filen.
             val savedUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
             onImageCaptured(savedUri)
         }
@@ -267,7 +267,9 @@ private fun takePhoto(
 }
 
 /**
- * En Coroutine-vänlig version av cameraProviderFuture.get()
+ * En Coroutine-vänlig extension function för att hämta ProcessCameraProvider asynkront.
+ * Använder 'suspendCoroutine' för att konvertera det Future-baserade CameraX-API:et
+ * till ett coroutine-vänligt API.
  */
 private suspend fun Context.getCameraProvider(): ProcessCameraProvider = suspendCoroutine { continuation ->
     val cameraProviderFuture = ProcessCameraProvider.getInstance(this)

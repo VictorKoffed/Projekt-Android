@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Huvuddatabas-klassen för appen.
- * Definierar alla entities (tabeller) och vyer.
+ * Definierar alla entities (tabeller), vyer och konverterare.
  */
 @Database(
     entities = [
@@ -20,32 +20,38 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BrewSample::class
     ],
     views = [BrewMetrics::class],
-    // --- ÄNDRING 1: Versionen har ökats ---
+    // Databasversion. Måste ökas vid schemaändringar (t.ex. ny tabell eller kolumn).
     version = 3,
-    // --- SLUT ÄNDRING 1 ---
-    exportSchema = false // Kan sättas till true för produktionsappar
+    // exportSchema bör vara 'false' i utveckling för att undvika varningar
+    exportSchema = false
 )
-@TypeConverters(Converters::class) // Används för att konvertera t.ex. Date till Long (Epoch)
+// TypeConverters används för att hantera icke-primitiva typer (som Date) i databasen.
+@TypeConverters(Converters::class)
 abstract class CoffeeDatabase : RoomDatabase() {
 
     abstract fun coffeeDao(): CoffeeDao
 
     companion object {
+        // Håller den singleton-instansen av databasen, garanterar trådsäkerhet.
         @Volatile
         private var INSTANCE: CoffeeDatabase? = null
 
-        // Byt namn till getInstance för att matcha CoffeeJournalApplication
+        /**
+         * Returnerar den singleton-instansen av databasen.
+         * Bygger instansen om den inte redan existerar, synkroniserat.
+         */
         fun getInstance(context: Context): CoffeeDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     CoffeeDatabase::class.java,
-                    "coffee_journal.db" // Byt namn för konsekvens
+                    "coffee_journal.db"
                 )
-                    .addCallback(DatabaseCallback) // Lägger till våra Triggers
-                    // --- ÄNDRING 2: Lade till fallback ---
-                    .fallbackToDestructiveMigration(false) // Använd destructive migration vid versionsökning
-                    // --- SLUT ÄNDRING 2 ---
+                    // Lägger till callback för att sätta upp triggers/vyer och initial data.
+                    .addCallback(DatabaseCallback)
+                    // Tillåter destruktiv migrering. Detta raderar befintlig data vid versionsökning,
+                    // vilket är vanligt i utveckling men bör bytas ut mot riktiga migrationsstrategier i produktion.
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
@@ -53,20 +59,21 @@ abstract class CoffeeDatabase : RoomDatabase() {
         }
 
         /**
-         * Callback för att lägga till data och triggers när databasen skapas.
+         * Callback för att köra initial SQL, t.ex. PRAGMA, skapa Vyer, och för-populera.
          */
         private val DatabaseCallback = object : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                // Kör all din PRAGMA och TRIGGER SQL här
+                // Aktivera foreign key constraints för databasintegritet.
                 db.execSQL("PRAGMA foreign_keys = ON;")
 
-                // För-populera med V60
+                // För-populera med vanliga bryggmetoder
                 db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
-                db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');") // Passar på att lägga till en till
+                db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');")
 
-                // Trigger för att minska lager vid ny bryggning OCH Trigger för att återställa lager vid raderad bryggning
-                // BÅDA ÄR BORTTAGNA OCH HANTERAS NU VIA KOTLIN-KOD I CoffeeDao.kt för att säkerställa Flow-uppdateringar.
+                // Notera: Logik för lagerhantering (decrement/increment) har flyttats
+                // till @Transaction-metoder i CoffeeDao.kt. Detta görs för att säkerställa
+                // att UI:et reaktivt uppdateras via Room Flows efter lagermodifiering.
             }
         }
     }

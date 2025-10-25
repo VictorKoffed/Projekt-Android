@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 
 /**
- * Factory for creating BrewViewModel instances.
+ * Factory som används för att skapa instanser av BrewViewModel.
+ *
+ * Denna fabrik är nödvändig för att kunna injicera CoffeeRepository i ViewModel-konstruktorn.
  */
 class BrewViewModelFactory(private val repository: CoffeeRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

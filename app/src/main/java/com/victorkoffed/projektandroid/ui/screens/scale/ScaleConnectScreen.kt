@@ -50,7 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.victorkoffed.projektandroid.ThemedSnackbar // <--- NY IMPORT
+import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
@@ -58,21 +58,26 @@ import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermission
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * Huvudskärm för att hantera anslutning till Bluetooth-vågen.
+ * UI-läget växlar baserat på 'connectionState' (Ansluten, Scanning, Frånkopplad, Fel).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScaleConnectScreen(
     vm: ScaleViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
-    val error by vm.error.collectAsState() // Hämta error state
+    // Hämta felmeddelanden från ViewModel
+    val error by vm.error.collectAsState()
 
-    // --- NYTT: Snackbar state och scope ---
+    // --- Snackbar state för felmeddelanden ---
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // --- SLUT NYTT ---
 
-    // --- NYTT: LaunchedEffect för att visa fel ---
+    // Effekt för att visa felmeddelanden i en Snackbar
     LaunchedEffect(error) {
         if (error != null) {
             scope.launch {
@@ -81,11 +86,10 @@ fun ScaleConnectScreen(
                     duration = SnackbarDuration.Long
                 )
             }
-            // Nollställ felet i ViewModel
+            // Nollställ felet i ViewModel så det inte visas igen
             vm.clearError()
         }
     }
-    // --- SLUT NYTT ---
 
     Scaffold(
         topBar = {
@@ -98,7 +102,7 @@ fun ScaleConnectScreen(
                 }
             )
         },
-        // --- NYTT: Lägg till snackbarHost med anpassade färger ---
+        // Använder en anpassad Snackbar-komponent för tematisk design
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
@@ -107,8 +111,8 @@ fun ScaleConnectScreen(
                 }
             )
         }
-        // --- SLUT NYTT ---
     ) { padding ->
+        // Använder AnimatedContent för en smidig övergång mellan anslutna/frånkopplade vyer
         AnimatedContent(
             targetState = connectionState,
             modifier = Modifier.padding(padding),
@@ -118,38 +122,35 @@ fun ScaleConnectScreen(
             when (state) {
                 is BleConnectionState.Connected -> {
                     val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f))
-                    // Hämta remember-status direkt från VM
                     val rememberScaleEnabled = vm.isRememberScaleEnabled()
 
                     ConnectedView(
                         deviceName = state.deviceName,
                         measurement = measurement,
-                        // Skicka med värden till ConnectedView
                         rememberScale = rememberScaleEnabled,
                         onRememberScaleChange = { vm.setRememberScaleEnabled(it) },
                         onDisconnect = { vm.disconnect() },
                         onTare = { vm.tareScale() }
                     )
                 }
-                else -> { // Handles Disconnected, Connecting, Error
+                else -> { // Hanterar Disconnected, Connecting och Error
                     val devices by vm.devices.collectAsState()
                     val isScanning by vm.isScanning.collectAsState()
-                    // error hämtas nu högre upp
+
+                    // Launcher för att begära Bluetooth- och platstillstånd vid start av scanning
                     val requestPermissions = rememberBluetoothPermissionLauncher { granted ->
-                        if (granted) vm.startScan()
+                        if (granted) vm.startScan() // Starta scanning om tillstånd ges
                     }
+
                     ScanningView(
                         devices = devices,
                         isScanning = isScanning,
                         connectionState = state,
-                        // --- ÄNDRING: Skicka inte med 'error' längre ---
-                        // error = (state as? BleConnectionState.Error)?.message,
-                        // --- SLUT ÄNDRING ---
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
-                        // Använd explicit namn istället för 'it'
-                        onDeviceClick = { device -> // Explicit namn 'device'
+                        onDeviceClick = { device ->
+                            // Tillåt anslutning endast om vågen är frånkopplad eller i fel-läge
                             if (state is BleConnectionState.Disconnected || state is BleConnectionState.Error) {
-                                vm.connect(device) // Använd 'device' här
+                                vm.connect(device)
                             }
                         }
                     )
@@ -160,7 +161,7 @@ fun ScaleConnectScreen(
 }
 
 
-// --- ConnectedView (oförändrad från förra svaret) ---
+// --- ConnectedView ---
 @Composable
 private fun ConnectedView(
     deviceName: String,
@@ -177,11 +178,11 @@ private fun ConnectedView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Ändring 1: Ändrat "Ansluten till:" till "Connected to:"
         Text("Connected to:", style = MaterialTheme.typography.titleMedium)
         Text(deviceName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
+        // Kontroll för "Kom ihåg våg"
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { onRememberScaleChange(!rememberScale) }
@@ -194,6 +195,7 @@ private fun ConnectedView(
         }
         Spacer(Modifier.height(16.dp))
 
+        // Visning av aktuell vikt
         Text("Weight", style = MaterialTheme.typography.titleLarge)
         Text(
             text = "%.1f g".format(measurement.weightGrams),
@@ -202,6 +204,7 @@ private fun ConnectedView(
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
+        // Tara- och Frånkopplingsknappar
         Button(onClick = onTare) {
             Text("Tare")
         }
@@ -213,15 +216,12 @@ private fun ConnectedView(
 }
 
 
-// --- UPPDATERAD ScanningView ---
+// --- ScanningView ---
 @Composable
 private fun ScanningView(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
     connectionState: BleConnectionState,
-    // --- BORTTAGEN PARAMETER: error ---
-    // error: String?,
-    // --- SLUT BORTTAGEN ---
     onToggleScan: () -> Unit,
     onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
@@ -233,60 +233,53 @@ private fun ScanningView(
     ) {
         ScanControls(
             isScanning = isScanning,
-            connectionState = connectionState, // Skicka med hela state
+            connectionState = connectionState,
             onToggleScan = onToggleScan
         )
 
-        // --- BORTTAGEN: Text-visning av fel ---
-        /*
-        error?.let {
-            Text(
-                text = "Error: $it",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        */
-        // --- SLUT BORTTAGEN ---
-
+        // Separator mellan kontroller och lista
         HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
-        DeviceList(devices, isScanning, connectionState, onDeviceClick) // Skicka vidare
+
+        // Visar listan över hittade enheter
+        DeviceList(devices, isScanning, connectionState, onDeviceClick)
     }
 }
-// --- SLUT UPPDATERAD ScanningView ---
 
 
-// --- ScanControls (oförändrad) ---
+// --- ScanControls ---
 @Composable
 private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionState, onToggleScan: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Button(
             onClick = onToggleScan,
+            // Tillåt scanning endast om vågen är frånkopplad eller i fel-läge
             enabled = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
         ) {
             when {
+                // Specialläge: Visar "Ansluter..." medan anslutningsförsöket pågår
                 connectionState is BleConnectionState.Connecting -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
-                    // Ändring 2: Ändrat "Ansluter..." till "Connecting..."
                     Text("Connecting...")
                 }
+                // Visar "Stoppa scanning" om aktiv
                 isScanning -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
                     Text("Stop scanning")
                 }
+                // Standardläge: Starta scanning
                 else -> Text("Start scanning")
             }
         }
     }
 }
 
-// --- DeviceList (oförändrad) ---
+// --- DeviceList ---
 @Composable
 private fun DeviceList(
     devices: List<DiscoveredDevice>,
@@ -299,10 +292,12 @@ private fun DeviceList(
             Text("Scanning for devices...")
         }
     } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) {
+        // Visa om scanningen avslutades utan resultat (och inget fel finns)
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No devices found.")
         }
     } else {
+        // Lista över hittade enheter
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(items = devices, key = { it.address }) { device ->
                 DeviceCard(device = device, onClick = { onDeviceClick(device) })
@@ -311,20 +306,20 @@ private fun DeviceList(
     }
 }
 
-// --- DeviceCard (UPPDATERAD) ---
+// --- DeviceCard ---
 @Composable
 private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick), // Gör kortet klickbart för att initiera anslutning
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         )
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = device.name ?: "(Nameless device)",
+                text = device.name ?: "(Nameless device)", // Fallback om enheten saknar namn
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Address: ${device.address}", style = MaterialTheme.typography.bodySmall)

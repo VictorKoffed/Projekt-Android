@@ -2,17 +2,36 @@ package com.victorkoffed.projektandroid.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val CoffeeBrown = Color(0xFFDCC7AA) // Din accentfärg (DCC7AA)
-val CoffeeDark = Color(0xFF331A15) // En mörkbrun för konturer/mörka element
+// --- HUVUDFÄRGER ---
+
+// Primär accentfärg (Baserad på DCC7AA från din ursprungliga design)
+val CoffeeBrown = Color(0xFFDCC7AA)
+
+// Mörkbrun/kontrasterande färg (Kan användas som Primary/Secondary i ett mörkt schema)
+val CoffeeDark = Color(0xFF331A15)
+
+// Ren svart (Behålls som konstant, även om Color.Black ofta används)
 val Black = Color(0xFF000000)
 
-// --- NYA FÄRGER FÖR TEMATISK ANVÄNDNING ---
-// Graf Färger
-val GraphFlowBlue = Color(0xFF007BFF) // Färg för flödesgraf
-val GraphWeightBlack = Color(0xFF000000) // Färg för viktgraf (Svart)
 
-// Plats för Bakgrund/Yta färger (Används i BrewDetailScreen)
-val BackgroundLightGray = Color(0xFFF0F0F0) // Ljusgrå bakgrund mellan kort (samma som Theme.background)
-val PlaceholderGray = Color(0xFFE7E7E7) // Bakgrund för bildplatshållare
-val PlaceholderDarkGray = Color(0xFF606060) // Ikon/textfärg för bildplatshållare
-// --- SLUT NYA FÄRGER ---
+// --- GRAFFÄRGER (SPECIFIKA KONSTANTER) ---
+
+// Sekundär färg: Används för flödesgrafen i LiveBrewScreen/BrewDetailScreen
+// Denna motsvarar ofta MaterialTheme.colorScheme.secondary
+val GraphFlowBlue = Color(0xFF007BFF)
+
+// Tertiär färg: Används för viktgrafen i LiveBrewScreen/BrewDetailScreen
+// Denna motsvarar ofta MaterialTheme.colorScheme.tertiary
+val GraphWeightBlack = Color(0xFF000000)
+
+
+// --- PLATSHÅLLARFÄRGER (SPECIFIKA FÖR UTVALDA KOMPONENTER) ---
+
+// Ljusgrå bakgrund. Denna färg är i praktiken ersatt av MaterialTheme.colorScheme.background/surfaceVariant
+val BackgroundLightGray = Color(0xFFF0F0F0)
+
+// Grå bakgrund för "Lägg till bild"-platshållaren
+val PlaceholderGray = Color(0xFFE7E7E7)
+
+// Mörkgrå färg för ikoner/text inuti bildplatshållaren (för kontrast)
+val PlaceholderDarkGray = Color(0xFF606060)

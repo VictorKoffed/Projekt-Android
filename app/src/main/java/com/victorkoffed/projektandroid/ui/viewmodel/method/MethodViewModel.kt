@@ -10,19 +10,29 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for managing brewing Methods.
+ * ViewModel för hantering av bryggmetoder (Methods).
+ *
+ * Använder [CoffeeRepository] för all datalagerinteraktion.
  */
 class MethodViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
-    // Expose a flow of all methods
+    /**
+     * Exponerar alla lagrade [Method]-objekt som en [StateFlow].
+     *
+     * Använder `stateIn` för att konvertera flödet från databasen till en StateFlow,
+     * vilket är optimalt för UI-bindning i Jetpack Compose/Views.
+     */
     val allMethods: StateFlow<List<Method>> = repository.getAllMethods()
         .stateIn(
             scope = viewModelScope,
+            // Håller flödet aktivt i 5 sekunder efter att sista observatören försvinner.
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    /** Adds a new method. */
+    /**
+     * Lägger till en ny bryggmetod i databasen om namnet inte är tomt.
+     */
     fun addMethod(name: String) {
         if (name.isNotBlank()) {
             viewModelScope.launch {
@@ -31,14 +41,18 @@ class MethodViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 
-    /** Updates an existing method. */
+    /**
+     * Uppdaterar en befintlig bryggmetod i databasen.
+     */
     fun updateMethod(method: Method) {
         viewModelScope.launch {
             repository.updateMethod(method)
         }
     }
 
-    /** Deletes a method. */
+    /**
+     * Tar bort en bryggmetod från databasen.
+     */
     fun deleteMethod(method: Method) {
         viewModelScope.launch {
             repository.deleteMethod(method)

@@ -39,13 +39,22 @@ import androidx.compose.ui.unit.dp
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 
+/**
+ * Huvudskärm för att visa, lägga till, redigera och ta bort kvarnar.
+ * Använder Compose State för att hantera vilka dialoger som visas.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GrinderScreen(vm: GrinderViewModel) {
+    // Hämta kvarnar som en State från ViewModel
     val grinders by vm.allGrinders.collectAsState()
+
+    // State-variabler som styr vilka dialogrutor som är synliga
     var showAddDialog by remember { mutableStateOf(false) }
-    var grinderToEdit by remember { mutableStateOf<Grinder?>(null) } // State för redigering
-    var grinderToDelete by remember { mutableStateOf<Grinder?>(null) } // State för borttagning
+    // Används för att skicka det Grinder-objekt som ska redigeras till dialogen
+    var grinderToEdit by remember { mutableStateOf<Grinder?>(null) }
+    // Används för att skicka det Grinder-objekt som ska bekräftas för borttagning
+    var grinderToDelete by remember { mutableStateOf<Grinder?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Grinders") }) }
@@ -65,6 +74,7 @@ fun GrinderScreen(vm: GrinderViewModel) {
             if (grinders.isEmpty()) {
                 Text("No grinders added yet.")
             } else {
+                // LazyColumn för effektiv visning av listan
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -72,15 +82,17 @@ fun GrinderScreen(vm: GrinderViewModel) {
                     items(grinders) { grinder ->
                         GrinderCard(
                             grinder = grinder,
-                            onClick = { grinderToEdit = grinder }, // Open editing
-                            onDeleteClick = { grinderToDelete = grinder } // Show confirmation
+                            onClick = { grinderToEdit = grinder }, // Sätt state för redigering
+                            onDeleteClick = { grinderToDelete = grinder } // Sätt state för borttagning
                         )
                     }
                 }
             }
         }
 
-        // Dialog for adding (unchanged)
+        // --- Dialoghantering ---
+
+        // Lägg till dialog
         if (showAddDialog) {
             AddGrinderDialog(
                 onDismiss = { showAddDialog = false },
@@ -91,44 +103,48 @@ fun GrinderScreen(vm: GrinderViewModel) {
             )
         }
 
-        // Dialog for editing
+        // Redigera dialog (visas endast om grinderToEdit är satt)
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
-                onDismiss = { grinderToEdit = null },
+                onDismiss = { grinderToEdit = null }, // Nollställ state vid stängning
                 onSaveGrinder = { updatedGrinder ->
-                    vm.updateGrinder(updatedGrinder)
+                    vm.updateGrinder(updatedGrinder) // Anropa ViewModel för att spara
                     grinderToEdit = null
                 }
             )
         }
 
-        // Dialog for delete confirmation
+        // Bekräftelse för borttagning (visas endast om grinderToDelete är satt)
         grinderToDelete?.let { currentGrinder ->
             DeleteGrinderConfirmationDialog(
                 grinderName = currentGrinder.name,
                 onConfirm = {
-                    vm.deleteGrinder(currentGrinder)
+                    vm.deleteGrinder(currentGrinder) // Anropa ViewModel för att radera
                     grinderToDelete = null
                 },
-                onDismiss = { grinderToDelete = null }
+                onDismiss = { grinderToDelete = null } // Nollställ state vid avbryt
             )
         }
     }
 }
 
+/**
+ * Komponent för att visa en enskild kvarn i listan.
+ * Klick på kortet startar redigering, klick på ikon startar borttagning.
+ */
 @Composable
 fun GrinderCard(
     grinder: Grinder,
-    onClick: () -> Unit, // Callback för klick
-    onDeleteClick: () -> Unit // Callback för delete-ikon
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick), // Gör kortet klickbart
+            .clickable(onClick = onClick), // Gör kortet klickbart för redigering
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Change 1: White background
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -136,6 +152,7 @@ fun GrinderCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(grinder.name, style = MaterialTheme.typography.titleMedium)
+                // Visa anteckningar endast om de finns
                 grinder.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
             // Delete-ikon knapp
@@ -143,14 +160,16 @@ fun GrinderCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete grinder",
-                    tint = MaterialTheme.colorScheme.primary // Change 2: DCC7AA color
+                    tint = MaterialTheme.colorScheme.primary // Använd primärfärg för ikonen
                 )
             }
         }
     }
 }
 
-// Dialog for Adding (unchanged)
+/**
+ * Dialogruta för att lägga till en ny kvarn.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGrinderDialog(
@@ -171,6 +190,7 @@ fun AddGrinderDialog(
         },
         confirmButton = {
             Button(
+                // Kontrollerar att namnet inte är tomt före tillägg
                 onClick = { if (name.isNotBlank()) onAddGrinder(name, notes.takeIf { it.isNotBlank() }) },
                 enabled = name.isNotBlank()
             ) { Text("Add") }
@@ -179,15 +199,18 @@ fun AddGrinderDialog(
     )
 }
 
-// NEW DIALOG: For editing grinder
+/**
+ * Dialogruta för att redigera en befintlig kvarn.
+ * Använder Grinder-objektet för att förfylla fälten.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditGrinderDialog(
-    grinder: Grinder, // Tar emot kvarnen som ska redigeras
+    grinder: Grinder,
     onDismiss: () -> Unit,
     onSaveGrinder: (updatedGrinder: Grinder) -> Unit
 ) {
-    // Förfyll fälten
+    // Förfyll fälten med befintliga värden
     var name by remember { mutableStateOf(grinder.name) }
     var notes by remember { mutableStateOf(grinder.notes ?: "") }
 
@@ -204,7 +227,8 @@ fun EditGrinderDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        // Skapa kopia med uppdaterad data, behåll ID
+                        // Skapa en kopia av det ursprungliga objektet med de nya värdena.
+                        // Detta är viktigt eftersom det behåller det ursprungliga ID:t.
                         val updatedGrinder = grinder.copy(
                             name = name,
                             notes = notes.takeIf { it.isNotBlank() }
@@ -219,7 +243,9 @@ fun EditGrinderDialog(
     )
 }
 
-// NEW DIALOG: For delete confirmation
+/**
+ * Dialogruta för att bekräfta borttagning av en kvarn.
+ */
 @Composable
 fun DeleteGrinderConfirmationDialog(
     grinderName: String,
@@ -229,10 +255,12 @@ fun DeleteGrinderConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete grinder?") },
+        // Varningstext om att kopplingen till befintliga bryggningar försvinner
         text = { Text("Are you sure you want to delete '$grinderName'? Brews that used this grinder will lose the connection.") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
+                // Använd error-färg för att markera en destruktiv handling
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }
         },

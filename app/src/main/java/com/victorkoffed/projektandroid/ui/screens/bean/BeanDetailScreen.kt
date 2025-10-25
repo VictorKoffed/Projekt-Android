@@ -1,6 +1,5 @@
 package com.victorkoffed.projektandroid.ui.screens.bean
 
-// --- NYA IMPORTER FÖR SNACKBAR ---
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
@@ -58,7 +57,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.victorkoffed.projektandroid.CoffeeJournalApplication
-import com.victorkoffed.projektandroid.ThemedSnackbar // <--- NY IMPORT
+import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModel
@@ -70,53 +69,59 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// --- SLUT NYA IMPORTER ---
-
-
-// Formatterare
+// --- Konstanter ---
+// Formatterare för rostdatum
 @SuppressLint("ConstantLocale")
 private val detailDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+// Formatterare för bryggningsdatum och tid
 @SuppressLint("ConstantLocale")
 private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
+/**
+ * Huvudskärmen för att visa detaljer om en specifik kaffeböna och dess associerade bryggningar.
+ * @param beanId ID:t för bönan som ska visas.
+ * @param onNavigateBack Callback för att navigera tillbaka till föregående skärm.
+ * @param onBrewClick Callback för att navigera till BrewDetailScreen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BeanDetailScreen(
     beanId: Long,
     onNavigateBack: () -> Unit,
-    onBrewClick: (Long) -> Unit // För att navigera till BrewDetailScreen
+    onBrewClick: (Long) -> Unit
 ) {
+    // Hämtar ViewModel som hanterar state och logik för den specifika bönan.
     val application = LocalContext.current.applicationContext as CoffeeJournalApplication
     val repository = application.coffeeRepository
 
     val viewModel: BeanDetailViewModel = viewModel(
-        key = beanId.toString(),
+        key = beanId.toString(), // Använder beanId som nyckel för att få en unik ViewModel
         factory = BeanDetailViewModelFactory(repository, beanId)
     )
 
+    // UI-states från ViewModel
     val state by viewModel.beanDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    // --- NYTT: Snackbar state och scope ---
+    // Snackbar-hantering för felmeddelanden
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // --- SLUT NYTT ---
 
-    // --- NYTT: LaunchedEffect för att visa fel ---
+    /**
+     * Körs när ViewModel-felet uppdateras. Visar ett Snackbar om ett fel finns.
+     */
     LaunchedEffect(state.error) {
         if (state.error != null) {
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = state.error!!,
-                    duration = SnackbarDuration.Long // Visa felet lite längre
+                    duration = SnackbarDuration.Long
                 )
             }
-            // Nollställ felet i ViewModel
-            viewModel.clearError()
+            viewModel.clearError() // Nollställ felet för att undvika oändlig loop
         }
     }
-    // --- SLUT NYTT ---
 
     Scaffold(
         topBar = {
@@ -128,10 +133,12 @@ fun BeanDetailScreen(
                     }
                 },
                 actions = {
+                    // Knappar för redigering och radering
                     IconButton(onClick = { viewModel.startEditing() }, enabled = state.bean != null) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                     IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.bean != null) {
+                        // Markera delete-ikonen med primärfärg (eller error-färg i ett mer komplett tema)
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete",
@@ -141,8 +148,8 @@ fun BeanDetailScreen(
                 }
             )
         },
-        // --- NYTT: Lägg till snackbarHost med anpassade färger ---
         snackbarHost = {
+            // Visar anpassade snackbars (t.ex. med färger)
             SnackbarHost(
                 hostState = snackbarHostState,
                 snackbar = { snackbarData ->
@@ -150,15 +157,17 @@ fun BeanDetailScreen(
                 }
             )
         }
-        // --- SLUT NYTT ---
     ) { paddingValues ->
         when {
+            // Laddningsindikator
             state.isLoading -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
+            // Visa innehåll
             state.bean != null -> {
+                // LazyColumn används för att effektivt visa en lista med detaljer och bryggningar.
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -166,12 +175,12 @@ fun BeanDetailScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Objekt 1: Bönans detaljkort
+                    // Objekt 1: Detaljer om bönan
                     item {
                         BeanDetailHeaderCard(bean = state.bean!!)
                     }
 
-                    // Objekt 2: Titel för brygg-listan
+                    // Objekt 2: Rubrik för bryggningslistan
                     item {
                         Text(
                             "Brews using this bean",
@@ -180,7 +189,7 @@ fun BeanDetailScreen(
                         )
                     }
 
-                    // Objekt 3...N: Bryggningarna
+                    // Objekt 3...N: Lista över bryggningar eller ett meddelande om att listan är tom
                     if (state.brews.isEmpty()) {
                         item {
                             Text(
@@ -190,6 +199,7 @@ fun BeanDetailScreen(
                             )
                         }
                     } else {
+                        // items är den optimerade LazyColumn-versionen av en foreach-loop
                         items(state.brews) { brew ->
                             BrewItemCard(brew = brew, onClick = { onBrewClick(brew.id) })
                         }
@@ -198,41 +208,40 @@ fun BeanDetailScreen(
             }
         }
 
-        // --- Dialogrutor (Flyttade från BeanScreen) ---
+        // --- Dialogrutor ---
 
-        // Dialog för att redigera
+        // Dialog för att redigera bönan
         if (isEditing && state.bean != null) {
-            // Återanvänd EditBeanDialog, men skicka in states från BeanDetailViewModel
+            // Skickar in de muterbara states (editName, etc.) och deras uppdateringsfunktioner (onNameChange)
             EditBeanDialog(
-                // Skicka med nuvarande redigerings-states
                 editName = viewModel.editName,
                 editRoaster = viewModel.editRoaster,
                 editRoastDateStr = viewModel.editRoastDateStr,
                 editInitialWeightStr = viewModel.editInitialWeightStr,
                 editRemainingWeightStr = viewModel.editRemainingWeightStr,
                 editNotes = viewModel.editNotes,
-                // Skicka med funktioner för att uppdatera dem
                 onNameChange = { viewModel.editName = it },
                 onRoasterChange = { viewModel.editRoaster = it },
                 onRoastDateChange = { viewModel.editRoastDateStr = it },
                 onInitialWeightChange = { viewModel.editInitialWeightStr = it },
                 onRemainingWeightChange = { viewModel.editRemainingWeightStr = it },
                 onNotesChange = { viewModel.editNotes = it },
-                // Spara/Avbryt-callbacks
                 onDismiss = { viewModel.cancelEditing() },
+                // Anropar ViewModel:s sparfunktion vid bekräftelse
                 onSaveBean = { viewModel.saveChanges() }
             )
         }
 
-        // Dialog för att ta bort (UPPDATERAD)
+        // Dialog för att ta bort bönan
         if (showDeleteConfirmDialog && state.bean != null) {
             DeleteConfirmationDialog(
                 beanName = state.bean!!.name,
-                brewCount = state.brews.size, // SKICKAR MED ANTALET BRYGGNINGAR
+                brewCount = state.brews.size, // Visar hur många bryggningar som kommer raderas
                 onConfirm = {
+                    // Anropar radering och navigerar tillbaka efteråt
                     viewModel.deleteBean {
                         showDeleteConfirmDialog = false
-                        onNavigateBack() // Navigera tillbaka efter lyckad borttagning
+                        onNavigateBack()
                     }
                 },
                 onDismiss = { showDeleteConfirmDialog = false }
@@ -241,8 +250,9 @@ fun BeanDetailScreen(
     }
 }
 
-// --- Resten av Composable-funktionerna (BeanDetailHeaderCard, BrewItemCard, DetailRow, EditBeanDialog) är oförändrade ---
-
+/**
+ * Kortkomponent som visar en sammanfattning av bönans detaljer och lagerstatus.
+ */
 @Composable
 fun BeanDetailHeaderCard(bean: Bean) {
     Card(
@@ -255,19 +265,21 @@ fun BeanDetailHeaderCard(bean: Bean) {
 
             DetailRow("Roaster:", bean.roaster ?: "-")
 
+            // Logik för att beräkna bönans ålder
             val dateStr = bean.roastDate?.let { detailDateFormat.format(it) } ?: "-"
             val ageStr = bean.roastDate?.let {
                 val diffMillis = System.currentTimeMillis() - it.time
                 val daysOld = TimeUnit.MILLISECONDS.toDays(diffMillis)
                 when {
-                    daysOld < 0 -> "(Future date)"
-                    daysOld == 0L -> "(Roasted today)"
-                    daysOld == 1L -> "(1 day old)"
-                    else -> "($daysOld days old)"
+                    daysOld < 0 -> "(Framtida datum)" // Översatt kommentar
+                    daysOld == 0L -> "(Rostad idag)" // Översatt kommentar
+                    daysOld == 1L -> "(1 dag gammal)" // Översatt kommentar
+                    else -> "($daysOld dagar gammal)" // Översatt kommentar
                 }
             } ?: ""
             DetailRow("Roast Date:", "$dateStr $ageStr")
 
+            // Visa lagersaldo
             DetailRow("Remaining Weight:", "%.1f g".format(bean.remainingWeightGrams))
             DetailRow("Initial Weight:", bean.initialWeightGrams?.let { "%.1f g".format(it) } ?: "-")
             DetailRow("Notes:", bean.notes ?: "-")
@@ -275,13 +287,16 @@ fun BeanDetailHeaderCard(bean: Bean) {
     }
 }
 
+/**
+ * Kortkomponent som visar en enskild bryggning i listan.
+ */
 @Composable
 fun BrewItemCard(brew: Brew, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White) // <-- VITA KORT
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -305,7 +320,9 @@ fun BrewItemCard(brew: Brew, onClick: () -> Unit) {
     }
 }
 
-// Enkel rad-komponent (kopierad från BrewDetailScreen)
+/**
+ * Enkel radkomponent för att visa en etikett och dess värde.
+ */
 @Composable
 fun DetailRow(label: String, value: String) {
     Row(verticalAlignment = Alignment.Top) {
@@ -315,33 +332,25 @@ fun DetailRow(label: String, value: String) {
 }
 
 
-// --- Dialogrutor (Flyttade från BeanScreen.kt och Modifierade) ---
-
+/**
+ * Dialogruta för att redigera en bön-post.
+ * Använder states som skickas in från ViewModel via hosting-skärmen.
+ */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditBeanDialog(
-    // States
-    editName: String,
-    editRoaster: String,
-    editRoastDateStr: String,
-    editInitialWeightStr: String,
-    editRemainingWeightStr: String,
-    editNotes: String,
-    // Callbacks
-    onNameChange: (String) -> Unit,
-    onRoasterChange: (String) -> Unit,
-    onRoastDateChange: (String) -> Unit,
-    onInitialWeightChange: (String) -> Unit,
-    onRemainingWeightChange: (String) -> Unit,
-    onNotesChange: (String) -> Unit,
-
-    onDismiss: () -> Unit,
-    onSaveBean: () -> Unit
+    // States och callbacks är väl namngivna och behöver ingen ytterligare kommentar
+    editName: String, editRoaster: String, editRoastDateStr: String, editInitialWeightStr: String,
+    editRemainingWeightStr: String, editNotes: String, onNameChange: (String) -> Unit,
+    onRoasterChange: (String) -> Unit, onRoastDateChange: (String) -> Unit,
+    onInitialWeightChange: (String) -> Unit, onRemainingWeightChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit, onDismiss: () -> Unit, onSaveBean: () -> Unit
 ) {
-    // Logik för kalender (flyttad hit)
+    // Logik för DatePickerDialog
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
+    // Försök parsas det aktuella datumet för att initialisera kalendern korrekt
     val (initialYear, initialMonth, initialDay) = try {
         val date = detailDateFormat.parse(editRoastDateStr)!!
         calendar.time = date
@@ -355,6 +364,7 @@ fun EditBeanDialog(
         DatePickerDialog(
             context,
             { _, year: Int, month: Int, dayOfMonth: Int ->
+                // Uppdatera editRoastDateStr i formatet YYYY-MM-DD
                 onRoastDateChange("$year-${String.format("%02d", month + 1)}-${String.format("%02d", dayOfMonth)}")
             },
             initialYear, initialMonth, initialDay
@@ -368,6 +378,7 @@ fun EditBeanDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = editName, onValueChange = onNameChange, label = { Text("Name *") }, singleLine = true)
                 OutlinedTextField(value = editRoaster, onValueChange = onRoasterChange, label = { Text("Roaster") }, singleLine = true)
+                // Textfält för rostdatum med en klickbar ikon för att öppna kalendern
                 OutlinedTextField(
                     value = editRoastDateStr,
                     onValueChange = {},
@@ -378,6 +389,7 @@ fun EditBeanDialog(
                         Icon(Icons.Default.DateRange, "Select date", Modifier.clickable { datePickerDialog.show() })
                     }
                 )
+                // Vikter använder Decimal-tangentbord
                 OutlinedTextField(
                     value = editInitialWeightStr, onValueChange = onInitialWeightChange,
                     label = { Text("Initial Weight (g)") },
@@ -392,6 +404,7 @@ fun EditBeanDialog(
             }
         },
         confirmButton = {
+            // Aktivera endast om namn finns och nuvarande vikt är ett giltigt positivt nummer
             Button(
                 onClick = onSaveBean,
                 enabled = editName.isNotBlank() && (editRemainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
@@ -401,11 +414,14 @@ fun EditBeanDialog(
     )
 }
 
-// DeleteConfirmationDialog (UPPDATERAD)
+/**
+ * Dialogruta för bekräftelse av radering.
+ * Visar en varning om att associerade bryggningar också kommer att raderas.
+ */
 @Composable
 fun DeleteConfirmationDialog(
     beanName: String,
-    brewCount: Int, // NY PARAMETER
+    brewCount: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -419,6 +435,7 @@ fun DeleteConfirmationDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
+                // Använd Error-färg för att markera en destruktiv åtgärd
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }
         },

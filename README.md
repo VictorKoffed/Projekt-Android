@@ -52,6 +52,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 1. Data migration to new device? OR add a cloud database firebase?
 2. Archive old beans and brews to remove them from home?
 3. Add some templates for methods and info about them as pictures etc?
+4. Implement Dark Mode?
+5. Implement the graph as a module for more modular code?
+6. implemetn the hamburger meny as a working button and have it one the main screens
+Home, bean, method and grinder, it shows the option for dark mode?
 
 ## 👤 Author
 
@@ -83,3 +87,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Link - https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
+fun clearError() {
+_error.value = null
+}
+}

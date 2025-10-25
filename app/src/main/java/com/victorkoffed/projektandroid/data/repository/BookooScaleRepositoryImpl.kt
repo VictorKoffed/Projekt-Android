@@ -15,18 +15,26 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
 
 /**
- * Implementation av [ScaleRepository] som använder [BookooBleClient].
+ * Implementation av [ScaleRepository] som använder [BookooBleClient] för BLE-kommunikation.
+ * Ansvarar för att kontrollera behörigheter och transformera råa BLE-data till domänmodeller.
  */
 class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository {
 
     private val client = BookooBleClient(context)
 
+    /**
+     * Startar BLE-skanning och samlar skanningsresultat till en Flow<List<DiscoveredDevice>>.
+     * Denna metod hanterar även dynamisk uppdatering av enheter som redan upptäckts.
+     */
     override fun startScanDevices(): Flow<List<DiscoveredDevice>> {
-        // Kontrollera rättigheter innan skanning
+        // Kontrollera nödvändig behörighet (BLUETOOTH_SCAN) innan skanning initieras.
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            // Om behörighet saknas, skicka ett fel via Flow.
             return flow { throw SecurityException("Missing BLUETOOTH_SCAN permission.") }
         }
+
         return client.startScan()
+            // Steg 1: Konvertera råa ScanResult till domänmodellen DiscoveredDevice.
             .map { result ->
                 DiscoveredDevice(
                     name = result.device.name,
@@ -34,15 +42,19 @@ class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository 
                     rssi = result.rssi
                 )
             }
+            // Steg 2: Använd 'scan' för att bygga en växande lista med unika enheter.
             .scan(emptyList()) { acc, newDevice ->
                 val mutable = acc.toMutableList()
                 val existing = mutable.find { it.address == newDevice.address }
                 if (existing != null) {
+                    // Om enheten redan finns, uppdatera dess RSSI/information.
                     val index = mutable.indexOf(existing)
                     mutable[index] = newDevice
                 } else {
+                    // Om enheten är ny, lägg till den i listan.
                     mutable.add(newDevice)
                 }
+                // Sortera listan efter signalstyrka (RSSI) för att visa de närmaste först.
                 mutable.sortedByDescending { it.rssi }
             }
     }
@@ -52,9 +64,8 @@ class BookooScaleRepositoryImpl(private val context: Context) : ScaleRepository 
     override fun observeMeasurements(): Flow<ScaleMeasurement> = client.measurements
     override fun observeConnectionState(): StateFlow<BleConnectionState> = client.connectionState
 
-    /** Implementation för att anropa tare-kommandot i BLE-klienten. */
+    /** Skickar tare/nollställningskommandot till den anslutna vågen via BLE-klienten. */
     override fun tareScale() {
         client.sendTareCommand()
     }
 }
-

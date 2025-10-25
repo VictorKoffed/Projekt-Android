@@ -2,24 +2,45 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Krävs för all nätverkskommunikation, t.ex. hämtning av kaffebilder. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- BLUETOOTH-BEHÖRIGHETER FÖR VÅGANSLUTNING (API 31/Android 12+) -->
+
+    <!-- Krävs för att skanna efter närliggande Bluetooth LE-enheter (vågen). -->
+    <!-- usesPermissionFlags="neverForLocation" indikerar att skanningen inte används för platsbestämning,
+         vilket är rekommenderat för att minska platsrelaterade behörighetskrav. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
+    <!-- Krävs för att ansluta till och kommunicera med parade Bluetooth-enheter. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- ÄLDRE BLUETOOTH-BEHÖRIGHETER (FÖR API 30/Android 11 och äldre) -->
+
+    <!-- Krävs för grundläggande Bluetooth-kommunikation på äldre enheter. -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
+    <!-- Krävs för att initiera Bluetooth-adapteråtgärder (som att starta/stoppa skanning) på äldre enheter. -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
+    <!-- KRÄVS FÖR BLUETOOTH-SKANNING PÅ API 29/ANDROID 10 OCH ÄLDRE -->
+    <!-- Fine Location krävs för att Bluetooth-skanning ska fungera korrekt på äldre OS. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30"/>
 
+    <!-- Krävs för att appen ska kunna använda enhetens kamera. -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- HÅRDVARUKRAV/DEKLARATIONER -->
+
+    <!-- Deklarerar att appen använder Bluetooth Low Energy (BLE). required="true" betyder att den inte kan installeras
+         på enheter utan BLE-stöd, men du har satt det till true, så det är ett hårt krav. -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
+    <!-- Deklarerar att appen kan använda kameran, men kräver inte att den är närvarande (required="false"). -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:name=".CoffeeJournalApplication"
         android:allowBackup="true"

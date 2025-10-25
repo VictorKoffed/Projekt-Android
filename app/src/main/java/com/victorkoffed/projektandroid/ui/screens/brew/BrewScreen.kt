@@ -1,6 +1,5 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
-// Import ALL from the db package for simplicity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,51 +45,51 @@ import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 
-// Import the graph from its location (if it is in the brew folder)
-// import com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph // Används ej direkt här längre
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewScreen(
     vm: BrewViewModel,
-    completedBrewId: Long?, // ID för den bryggning vars resultat ska visas (behålls ifall du vill lägga till historik här senare)
+    // ID för en nyligen avslutad bryggning. Används för att nollställa tillståndet vid navigation.
+    completedBrewId: Long?,
+    // Aktuell anslutningsstatus till Bluetooth-vågen.
     scaleConnectionState: BleConnectionState,
+    // Callback för att starta en live-bryggning.
     onStartBrewClick: (setup: BrewSetupState) -> Unit,
+    // Callback för att spara bryggningen utan realtidsgraf.
     onSaveWithoutGraph: () -> Unit,
+    // Callback för att navigera till anslutningsskärmen.
     onNavigateToScale: () -> Unit,
-    onClearResult: () -> Unit, // Behålls om completedBrewId används
+    // Callback för att nollställa 'completedBrewId' i NavHost/Activity.
+    onClearResult: () -> Unit,
+    // Callback för att navigera tillbaka.
     onNavigateBack: () -> Unit
 ) {
-    // Hämta listor och states från ViewModel
+    // Hämta listor och states från ViewModel för UI-bindning
     val availableBeans by vm.availableBeans.collectAsState()
     val availableGrinders by vm.availableGrinders.collectAsState()
     val availableMethods by vm.availableMethods.collectAsState()
     val setupState = vm.brewSetupState
-    // metrics och samples behövs inte längre här
-    // val metrics by vm.completedBrewMetrics.collectAsState()
-    // val samples by vm.completedBrewSamples.collectAsState()
+    // State som indikerar om det finns sparade bryggningar att ladda ifrån
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
 
     val scrollState = rememberScrollState()
-    // REMOVED: val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
 
-    // --- NEW STATE FOR DIALOG ---
+    // Lokalt state för att visa bekräftelsedialog vid frånkopplad våg
     var showConnectionAlert by remember { mutableStateOf(false) }
-    // --- END NEW ---
 
-    // Clears old results if we navigate here with an old ID
-    // (kan tas bort om du inte vill visa någon form av resultat här alls)
+    // Nollställer ViewModel-state och NavHost-ID när skärmen laddas med ett avslutat ID.
+    // Detta säkerställer att skärmen alltid visar setup-läget.
     LaunchedEffect(completedBrewId) {
         if (completedBrewId != null) {
-            vm.clearBrewResults() // Nollställ viewmodel state
-            onClearResult() // Be MainActivity nollställa ID:t
+            vm.clearBrewResults()
+            onClearResult()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Brew") }, // Change title to something more appropriate
+                title = { Text("New Brew") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
@@ -107,32 +106,31 @@ fun BrewScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- ONLY "BEFORE BREW" SECTION REMAINS ---
-            Row( // Använd en Row för att placera titel och knapp
+            // Kontrollrad med funktionen "Ladda senaste inställningar"
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween, // Distributes the space
-                verticalAlignment = Alignment.CenterVertically // Centers vertically
+                horizontalArrangement = Arrangement.End, // Flyttar knappen till höger
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Remove the title "Before Brew", it is not needed when it is the only thing displayed
-                // Text("Before Brew", style = MaterialTheme.typography.headlineSmall)
-
-                // Keep the "Load latest" button, it is useful
+                // Knapp för att ladda senaste använda inställningar
                 TextButton(
                     onClick = { vm.loadLatestBrewSettings() },
-                    enabled = hasPreviousBrews // Aktivera bara om det finns bryggningar
+                    enabled = hasPreviousBrews // Endast aktiv om det finns data att ladda
                 ) {
                     Icon(
-                        Icons.Default.History, // Clock icon
-                        contentDescription = null, // Descriptive text not necessary here
-                        modifier = Modifier.size(ButtonDefaults.IconSize) // Standard icon size
+                        Icons.Default.History,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
                     )
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing)) // Standard spacing
-                    Text("Load latest settings") // Clearer button text
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Load latest settings")
                 }
             }
             Spacer(Modifier.height(8.dp))
 
-            // ... (DropdownSelectors och OutlinedTextFields för setup är oförändrade) ...
+            // --- Inställningsformulär ---
+
+            // Dropdown för val av kaffeböna (obligatorisk, markerad med *)
             DropdownSelector(
                 label = "Bean *",
                 options = availableBeans,
@@ -140,6 +138,7 @@ fun BrewScreen(
                 onOptionSelected = { vm.selectBean(it) },
                 optionToString = { it?.name ?: "Select bean..." }
             )
+            // Textfält för dos (obligatorisk)
             OutlinedTextField(
                 value = setupState.doseGrams,
                 onValueChange = { vm.onDoseChange(it) },
@@ -148,6 +147,7 @@ fun BrewScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+            // Dropdown för kvarn
             DropdownSelector(
                 label = "Grinder",
                 options = availableGrinders,
@@ -155,12 +155,14 @@ fun BrewScreen(
                 onOptionSelected = { vm.selectGrinder(it) },
                 optionToString = { it?.name ?: "Select grinder..." }
             )
+            // Textfält för malningsinställning
             OutlinedTextField(
                 value = setupState.grindSetting,
                 onValueChange = { vm.onGrindSettingChange(it) },
                 label = { Text("Grind Setting") },
                 modifier = Modifier.fillMaxWidth()
             )
+            // Textfält för kvarnhastighet
             OutlinedTextField(
                 value = setupState.grindSpeedRpm,
                 onValueChange = { vm.onGrindSpeedChange(it) },
@@ -169,6 +171,7 @@ fun BrewScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
+            // Dropdown för bryggmetod (obligatorisk)
             DropdownSelector(
                 label = "Method *",
                 options = availableMethods,
@@ -176,6 +179,7 @@ fun BrewScreen(
                 onOptionSelected = { vm.selectMethod(it) },
                 optionToString = { it?.name ?: "Select method..." }
             )
+            // Textfält för vattentemperatur
             OutlinedTextField(
                 value = setupState.brewTempCelsius,
                 onValueChange = { vm.onBrewTempChange(it) },
@@ -185,34 +189,36 @@ fun BrewScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            // --- UPDATED START BREW BUTTON ---
+            // --- Start Live Brew-knappen ---
             Button(
                 onClick = {
-                    // Check connection status here
+                    // Logik: Om vågen är ansluten, starta bryggningen direkt.
                     if (scaleConnectionState is BleConnectionState.Connected) {
                         onStartBrewClick(vm.getCurrentSetup())
                     } else {
-                        // Show the dialog if the scale is not connected
+                        // Annars, visa varningsdialogen för att välja åtgärd
                         showConnectionAlert = true
                     }
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
+                // Endast aktiv om alla obligatoriska fält (Bean, Dose, Method) är ifyllda
                 enabled = vm.isSetupValid(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Start Live Brew") // Clearer button text
+                Text("Start Live Brew")
             }
 
 
-            // --- ALERT DIALOG (Unchanged) ---
+            // --- Alert Dialog vid frånkopplad våg ---
             if (showConnectionAlert) {
                 AlertDialog(
                     onDismissRequest = { showConnectionAlert = false },
                     title = { Text("Scale Not Connected") },
                     text = { Text("The scale is not connected. How do you want to proceed?") },
                     confirmButton = {
+                        // Alternativ 1: Navigera till anslutningsskärmen
                         TextButton(onClick = {
                             showConnectionAlert = false
                             onNavigateToScale()
@@ -221,9 +227,11 @@ fun BrewScreen(
                         }
                     },
                     dismissButton = {
+                        // Alternativ 2: Avbryt
                         TextButton(onClick = { showConnectionAlert = false }) {
                             Text("Cancel")
                         }
+                        // Alternativ 3: Fortsätt och spara utan realtidsdata
                         TextButton(onClick = {
                             showConnectionAlert = false
                             onSaveWithoutGraph()
@@ -233,14 +241,11 @@ fun BrewScreen(
                     }
                 )
             }
-            // --- END ALERT DIALOG ---
-        } // End of Column
-    } // End of Scaffold
-} // End of BrewScreen
+        }
+    }
+}
 
-// --- The ResultMetrics FUNCTION IS REMOVED ---
-
-// DropdownSelector (Unchanged)
+// --- DropdownSelector (Återanvändbar komponent) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> DropdownSelector(
@@ -250,6 +255,7 @@ fun <T> DropdownSelector(
     onOptionSelected: (T?) -> Unit,
     optionToString: (T?) -> String
 ) {
+    // Standard Composable för att hantera urval från en lista i ett OutlinedTextField
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -263,12 +269,13 @@ fun <T> DropdownSelector(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth() // menuAnchor() is important
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
+            // Itererar över tillgängliga objekt för att skapa menyval
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(optionToString(option)) },

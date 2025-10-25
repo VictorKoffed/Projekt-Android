@@ -8,64 +8,74 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.ParseException // För datum-parsning
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * ViewModel for managing Coffee Beans.
+ * ViewModel för hantering av Kaffebönor.
+ * Huvudansvaret är att tillhandahålla listan över alla bönor och hantera tillägg av nya.
+ * (Redigering/Borttagning hanteras nu i BeanDetailViewModel).
  */
 class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
-    // Expose a flow of all beans from the repository
+    /**
+     * Exponerar ett StateFlow av alla bönor från databasen.
+     * StateIn används för att konvertera Flow till StateFlow, vilket gör den livscykelmedveten.
+     */
     val allBeans: StateFlow<List<Bean>> = repository.getAllBeans()
         .stateIn(
             scope = viewModelScope,
+            // Dela flödet och håll det aktivt i 5 sekunder efter att sista observatören försvinner
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
+            initialValue = emptyList() // Startvärde
         )
 
-    // Hjälpfunktion för att försöka parsa datumsträng (yyyy-MM-dd)
+    /**
+     * Hjälpfunktion för att försöka parsa en datumsträng i formatet "yyyy-MM-dd".
+     *
+     * Returnerar: Date-objekt vid lyckad parsing, annars null.
+     */
     private fun parseDateString(dateString: String?): Date? {
         if (dateString.isNullOrBlank()) return null
         return try {
             SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
         } catch (_: ParseException) {
-            null // Returnera null om formatet är fel
+            // Returnera null om formatet är felaktigt
+            null
         }
     }
 
     /**
-     * Adds a new bean to the database.
-     * Tar nu emot roastDateString och initialWeightString.
+     * Lägger till en ny böna i databasen.
+     * Hanterar konvertering av stränginput från UI (roastDateString, initialWeightString)
+     * till de korrekta typerna (Date, Double) för datamodellen.
      */
     fun addBean(
         name: String,
         roaster: String?,
-        roastDateString: String?, // NY: Datum som sträng
-        initialWeightString: String?, // NY: Vikt som sträng
+        roastDateString: String?,
+        initialWeightString: String?,
         remainingWeight: Double,
         notes: String?
     ) {
-        val roastDate = parseDateString(roastDateString) // Konvertera sträng till Date
-        val initialWeight = initialWeightString?.toDoubleOrNull() // Konvertera sträng till Double
+        // Försök konvertera datumsträng till Date
+        val roastDate = parseDateString(roastDateString)
+        // Försök konvertera viktsträng till Double
+        val initialWeight = initialWeightString?.toDoubleOrNull()
 
         val newBean = Bean(
             name = name,
-            roaster = roaster,
-            roastDate = roastDate, // Spara Date-objektet
-            initialWeightGrams = initialWeight, // Spara Double-värdet
+            roaster = roaster?.takeIf { it.isNotBlank() }, // Spara endast om icke-tom
+            roastDate = roastDate,
+            initialWeightGrams = initialWeight,
             remainingWeightGrams = remainingWeight,
-            notes = notes
+            notes = notes?.takeIf { it.isNotBlank() } // Spara endast om icke-tom
         )
         viewModelScope.launch {
+            // Utför databasoperationen asynkront
             repository.addBean(newBean)
         }
     }
-
-    // --- BORTTAGET ---
-    // updateBean (Flyttad till BeanDetailViewModel)
-    // deleteBean (Flyttad till BeanDetailViewModel)
-    // --- SLUT BORTTAGET ---
 }

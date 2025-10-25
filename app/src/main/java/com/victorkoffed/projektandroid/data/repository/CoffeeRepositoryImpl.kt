@@ -9,48 +9,53 @@ import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Konkret implementation av [CoffeeRepository].
+ * Denna klass är det enda ansvarsområdet för att hämta data från [CoffeeDao] (Room Database).
+ * Den fungerar som datalagret för domänen och delegerar alla operationer direkt till DAO:n.
+ */
 class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {
-    // --- Grinder ---
+    // --- Kvarn (Grinder) ---
     override fun getAllGrinders(): Flow<List<Grinder>> = dao.getAllGrinders()
     override suspend fun addGrinder(grinder: Grinder) = dao.insertGrinder(grinder)
     override suspend fun updateGrinder(grinder: Grinder) = dao.updateGrinder(grinder)
     override suspend fun deleteGrinder(grinder: Grinder) = dao.deleteGrinder(grinder)
     override suspend fun getGrinderById(id: Long): Grinder? = dao.getGrinderById(id)
 
-    // --- Method ---
+    // --- Metod (Method) ---
     override fun getAllMethods(): Flow<List<Method>> = dao.getAllMethods()
     override suspend fun addMethod(method: Method) = dao.insertMethod(method)
     override suspend fun updateMethod(method: Method) = dao.updateMethod(method)
     override suspend fun deleteMethod(method: Method) = dao.deleteMethod(method)
     override suspend fun getMethodById(id: Long): Method? = dao.getMethodById(id)
 
-    // --- Bean ---
+    // --- Böna (Bean) ---
     override fun getAllBeans(): Flow<List<Bean>> = dao.getAllBeans()
     override suspend fun addBean(bean: Bean) = dao.insertBean(bean)
     override suspend fun updateBean(bean: Bean) = dao.updateBean(bean)
     override suspend fun getBeanById(id: Long): Bean? = dao.getBeanById(id)
     override suspend fun deleteBean(bean: Bean) = dao.deleteBean(bean)
 
-    // --- Brew ---
+    // --- Bryggning (Brew) ---
     override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews()
     override suspend fun getBrewById(id: Long): Brew? = dao.getBrewById(id)
+    /** Anropar den transaktionella DAO-metoden som lägger till bryggning och minskar lagret. */
     override suspend fun addBrew(brew: Brew): Long = dao.addBrew(brew)
     override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew)
     override suspend fun deleteBrew(brew: Brew) = dao.deleteBrew(brew)
+    /** Anropar den transaktionella DAO-metoden för radering med lageråterställning. */
     override suspend fun deleteBrewAndRestoreStock(brew: Brew) = dao.deleteBrewTransaction(brew)
+    /** Anropar den transaktionella DAO-metoden som lägger till bryggning, samples och minskar lagret. */
     override suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long =
         dao.addBrewWithSamples(brew, samples)
 
-    // ✅ NYTT: observera Brew som Flow
     override fun observeBrew(brewId: Long): Flow<Brew?> = dao.observeBrew(brewId)
-
-    // --- NY IMPLEMENTATION ---
     override fun getBrewsForBean(beanId: Long): Flow<List<Brew>> = dao.getBrewsForBean(beanId)
 
-    // --- BrewSample ---
+    // --- Mätpunkter (BrewSample) ---
     override fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>> = dao.getSamplesForBrew(brewId)
     override suspend fun addBrewSamples(samples: List<BrewSample>) = dao.insertBrewSamples(samples)
 
-    // --- BrewMetrics (View) ---
+    // --- Beräknade Mått (BrewMetrics) ---
     override fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?> = dao.getBrewMetrics(brewId)
 }

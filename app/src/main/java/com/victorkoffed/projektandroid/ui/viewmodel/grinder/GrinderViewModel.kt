@@ -10,29 +10,32 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel för att hantera logik relaterad till Grinders (kvarnar).
+ * ViewModel för att hantera CRUD-operationer (Skapa, Läsa, Uppdatera, Radera)
+ * relaterade till Grinders (kaffekvarnar).
  */
 class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
-    // Exponerar en Flow av alla kvarnar från databasen.
+    /**
+     * StateFlow som exponerar en lista av alla kaffekvarnar från databasen till UI:et.
+     */
     val allGrinders: StateFlow<List<Grinder>> = repository.getAllGrinders()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000), // Håll flödet aktivt i 5s
-            initialValue = emptyList() // Börja med en tom lista
+            // Håll flödet aktivt i 5 sekunder efter att den sista observatören försvinner.
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList() // Startar med en tom lista för att undvika null-state.
         )
 
     /**
-     * Lägger till en ny kvarn i databasen.
+     * Lägger till en ny kvarn i databasen om namnet inte är tomt.
      */
-    fun addGrinder(name: String, notes: String?) { // Ändrade notes till nullable för att matcha Grinder data class
-        // Kör på en bakgrundstråd
+    fun addGrinder(name: String, notes: String?) {
         viewModelScope.launch {
             if (name.isNotBlank()) {
                 repository.addGrinder(
                     Grinder(
                         name = name,
-                        notes = notes // Använd notes direkt (kan vara null)
+                        notes = notes // Anteckningar är valfria (nullable)
                     )
                 )
             }
@@ -40,10 +43,10 @@ class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
     }
 
     /**
-     * Uppdaterar en befintlig kvarn i databasen.
-     * Denna funktion lades till för att stödja redigering.
+     * Uppdaterar en befintlig Grinder-entitet i databasen.
+     * Används vid redigering av en kvarn.
      */
-    fun updateGrinder(grinder: Grinder) { // DENNA FUNKTION LADES TILL
+    fun updateGrinder(grinder: Grinder) {
         viewModelScope.launch {
             repository.updateGrinder(grinder)
         }
@@ -51,7 +54,7 @@ class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
 
     /**
-     * Raderar en kvarn från databasen.
+     * Raderar en specifik kvarn från databasen.
      */
     fun deleteGrinder(grinder: Grinder) {
         viewModelScope.launch {
@@ -59,4 +62,3 @@ class GrinderViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 }
-
