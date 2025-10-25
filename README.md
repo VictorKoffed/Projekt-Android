@@ -55,6 +55,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 4. kolla över kommentarer
 5. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
 6. Data migration to new device?
+7. Check so UX is in English
+7. Archive old beans and brews to remove them from home?
 
 ## 👤 Author
 

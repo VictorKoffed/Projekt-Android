@@ -31,8 +31,12 @@ class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {
     override suspend fun addBrew(brew: Brew): Long = dao.addBrew(brew)
     override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew)
     override suspend fun deleteBrew(brew: Brew) = dao.deleteBrew(brew)
-    override suspend fun deleteBrewAndRestoreStock(brew: Brew) = dao.deleteBrewTransaction(brew) // NY IMPLEMENTATION
-    override suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long = dao.addBrewWithSamples(brew, samples)
+    override suspend fun deleteBrewAndRestoreStock(brew: Brew) = dao.deleteBrewTransaction(brew)
+    override suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long =
+        dao.addBrewWithSamples(brew, samples)
+
+    // ✅ NYTT: observera Brew som Flow
+    override fun observeBrew(brewId: Long): Flow<Brew?> = dao.observeBrew(brewId)
 
     // --- NY IMPLEMENTATION ---
     override fun getBrewsForBean(beanId: Long): Flow<List<Brew>> = dao.getBrewsForBean(beanId)

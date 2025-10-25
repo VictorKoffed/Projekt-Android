@@ -31,8 +31,11 @@ interface CoffeeRepository {
     suspend fun addBrew(brew: Brew): Long
     suspend fun updateBrew(brew: Brew)
     suspend fun deleteBrew(brew: Brew)
-    suspend fun deleteBrewAndRestoreStock(brew: Brew) // NYTT
+    suspend fun deleteBrewAndRestoreStock(brew: Brew)
     suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long
+
+    // ✅ NYTT: reaktiv observation av en enskild Brew
+    fun observeBrew(brewId: Long): Flow<Brew?>
 
     // --- NY FUNKTION ---
     fun getBrewsForBean(beanId: Long): Flow<List<Brew>>

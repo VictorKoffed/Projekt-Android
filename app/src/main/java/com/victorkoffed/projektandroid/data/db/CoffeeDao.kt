@@ -25,10 +25,9 @@ interface CoffeeDao {
     @Delete suspend fun deleteBean(bean: Bean)
     @Query("SELECT * FROM Bean ORDER BY name ASC") fun getAllBeans(): Flow<List<Bean>>
     @Query("SELECT * FROM Bean WHERE bean_id = :id") suspend fun getBeanById(id: Long): Bean?
-    // Hjälpfunktion för att återställa lagret
+    // Hjälpfunktioner för lager
     @Query("UPDATE Bean SET remaining_weight_g = remaining_weight_g + :dose WHERE bean_id = :beanId")
     suspend fun incrementBeanStock(beanId: Long, dose: Double)
-    // NY HJÄLPFUNKTION: Minska lagret (med skydd mot negativa värden)
     @Query("UPDATE Bean SET remaining_weight_g = MAX(0, remaining_weight_g - :dose) WHERE bean_id = :beanId")
     suspend fun decrementBeanStock(beanId: Long, dose: Double)
 
@@ -39,6 +38,10 @@ interface CoffeeDao {
     @Query("SELECT * FROM Brew WHERE brew_id = :id") suspend fun getBrewById(id: Long): Brew?
     @Query("SELECT * FROM Brew ORDER BY started_at DESC") fun getAllBrews(): Flow<List<Brew>>
 
+    // ✅ NYTT: Observera en enskild bryggning reaktivt
+    @Query("SELECT * FROM Brew WHERE brew_id = :id")
+    fun observeBrew(id: Long): Flow<Brew?>
+
     // --- Brew radering med lageråterställning (NY TRANSAKTION) ---
     @Transaction
     suspend fun deleteBrewTransaction(brew: Brew) {
@@ -46,11 +49,9 @@ interface CoffeeDao {
         incrementBeanStock(brew.beanId, brew.doseGrams)
         // Steg 2: Radera bryggningen (CASCADE raderar Samples)
         deleteBrew(brew)
-        // Steg 3: Tvinga fram Flow-uppdatering av bönan (säkerställer hemskärmsuppdatering)
+        // Steg 3: Tvinga fram Flow-uppdatering av bönan
         val bean = getBeanById(brew.beanId)
-        if (bean != null) {
-            updateBean(bean)
-        }
+        if (bean != null) updateBean(bean)
     }
 
     // --- NY QUERY ---
@@ -59,10 +60,12 @@ interface CoffeeDao {
 
     // --- BrewSample ---
     @Insert suspend fun insertBrewSamples(samples: List<BrewSample>)
-    @Query("SELECT * FROM BrewSample WHERE brew_id = :brewId ORDER BY t_ms ASC") fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
+    @Query("SELECT * FROM BrewSample WHERE brew_id = :brewId ORDER BY t_ms ASC")
+    fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
 
     // --- BrewMetrics (View) ---
-    @Query("SELECT * FROM BrewMetrics WHERE brew_id = :brewId") fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?>
+    @Query("SELECT * FROM BrewMetrics WHERE brew_id = :brewId")
+    fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?>
 
     // --- Transactional Function for Brew with Samples (MODIFIERAD) ---
     @Transaction
@@ -70,16 +73,9 @@ interface CoffeeDao {
         val brewId = insertBrew(brew)
         val samplesWithBrewId = samples.map { it.copy(brewId = brewId) }
         insertBrewSamples(samplesWithBrewId)
-
-        // Steg 2: MINSKA lagret manuellt
         decrementBeanStock(brew.beanId, brew.doseGrams)
-
-        // Steg 3: Tvinga Room att uppdatera Flow genom att röra bönan som just ändrades
         val bean = getBeanById(brew.beanId)
-        if (bean != null) {
-            updateBean(bean)
-        }
-
+        if (bean != null) updateBean(bean)
         return brewId
     }
 
@@ -87,15 +83,9 @@ interface CoffeeDao {
     @Transaction
     suspend fun addBrew(brew: Brew): Long {
         val brewId = insertBrew(brew)
-
-        // Steg 2: MINSKA lagret manuellt
         decrementBeanStock(brew.beanId, brew.doseGrams)
-
-        // Steg 3: Tvinga Room att uppdatera Flow genom att röra bönan
         val bean = getBeanById(brew.beanId)
-        if (bean != null) {
-            updateBean(bean)
-        }
+        if (bean != null) updateBean(bean)
         return brewId
     }
 }
