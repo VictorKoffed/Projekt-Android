@@ -166,8 +166,8 @@ class BrewDetailViewModel(
                 isEditing = false
                 // Ingen explicit reload behövs – observeBrew pushar ny emission
             } catch (e: Exception) {
-                Log.e(logTag, "Kunde inte spara ändringar: ${e.message}", e)
-                _brewDetailState.update { it.copy(error = "Kunde inte spara: ${e.message}") }
+                Log.e(logTag, "Failed to save changes: ${e.message}", e)
+                _brewDetailState.update { it.copy(error = "Failed to save changes: ${e.message}") }
             }
         }
     }
@@ -209,8 +209,8 @@ class BrewDetailViewModel(
                     quickEditNotes = updatedBrew.notes ?: ""
                 }
             } catch (e: Exception) {
-                Log.e(logTag, "Kunde inte spara anteckningar direkt: ${e.message}", e)
-                _brewDetailState.update { it.copy(error = "Kunde inte spara anteckningar: ${e.message}") }
+                Log.e(logTag, "Failed to save quick notes: ${e.message}", e)
+                _brewDetailState.update { it.copy(error = "Failed to save notes: ${e.message}") }
             }
         }
     }
@@ -239,12 +239,12 @@ class BrewDetailViewModel(
                     repository.deleteBrewAndRestoreStock(brewToDelete)
                     onSuccess()
                 } catch (e: Exception) {
-                    Log.e(logTag, "Kunde inte radera bryggning: ${e.message}", e)
-                    _brewDetailState.update { it.copy(error = "Kunde inte radera: ${e.message}") }
+                    Log.e(logTag, "Failed to delete brew: ${e.message}", e)
+                    _brewDetailState.update { it.copy(error = "Failed to delete brew: ${e.message}") }
                 }
             }
         } else {
-            _brewDetailState.update { it.copy(error = "Kan inte radera, ingen bryggning laddad.") }
+            _brewDetailState.update { it.copy(error = "Cannot delete, no brew loaded.") }
         }
     }
 

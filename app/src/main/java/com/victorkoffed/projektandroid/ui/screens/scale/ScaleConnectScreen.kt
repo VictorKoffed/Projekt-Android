@@ -303,7 +303,7 @@ private fun DeviceList(
     }
 }
 
-// --- DeviceCard (oförändrad) ---
+// --- DeviceCard (UPPDATERAD) ---
 @Composable
 private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
@@ -319,8 +319,8 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
                 text = device.name ?: "(Nameless device)",
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(text = "Adress: ${device.address}", style = MaterialTheme.typography.bodySmall)
-            Text(text = "Signalstyrka: ${device.rssi} dBm", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Address: ${device.address}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Signal strength: ${device.rssi} dBm", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

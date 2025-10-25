@@ -785,7 +785,7 @@ fun BrewSamplesGraph(
         }
 
         drawContext.canvas.nativeCanvas.apply {
-            drawText("Tid", graphStartX + graphWidth / 2, size.height - 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
+            drawText("Time", graphStartX + graphWidth / 2, size.height - 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
             withSave {
                 rotate(-90f)
                 drawText(
