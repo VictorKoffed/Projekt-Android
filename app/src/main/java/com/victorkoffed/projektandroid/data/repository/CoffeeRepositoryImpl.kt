@@ -1,6 +1,12 @@
 package com.victorkoffed.projektandroid.data.repository
 
-import com.victorkoffed.projektandroid.data.db.*
+import com.victorkoffed.projektandroid.data.db.Bean
+import com.victorkoffed.projektandroid.data.db.Brew
+import com.victorkoffed.projektandroid.data.db.BrewMetrics
+import com.victorkoffed.projektandroid.data.db.BrewSample
+import com.victorkoffed.projektandroid.data.db.CoffeeDao
+import com.victorkoffed.projektandroid.data.db.Grinder
+import com.victorkoffed.projektandroid.data.db.Method
 import kotlinx.coroutines.flow.Flow
 
 class CoffeeRepositoryImpl(private val dao: CoffeeDao) : CoffeeRepository {

@@ -2,10 +2,11 @@ package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
 // --- KONTROLLERA ATT ALLA DESSA IMPORTER FINNS ---
 import android.app.Application
-import android.content.Context // <-- NY IMPORT för SharedPreferences
-import android.content.SharedPreferences // <-- NY IMPORT för SharedPreferences
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.SystemClock
-import android.util.Log // För loggning
+import android.util.Log
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
@@ -19,13 +20,20 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Date
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
-import androidx.core.content.edit
 
 // --- SLUT PÅ IMPORTER ---
 

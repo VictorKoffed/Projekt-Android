@@ -5,12 +5,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.victorkoffed.projektandroid.data.db.* // Importera alla db-klasser
+import com.victorkoffed.projektandroid.data.db.Bean
+import com.victorkoffed.projektandroid.data.db.Brew
+import com.victorkoffed.projektandroid.data.db.BrewMetrics
+import com.victorkoffed.projektandroid.data.db.BrewSample
+import com.victorkoffed.projektandroid.data.db.Grinder
+import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import kotlinx.coroutines.async // <-- NY IMPORT
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Date // <-- NY IMPORT
+import java.util.Date
 
 // Data class för att hålla all state för brygg-setup (oförändrad)
 data class BrewSetupState(

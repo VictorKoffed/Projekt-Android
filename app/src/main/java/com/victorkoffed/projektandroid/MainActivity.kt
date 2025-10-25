@@ -1,16 +1,36 @@
 package com.victorkoffed.projektandroid
 
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.* // Importera alla filled ikoner
-import androidx.compose.material.icons.outlined.* // Importera alla outlined ikoner för ovalda state
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Coffee
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Coffee
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModelProvider
@@ -23,49 +43,35 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.victorkoffed.projektandroid.data.repository.BookooScaleRepositoryImpl
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- KONTROLLERA DENNA IMPORT
-import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.ui.navigation.Screen
+import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
+import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
+import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
+import com.victorkoffed.projektandroid.ui.screens.brew.BrewScreen
+import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
+import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
+import com.victorkoffed.projektandroid.ui.screens.brew.LiveBrewScreen
+import com.victorkoffed.projektandroid.ui.screens.grinder.GrinderScreen
+import com.victorkoffed.projektandroid.ui.screens.home.HomeScreen
+import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
-import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.grinder.GrinderScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModelFactory
-// --- NYA IMPORTER ---
-import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
-// --- SLUT NYA IMPORTER ---
-import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
-import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.brew.LiveBrewScreen
-import com.victorkoffed.projektandroid.ui.screens.brew.BrewScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.home.HomeScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModelFactory
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
+import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModelFactory
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModelFactory
 import kotlinx.coroutines.launch
-// --- NYA IMPORTER FÖR NAVIGERING OCH KAMERA ---
-import androidx.compose.ui.Modifier
-import com.victorkoffed.projektandroid.ui.navigation.Screen // <-- NY IMPORT
-import com.victorkoffed.projektandroid.ui.screens.brew.CameraScreen
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
-// --- SLUT NYA IMPORTER ---
-
-// --- NYA IMPORTER FÖR SNACKBAR & HELSKÄRMSBILD ---
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.rememberCoroutineScope
-import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
-import android.net.Uri // <-- NY IMPORT FÖR URL-KODNING
-import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
-
-// --- SLUT NYA IMPORTER ---
-
 
 // --- ÅTERSTÄLLD DATA CLASS för navigationsalternativ ---
 data class NavItem(

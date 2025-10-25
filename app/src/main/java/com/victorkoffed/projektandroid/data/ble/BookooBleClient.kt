@@ -1,12 +1,18 @@
 package com.victorkoffed.projektandroid.data.ble
 
 import android.annotation.SuppressLint
-import android.bluetooth.*
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.os.Build // <-- NY IMPORT
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -22,8 +28,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
-import java.util.*
-import android.bluetooth.BluetoothProfile
+import java.util.UUID
 
 // --- KONSTANTER FÖR API 31-VÄRDEN ---
 private const val GATT_SUCCESS_COMPAT = 0 // Motsvarar BluetoothStatusCodes.SUCCESS och BluetoothGatt.GATT_SUCCESS

@@ -1,11 +1,9 @@
 package com.victorkoffed.projektandroid.ui.theme
 
-// --- TILLAGDA IMPORTER ---
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-// --- SLUT TILLAGDA IMPORTER ---
 
 // NYTT: Definiera en Lätt färgskala med DCC7AA som primärfärg.
 private val LightCoffeeColorScheme = lightColorScheme(
