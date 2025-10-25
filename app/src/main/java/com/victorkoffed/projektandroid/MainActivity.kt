@@ -354,7 +354,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } else {
                                 // Detta ska inte hända om navigeringen görs rätt
-                                Text("Error: Brew ID saknas.")
+                                Text("Error: Brew ID missing.")
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
@@ -374,7 +374,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } else {
                                 // Detta ska inte hända
-                                Text("Error: Bean ID saknas.")
+                                Text("Error: Brew ID missing.")
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
