@@ -70,7 +70,7 @@ import androidx.core.graphics.withSave
 
 
 // Lokala färger för denna skärm
-private val Accent = Color(0xFFDCC7AA)
+// REMOVED: private val Accent = Color(0xFFDCC7AA)
 private val CardGray = Color(0xFFF0F0F0)
 // NYTT: Definiera färgkonstant för Flow (MÅL 6)
 private val FlowBlue = Color(0xFF007BFF)
@@ -172,14 +172,14 @@ fun BrewDetailScreen(
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.saveChanges() }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = Accent)
+                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
                         }
                     } else {
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = Accent)
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
                         }
                     }
                 }
@@ -358,10 +358,10 @@ fun BrewDetailScreen(
                                     unfocusedContainerColor = Color.White,
                                     disabledContainerColor = Color.White,
                                     errorContainerColor = Color.White,
-                                    focusedBorderColor = Accent,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    cursorColor = Accent,
-                                    focusedLabelColor = Accent
+                                    cursorColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
+                                    focusedLabelColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
                                 )
                             )
                         } else {
@@ -384,10 +384,10 @@ fun BrewDetailScreen(
                                         unfocusedContainerColor = Color.White,
                                         disabledContainerColor = Color.White,
                                         errorContainerColor = Color.White,
-                                        focusedBorderColor = Accent,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
                                         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                        cursorColor = Accent,
-                                        focusedLabelColor = Accent
+                                        cursorColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
+                                        focusedLabelColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
                                     )
                                 )
                                 // Spara-knapp
@@ -399,7 +399,7 @@ fun BrewDetailScreen(
                                     Icon(
                                         Icons.Default.Save,
                                         contentDescription = "Save notes",
-                                        tint = if (hasUnsavedNotes) Accent else Color.Gray
+                                        tint = if (hasUnsavedNotes) MaterialTheme.colorScheme.primary else Color.Gray // FIX: Use Theme Color
                                     )
                                 }
                             }
@@ -431,12 +431,10 @@ fun BrewDetailScreen(
                                 onNavigateBack()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
                     ) { Text("Ta bort", color = Color.Black) }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
-                }
+                dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
             )
         }
     }

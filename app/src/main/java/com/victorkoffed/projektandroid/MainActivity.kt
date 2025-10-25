@@ -33,7 +33,6 @@ import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModelFact
 import com.victorkoffed.projektandroid.ui.screens.grinder.GrinderScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModelFactory
-import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
 // --- NYA IMPORTER ---
 import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
 // --- SLUT NYA IMPORTER ---
@@ -63,6 +62,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.victorkoffed.projektandroid.ui.screens.brew.FullscreenImageScreen
 import android.net.Uri // <-- NY IMPORT FÖR URL-KODNING
+import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
+
 // --- SLUT NYA IMPORTER ---
 
 
@@ -75,7 +76,7 @@ data class NavItem(
 )
 // --- SLUT ÅTERSTÄLLD ---
 
-val MockupColor = Color(0xFFDCC7AA)
+// REMOVED: val MockupColor = Color(0xFFDCC7AA)
 
 class MainActivity : ComponentActivity() {
 
@@ -168,7 +169,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = MockupColor,
+                                            selectedIconColor = MaterialTheme.colorScheme.primary, // FIX: Use Theme Color
                                             selectedTextColor = Color.Black,
                                             unselectedIconColor = Color.Black,
                                             unselectedTextColor = Color.Black,
@@ -230,16 +231,6 @@ class MainActivity : ComponentActivity() {
                                 vm = scaleVm,
                                 onNavigateBack = { navController.popBackStack() }
                             )
-
-                            // PROBLEMLOGIKEN ÄR BORTTAGEN HÄR: Du stannar nu på ScaleConnectScreen
-                            // när en anslutning upprättas.
-                            /*
-                            LaunchedEffect(scaleConnectionState) {
-                                if (scaleConnectionState is BleConnectionState.Connected) {
-                                    navController.popBackStack()
-                                }
-                            }
-                            */
                         }
 
                         // --- Flöde för ny bryggning ---

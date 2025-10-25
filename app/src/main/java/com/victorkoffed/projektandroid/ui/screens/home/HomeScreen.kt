@@ -43,8 +43,7 @@ import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.launch
 
 
-// Färgdefinitionen antas vara tillgänglig i MainActivity eller på annat ställe.
-private val MockupColor = Color(0xFFDCC7AA)
+// REMOVED: private val MockupColor = Color(0xFFDCC7AA)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,7 +143,7 @@ fun HomeScreen(
                 },
                 actions = {
                     // --- Logik för "Lägg till bryggning"-knappen ---
-                    val buttonColor = MockupColor // Färgen från mockupen
+                    val buttonColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
                     val iconColor = Color.Black // Svart ikonfärg för kontrast
 
                     Surface(
@@ -331,7 +330,7 @@ fun ScaleStatusCard(
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
             subtitle = "Tap to disconnect"
             iconColor = MaterialTheme.colorScheme.primary
-            titleColor = MockupColor
+            titleColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
         }
         is BleConnectionState.Connecting -> {
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
@@ -405,7 +404,7 @@ fun InfoCard(
         ) {
             if (content != null) { content() }
             else if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MockupColor)
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
                 subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center) }
             }
         }
@@ -436,7 +435,7 @@ fun NoBrewsTextWithIcon(
                 modifier = Modifier
                     .size(32.dp) // ÄNDRAD: ÖKAD STORLEK
                     .clip(CircleShape),
-                color = MockupColor
+                color = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(

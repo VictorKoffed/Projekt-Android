@@ -11,8 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-// import androidx.compose.ui.text.font.FontWeight // Behövs inte längre
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 // Importera ALLT från db-paketet för enkelhetens skull
@@ -45,7 +43,7 @@ fun BrewScreen(
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
 
     val scrollState = rememberScrollState()
-    val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
+    // REMOVED: val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
 
     // --- NYTT STATE FÖR DIALOG ---
     var showConnectionAlert by remember { mutableStateOf(false) }
@@ -172,7 +170,7 @@ fun BrewScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 enabled = vm.isSetupValid(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor
+                    containerColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
                 )
             ) {
                 Text("Start Live Brew") // Tydligare knapptext
