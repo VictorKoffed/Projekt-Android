@@ -22,10 +22,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Snackbar // <--- NY
+import androidx.compose.material3.SnackbarData // <--- NY
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable // <--- NY
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -82,6 +84,19 @@ data class NavItem(
     val unselectedIcon: ImageVector // Outlined ikon
 )
 // --- SLUT ÅTERSTÄLLD ---
+
+// --- NY TOPPNIVÅ KOMPONENT FÖR TEMATISK SNACKBAR (Återanvändbar) ---
+@Composable
+fun ThemedSnackbar(data: SnackbarData) {
+    // Använder temats primärfärg (CoffeeBrown) som bakgrund
+    Snackbar(
+        snackbarData = data,
+        containerColor = MaterialTheme.colorScheme.primary, // DCC7AA
+        contentColor = MaterialTheme.colorScheme.onPrimary, // Black
+        actionColor = MaterialTheme.colorScheme.onPrimary // Black
+    )
+}
+// --- SLUT NY TOPPNIVÅ KOMPONENT ---
 
 // REMOVED: val MockupColor = Color(0xFFDCC7AA)
 
@@ -187,18 +202,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     },
-                    // --- NYTT: Lade till snackbarHost ---
+                    // --- NYTT: Lade till snackbarHost med anpassad tematik ---
                     snackbarHost = {
                         SnackbarHost(
-                            hostState = snackbarHostState,
+                            snackbarHostState,
                             snackbar = { snackbarData ->
-                                // Använd appens primärfärg (CoffeeBrown) för bakgrund
-                                Snackbar(
-                                    snackbarData = snackbarData,
-                                    containerColor = MaterialTheme.colorScheme.primary, // DCC7AA
-                                    contentColor = MaterialTheme.colorScheme.onPrimary, // Black
-                                    actionColor = MaterialTheme.colorScheme.onPrimary // Black
-                                )
+                                ThemedSnackbar(snackbarData) // <--- ANVÄNDER DEN CENTRALISERADE KOMPONENTEN
                             }
                         )
                     }
@@ -368,7 +377,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } else {
                                 // Detta ska inte hända om navigeringen görs rätt
-                                Text("Error: Brew ID missing.")
+                                Text("Error: Brew ID missing.") // <--- KORRIGERAD
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }
@@ -388,7 +397,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } else {
                                 // Detta ska inte hända
-                                Text("Error: Brew ID missing.")
+                                Text("Error: Bean ID missing.") // <--- KORRIGERAD
                                 LaunchedEffect(Unit) { navController.popBackStack() }
                             }
                         }

@@ -34,7 +34,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,6 +58,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.victorkoffed.projektandroid.CoffeeJournalApplication
+import com.victorkoffed.projektandroid.ThemedSnackbar // <--- NY IMPORT
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModel
@@ -141,12 +141,12 @@ fun BeanDetailScreen(
                 }
             )
         },
-        // --- NYTT: Lägg till snackbarHost ---
+        // --- NYTT: Lägg till snackbarHost med anpassade färger ---
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
                 snackbar = { snackbarData ->
-                    Snackbar(snackbarData = snackbarData, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, actionColor = MaterialTheme.colorScheme.onPrimary)
+                    ThemedSnackbar(snackbarData)
                 }
             )
         }

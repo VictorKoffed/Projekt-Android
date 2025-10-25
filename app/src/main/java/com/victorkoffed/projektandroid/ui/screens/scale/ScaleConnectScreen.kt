@@ -33,7 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -51,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.victorkoffed.projektandroid.ThemedSnackbar // <--- NY IMPORT
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
@@ -98,14 +98,16 @@ fun ScaleConnectScreen(
                 }
             )
         },
+        // --- NYTT: Lägg till snackbarHost med anpassade färger ---
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
                 snackbar = { snackbarData ->
-                    Snackbar(snackbarData = snackbarData, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, actionColor = MaterialTheme.colorScheme.onPrimary)
+                    ThemedSnackbar(snackbarData)
                 }
             )
         }
+        // --- SLUT NYTT ---
     ) { padding ->
         AnimatedContent(
             targetState = connectionState,

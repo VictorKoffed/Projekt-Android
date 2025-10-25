@@ -62,7 +62,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -98,6 +97,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.withSave
 import androidx.navigation.NavBackStackEntry
 import coil.compose.AsyncImage
+import com.victorkoffed.projektandroid.ThemedSnackbar // <--- NY IMPORT
 import com.victorkoffed.projektandroid.data.db.BrewMetrics
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.db.Grinder
@@ -232,12 +232,12 @@ fun BrewDetailScreen(
                 }
             )
         },
-        // --- NYTT: Lägg till snackbarHost ---
+        // --- NYTT: Lägg till snackbarHost med anpassade färger ---
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
                 snackbar = { snackbarData ->
-                    Snackbar(snackbarData = snackbarData, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, actionColor = MaterialTheme.colorScheme.onPrimary)
+                    ThemedSnackbar(snackbarData)
                 }
             )
         }
