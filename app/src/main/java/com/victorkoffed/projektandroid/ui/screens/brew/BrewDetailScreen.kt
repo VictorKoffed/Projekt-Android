@@ -818,17 +818,21 @@ fun FullscreenImageScreen(
     uri: String,
     onNavigateBack: () -> Unit
 ) {
+    // Använd de tematiska färgerna
+    val darkContainerColor = MaterialTheme.colorScheme.tertiary
+    val onDarkColor = MaterialTheme.colorScheme.onTertiary
+
     Scaffold(
-        containerColor = Color.Black, // Svart bakgrund är OK här då det är en helskärmsbildvisare
+        containerColor = darkContainerColor, // Ersätter Color.Black med tematisk färg
         topBar = {
             TopAppBar(
-                title = { Text("Brew Photo", color = Color.White) },
+                title = { Text("Brew Photo", color = onDarkColor) }, // Ersätter Color.White
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = onDarkColor) // Ersätter Color.White
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = darkContainerColor) // Ersätter Color.Black
             )
         }
     ) { paddingValues ->

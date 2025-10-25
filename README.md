@@ -56,6 +56,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 5. Data migration to new device? OR add a cloud database firebase?
 6. Check so UX is in English
 7. Archive old beans and brews to remove them from home?
+8. Add some templates for methods and info about them as pictures etc?
 
 ## 👤 Author
 
