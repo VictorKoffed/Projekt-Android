@@ -45,7 +45,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. The auto connect BLE dont work.
 
-##  ToDo List (Future)
+##  ToDo List (Future Version 1.1)
 
 
 1. Rensa upp varningar och göra koden snyggare
