@@ -45,13 +45,12 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. The auto connect BLE dont work.
 2. Clean up warnings and refactor
-3. Connect to Scale stopped working after latest update
 
 ##  ToDo List (Future Version 0.2)
 
 1. Data migration to new device? OR add a cloud database firebase?
 2. Archive old beans and brews to remove them from home?
-3. Add some templates for methods and info about them as pictures etc?
+3. Add some templates for methods and info about them and pictures etc?
 5. Implement the graph as a module for more modular code?
 
 ## 👤 Author
