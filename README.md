@@ -50,7 +50,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 1. Rensa upp varningar och göra koden snyggare
 2. Fix imports
 3. kolla över kommentarer
-4. Data migration to new device?
+4. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
+5. Data migration to new device?
 
 ## 👤 Author
 
