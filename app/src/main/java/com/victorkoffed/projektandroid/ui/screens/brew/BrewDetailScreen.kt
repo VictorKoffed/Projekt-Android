@@ -210,7 +210,8 @@ fun BrewDetailScreen(
                         }
                     } else {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tillbaka")
+                            // Ändring 1: Ändrat "Tillbaka" till "Back"
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
                 },
@@ -394,7 +395,7 @@ fun BrewDetailScreen(
                             OutlinedTextField(
                                 value = viewModel.editNotes,
                                 onValueChange = { viewModel.onEditNotesChanged(it) },
-                                label = { Text("Noteringar (Full Edit Mode)") },
+                                label = { Text("Notes (Full Edit Mode)") }, // Ändrat från "Noteringar (Full Edit Mode)"
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 100.dp),
@@ -477,7 +478,7 @@ fun BrewDetailScreen(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
-                    ) { Text("Ta bort", color = Color.Black) }
+                    ) { Text("Delete", color = Color.Black) } // Ändring 2: Ändrat "Ta bort" till "Delete"
                 },
                 dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
             )
@@ -575,7 +576,7 @@ fun BrewEditCard(
                 modifier = Modifier.fillMaxWidth()
             )
             EditDropdownSelector(
-                label = "Metod",
+                label = "Method", // Ändring 3: Ändrat "Metod" till "Method"
                 options = availableMethods,
                 selectedOption = viewModel.editSelectedMethod,
                 onOptionSelected = { viewModel.onEditMethodSelected(it) },

@@ -3,7 +3,7 @@
 A mobile app built in **Kotlin** using **Jetpack Compose**.  
 The app lets coffee enthusiasts record and visualize their brews with a simple and modern interface.
 
-## ✨ Features (For Version 1.0)
+## ✨ Features (For Version 0.1)
 
 **Done ✅**
 - Fetch random coffee images via the **Coffee API** using **Volley** 
@@ -49,7 +49,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 4. Check comments
 5. Check so UX is in English
 
-##  ToDo List (Future Version 1.1)
+##  ToDo List (Future Version 0.2)
 
 1. Data migration to new device? OR add a cloud database firebase?
 2. Archive old beans and brews to remove them from home?

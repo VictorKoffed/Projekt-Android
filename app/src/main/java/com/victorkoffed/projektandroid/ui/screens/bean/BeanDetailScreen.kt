@@ -131,7 +131,11 @@ fun BeanDetailScreen(
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                     IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.bean != null) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
@@ -162,7 +166,7 @@ fun BeanDetailScreen(
                     // Objekt 2: Titel för brygg-listan
                     item {
                         Text(
-                            "Brews with this bean",
+                            "Brews using this bean",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -256,8 +260,8 @@ fun BeanDetailHeaderCard(bean: Bean) {
             } ?: ""
             DetailRow("Roast Date:", "$dateStr $ageStr")
 
-            DetailRow("Remaining:", "%.1f g".format(bean.remainingWeightGrams))
-            DetailRow("Initial:", bean.initialWeightGrams?.let { "%.1f g".format(it) } ?: "-")
+            DetailRow("Remaining Weight:", "%.1f g".format(bean.remainingWeightGrams))
+            DetailRow("Initial Weight:", bean.initialWeightGrams?.let { "%.1f g".format(it) } ?: "-")
             DetailRow("Notes:", bean.notes ?: "-")
         }
     }
@@ -359,7 +363,7 @@ fun EditBeanDialog(
                 OutlinedTextField(
                     value = editRoastDateStr,
                     onValueChange = {},
-                    label = { Text("Roast Date: (yyyy-mm-dd)") },
+                    label = { Text("Roast Date (YYYY-MM-DD)") },
                     readOnly = true,
                     modifier = Modifier.clickable { datePickerDialog.show() },
                     trailingIcon = {
@@ -405,7 +409,10 @@ fun DeleteConfirmationDialog(
             Text("Are you sure you want to delete '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
         },
         confirmButton = {
-            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") }
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text("Delete") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

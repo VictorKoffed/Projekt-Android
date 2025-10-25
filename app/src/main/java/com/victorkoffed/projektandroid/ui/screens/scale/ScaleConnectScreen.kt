@@ -169,7 +169,8 @@ private fun ConnectedView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Ansluten till:", style = MaterialTheme.typography.titleMedium)
+        // Ändring 1: Ändrat "Ansluten till:" till "Connected to:"
+        Text("Connected to:", style = MaterialTheme.typography.titleMedium)
         Text(deviceName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
@@ -263,7 +264,8 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
                 connectionState is BleConnectionState.Connecting -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Ansluter...")
+                    // Ändring 2: Ändrat "Ansluter..." till "Connecting..."
+                    Text("Connecting...")
                 }
                 isScanning -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
