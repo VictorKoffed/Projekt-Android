@@ -16,15 +16,15 @@ private val LightCoffeeColorScheme = lightColorScheme(
     onPrimaryContainer = Black,
 
     // Sekundär/Tertiär färg (Används ofta för FABs, knappar, mm.)
-    secondary = CoffeeBrown,
+    secondary = GraphFlowBlue, // FIX: Används för Flow (blå)
     onSecondary = Black,
-    tertiary = CoffeeBrown,
-    onTertiary = Black,
+    tertiary = GraphWeightBlack, // FIX: Används för vikt (svart)
+    onTertiary = Color.White, // FIX: Vit text på svart viktgraf
     tertiaryContainer = CoffeeBrown.copy(alpha = 0.3f), // Används i LiveBrewScreen
     onTertiaryContainer = Black,
 
     // Bakgrund och Yta (Vitt/Ljusgrått)
-    background = Color(0xFFF0F0F0), // Används i HomeScreen Scaffold
+    background = BackgroundLightGray, // FIX: Använder den ljusgråa konstanten
     surface = Color.White,
     onSurface = Color.Black,
     onBackground = Color.Black,
@@ -32,7 +32,7 @@ private val LightCoffeeColorScheme = lightColorScheme(
     // Övriga färger
     error = Color(0xFFB00020),
     onError = Color.White,
-    outline = CoffeeDark // Använd en mörk färg för konturer
+    outline = PlaceholderDarkGray // FIX: Använd den mörka platshållar-färgen för konturer
 )
 
 

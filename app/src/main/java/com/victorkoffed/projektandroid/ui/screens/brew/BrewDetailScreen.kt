@@ -65,21 +65,22 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.core.graphics.withSave
-
+import com.victorkoffed.projektandroid.ui.theme.PlaceholderGray // NY IMPORT
+import com.victorkoffed.projektandroid.ui.theme.PlaceholderDarkGray // NY IMPORT
 // --- SLUT NYA IMPORTER ---
 
 
 // Lokala färger för denna skärm
 // REMOVED: private val Accent = Color(0xFFDCC7AA)
-private val CardGray = Color(0xFFF0F0F0)
+// REMOVED: private val CardGray = Color(0xFFF0F0F0) // Använder nu MaterialTheme.colorScheme.background
 // NYTT: Definiera färgkonstant för Flow (MÅL 6)
-private val FlowBlue = Color(0xFF007BFF)
+// REMOVED: private val FlowBlue = Color(0xFF007BFF) // Använder nu MaterialTheme.colorScheme.secondary
 // NYTT: Definiera färgkonstant för Weight (MÅL 6)
-private val WeightBlack = Color.Black
+// REMOVED: private val WeightBlack = Color.Black // Använder nu MaterialTheme.colorScheme.tertiary
 
 // Specifikt för "Add Picture"-ytan (grå stil)
-private val AddPicBgGray = Color(0xFFE7E7E7)   // ljusgrå bakgrund
-private val AddPicFgGray = Color(0xFF606060)   // mörkgrå ikon/text
+// REMOVED: private val AddPicBgGray = Color(0xFFE7E7E7) // Använder nu PlaceholderGray
+// REMOVED: private val AddPicFgGray = Color(0xFF606060) // Använder nu PlaceholderDarkGray
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,7 +150,7 @@ fun BrewDetailScreen(
 
 
     Scaffold(
-        containerColor = CardGray, // grå bakgrund mellan korten
+        containerColor = MaterialTheme.colorScheme.background, // FIX: Use Theme Color
         topBar = {
             TopAppBar(
                 title = {
@@ -172,14 +173,14 @@ fun BrewDetailScreen(
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.saveChanges() }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
+                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary)
                         }
                     } else {
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -250,8 +251,8 @@ fun BrewDetailScreen(
                                         .clickable { onNavigateToCamera() },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = AddPicBgGray,
-                                        contentColor = AddPicFgGray
+                                        containerColor = PlaceholderGray, // FIX: Use Thematic Color
+                                        contentColor = PlaceholderDarkGray // FIX: Use Thematic Color
                                     )
                                 ) {
                                     Box(
@@ -262,10 +263,10 @@ fun BrewDetailScreen(
                                             Icon(
                                                 Icons.Default.PhotoCamera,
                                                 contentDescription = "Add Picture",
-                                                tint = AddPicFgGray
+                                                tint = PlaceholderDarkGray // FIX: Use Thematic Color
                                             )
                                             Spacer(Modifier.height(8.dp))
-                                            Text("Add Picture", color = AddPicFgGray)
+                                            Text("Add Picture", color = PlaceholderDarkGray) // FIX: Use Thematic Color
                                         }
                                     }
                                 }
@@ -304,9 +305,9 @@ fun BrewDetailScreen(
                                     if (showWeightLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = WeightBlack, // Använder WeightBlack
-                                    selectedLabelColor = Color.White, // Vit text
-                                    selectedLeadingIconColor = Color.White // Vit ikon
+                                    selectedContainerColor = MaterialTheme.colorScheme.tertiary, // FIX: Use Theme Color
+                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary, // FIX: Use Theme Color
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onTertiary // FIX: Use Theme Color
                                 )
                             )
                             // --- UPPDATERAD FLOW CHIP (MÅL 6) ---
@@ -318,9 +319,9 @@ fun BrewDetailScreen(
                                     if (showFlowLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = FlowBlue, // Använder FlowBlue
-                                    selectedLabelColor = Color.White, // Vit text
-                                    selectedLeadingIconColor = Color.White // Vit ikon
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary, // FIX: Use Theme Color
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondary, // FIX: Use Theme Color
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondary // FIX: Use Theme Color
                                 )
                             )
                         }
@@ -594,8 +595,8 @@ fun BrewSamplesGraph(
 ) {
     val density = LocalDensity.current
 
-    val massColor = WeightBlack // Använder WeightBlack
-    val flowColor = FlowBlue // Använder FlowBlue
+    val massColor = MaterialTheme.colorScheme.tertiary // FIX: Use Theme Color
+    val flowColor = MaterialTheme.colorScheme.secondary // FIX: Use Theme Color
     val gridLineColor = Color.LightGray
     val gridLinePaint = remember {
         Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
