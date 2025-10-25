@@ -49,10 +49,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. Rensa upp varningar och göra koden snyggare
 2. Fix the buttons in brewdetailscreen vikt and flow (vikt should be wheight) and i think the button flow shuld be same blue as the graf and white text and wheight should be black as its graph and white text?
-2. Fix imports
-3. kolla över kommentarer
-4. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
-5. Data migration to new device?
+3. Fix imports
+4. kolla över kommentarer
+5. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
+6. Data migration to new device?
 
 ## 👤 Author
 
