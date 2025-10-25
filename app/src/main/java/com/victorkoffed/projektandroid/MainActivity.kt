@@ -94,7 +94,7 @@ fun ThemedSnackbar(data: SnackbarData) {
         snackbarData = data,
         // Använder primärfärgen (DCC7AA) som bakgrund
         containerColor = MaterialTheme.colorScheme.primary,
-        // Använder onPrimary (Svart) som textfärg
+        // Använder onPrimary (Svart/Vit beroende på tema) som textfärg
         contentColor = MaterialTheme.colorScheme.onPrimary,
         actionColor = MaterialTheme.colorScheme.onPrimary
     )
@@ -198,9 +198,12 @@ class MainActivity : ComponentActivity() {
                                         },
                                         colors = NavigationBarItemDefaults.colors(
                                             selectedIconColor = MaterialTheme.colorScheme.primary,
-                                            selectedTextColor = Color.Black,
-                                            unselectedIconColor = Color.Black,
-                                            unselectedTextColor = Color.Black,
+                                            // FIX 1: Använd tematisk kontrastfärg för vald text. (Blir svart i ljust, vit i mörkt)
+                                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            // FIX 2: Använd tematisk kontrastfärg för icke-valda ikoner.
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                                            // FIX 3: Använd tematisk kontrastfärg för icke-valda text.
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurface,
                                             indicatorColor = Color.Transparent
                                         )
                                     )

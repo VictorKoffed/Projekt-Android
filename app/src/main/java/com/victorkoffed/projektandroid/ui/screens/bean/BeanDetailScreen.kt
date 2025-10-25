@@ -195,7 +195,7 @@ fun BeanDetailScreen(
                             Text(
                                 "No brews recorded for this bean yet.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f) // Bättre för Dark Mode
                             )
                         }
                     } else {
@@ -258,6 +258,7 @@ fun BeanDetailHeaderCard(bean: Bean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        // FIX: Använder MaterialTheme.colorScheme.surface istället för Color.White
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -296,7 +297,8 @@ fun BrewItemCard(brew: Brew, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        // FIX: Använder MaterialTheme.colorScheme.surface istället för Color.White
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -312,7 +314,7 @@ fun BrewItemCard(brew: Brew, onClick: () -> Unit) {
                 Text(
                     text = "${brew.doseGrams} g",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant // Använd tematisk sekundärfärg
                 )
             }
             Icon(Icons.Default.ChevronRight, contentDescription = "View brew")

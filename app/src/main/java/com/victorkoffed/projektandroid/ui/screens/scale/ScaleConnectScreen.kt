@@ -314,7 +314,8 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick), // Gör kortet klickbart för att initiera anslutning
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            // ÄNDRA: Använd MaterialTheme.colorScheme.surface istället för Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(Modifier.padding(16.dp)) {
