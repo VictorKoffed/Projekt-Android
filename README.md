@@ -45,9 +45,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. The auto connect BLE dont work.
 2. Clean up warnings and refactor ∞
-3. make the app remember to use dark mode
-not use the phones setting
-4. fix the atart screen to a more gentle color than white?
+3. fix the start screen to a more gentle color than white?
 
 ##  ToDo List (Future Version 0.2)
 
