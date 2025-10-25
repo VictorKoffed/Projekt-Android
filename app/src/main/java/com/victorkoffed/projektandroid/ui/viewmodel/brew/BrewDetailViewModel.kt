@@ -31,12 +31,20 @@ class BrewDetailViewModel(
     private val brewId: Long
 ) : ViewModel() {
 
-    private val LOG_TAG = "BrewDetailVM"
+    // ÄNDRAD: Byter namn för att följa Kotlin Coding Conventions (löser varningen)
+    private val logTag = "BrewDetailVM"
 
     private val _brewDetailState = MutableStateFlow(BrewDetailState())
     val brewDetailState: StateFlow<BrewDetailState> = _brewDetailState.asStateFlow()
 
-    // --- NYTT: State för Redigeringsläge ---
+    // --- State för snabb redigering av notes (LIVE UI-BINDNING) ---
+    var quickEditNotes by mutableStateOf("")
+        private set
+
+    // Denna variabel togs bort: private var saveNotesJob: Job? = null
+
+
+    // --- State för Redigeringsläge ---
     var isEditing by mutableStateOf(false) // Är vi i redigeringsläge?
         private set
 
@@ -59,16 +67,15 @@ class BrewDetailViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val availableMethods: StateFlow<List<Method>> = repository.getAllMethods()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    // --- SLUT PÅ NYTT ---
 
 
     init {
-        Log.d(LOG_TAG, "ViewModel initierad för brewId: $brewId")
+        Log.d(logTag, "ViewModel initierad för brewId: $brewId")
         loadBrewDetails()
     }
 
     private fun loadBrewDetails() {
-        Log.d(LOG_TAG, "loadBrewDetails anropad...")
+        Log.d(logTag, "loadBrewDetails anropad...")
         viewModelScope.launch {
             _brewDetailState.update { it.copy(isLoading = true, error = null) }
             try {
@@ -77,35 +84,37 @@ class BrewDetailViewModel(
                     _brewDetailState.update { it.copy(isLoading = false, error = "Brew not found") } // <-- Bättre felhantering
                     return@launch
                 }
-                Log.d(LOG_TAG, "Hittade bryggning: $brew")
+                Log.d(logTag, "Hittade bryggning: $brew")
 
-                val beanFlow = flow { emit(repository.getBeanById(brew.beanId)) }.onEach { Log.d(LOG_TAG, "Hämtade böna: $it") }
-                val grinderFlow = brew.grinderId?.let { id -> flow { emit(repository.getGrinderById(id)) } } ?: flowOf<Grinder?>(null).onEach { Log.d(LOG_TAG, "Hämtade kvarn: $it") }
-                val methodFlow = brew.methodId?.let { id -> flow { emit(repository.getMethodById(id)) } } ?: flowOf<Method?>(null).onEach { Log.d(LOG_TAG, "Hämtade metod: $it") }
-                val samplesFlow = repository.getSamplesForBrew(brewId).onEach { Log.d(LOG_TAG, "Hämtade ${it.size} samples") }
-                val metricsFlow = repository.getBrewMetrics(brewId).onEach { Log.d(LOG_TAG, "Hämtade metrics: $it") }
+                val beanFlow = flow { emit(repository.getBeanById(brew.beanId)) }.onEach { Log.d(logTag, "Hämtade böna: $it") }
+                val grinderFlow = brew.grinderId?.let { id -> flow { emit(repository.getGrinderById(id)) } } ?: flowOf<Grinder?>(null).onEach { Log.d(logTag, "Hämtade kvarn: $it") }
+                val methodFlow = brew.methodId?.let { id -> flow { emit(repository.getMethodById(id)) } } ?: flowOf<Method?>(null).onEach { Log.d(logTag, "Hämtade metod: $it") }
+                val samplesFlow = repository.getSamplesForBrew(brewId).onEach { Log.d(logTag, "Hämtade ${it.size} samples") }
+                val metricsFlow = repository.getBrewMetrics(brewId).onEach { Log.d(logTag, "Hämtade metrics: $it") }
 
-                Log.d(LOG_TAG, "Startar combine...")
+                Log.d(logTag, "Startar combine...")
                 combine(beanFlow, grinderFlow, methodFlow, samplesFlow, metricsFlow) {
                         bean, grinder, method, samples, metrics ->
-                    Log.d(LOG_TAG, "Combine emitterar nytt state.")
+                    Log.d(logTag, "Combine emitterar nytt state.")
                     BrewDetailState(
                         brew = brew, bean = bean, grinder = grinder, method = method,
                         samples = samples, metrics = metrics, isLoading = false
                     )
                 }.catch { e ->
-                    Log.e(LOG_TAG, "Error in combine flow", e)
+                    Log.e(logTag, "Error in combine flow", e)
                     _brewDetailState.update { it.copy(isLoading = false, error = "Error loading details: ${e.message}") }
                 }.collectLatest { state ->
-                    Log.d(LOG_TAG, "Uppdaterar state: ...")
+                    Log.d(logTag, "Uppdaterar state: ...")
                     _brewDetailState.value = state
                     // NYTT: När data laddats, initiera redigeringsfälten
                     if (!isEditing) { // Undvik att skriva över om användaren redan börjat redigera
                         resetEditFieldsToCurrentState()
                     }
+                    // NYTT: Sätt initialvärdet för quickEditNotes (För den levande fältet)
+                    quickEditNotes = state.brew?.notes ?: ""
                 }
             } catch (e: Exception) {
-                Log.e(LOG_TAG, "Error in loadBrewDetails", e)
+                Log.e(logTag, "Error in loadBrewDetails", e)
                 _brewDetailState.update { it.copy(isLoading = false, error = "Failed to load brew: ${e.message}") }
             }
         }
@@ -144,7 +153,7 @@ class BrewDetailViewModel(
                 isEditing = false // Avsluta redigeringsläget
                 loadBrewDetails() // Ladda om datan för att visa de sparade ändringarna
             } catch (e: Exception) {
-                Log.e(LOG_TAG, "Kunde inte spara ändringar: ${e.message}", e)
+                Log.e(logTag, "Kunde inte spara ändringar: ${e.message}", e)
                 _brewDetailState.update { it.copy(error = "Kunde inte spara: ${e.message}") }
                 // Låt användaren vara kvar i redigeringsläget för att kunna försöka igen?
             }
@@ -169,8 +178,41 @@ class BrewDetailViewModel(
         editSelectedMethod = currentState.method
         editBrewTempCelsius = currentState.brew?.brewTempCelsius?.toString() ?: "" // Konvertera Double? till String
         editNotes = currentState.brew?.notes ?: ""
+        // quickEditNotes uppdateras i collectLatest när datan laddas.
     }
     // --- SLUT PÅ NYA FUNKTIONER ---
+
+    // --- NY FUNKTION: För snabb redigering av notes (ADRESSERAR MÅL 5) ---
+    // Denna uppdaterar endast det lokala state-värdet
+    fun onQuickEditNotesChanged(value: String) {
+        quickEditNotes = value
+    }
+
+    // NY FUNKTION: Spara anteckningar direkt i databasen (TRIGGERED BY BUTTON)
+    fun saveQuickEditNotes() {
+        val currentBrew = _brewDetailState.value.brew ?: return
+        viewModelScope.launch {
+            try {
+                val notesToSave = quickEditNotes.takeIf { it.isNotBlank() }
+
+                if (notesToSave != currentBrew.notes) {
+                    val updatedBrew = currentBrew.copy(notes = notesToSave)
+                    repository.updateBrew(updatedBrew)
+
+                    // FIX: SYNCHRONISERA quickEditNotes EFTER LYCKAD DB-UPPDATERING
+                    // Detta säkerställer att UI-fältet behåller det sparade värdet omedelbart.
+                    quickEditNotes = updatedBrew.notes ?: ""
+
+                    // Uppdatera Flow State för att UI:t ska reflektera den sparade anteckningen
+                    _brewDetailState.update { it.copy(brew = updatedBrew) }
+                }
+            } catch (e: Exception) {
+                Log.e(logTag, "Kunde inte spara anteckningar direkt: ${e.message}", e)
+                _brewDetailState.update { it.copy(error = "Kunde inte spara anteckningar: ${e.message}") }
+            }
+        }
+    }
+    // --- SLUT NY FUNKTION ---
 
     // --- NY FUNKTION FÖR BILD ---
     /**
@@ -186,22 +228,24 @@ class BrewDetailViewModel(
                 // Ladda om detaljerna för att UI:t ska visa den nya bilden
                 loadBrewDetails()
             } catch (e: Exception) {
-                Log.e(LOG_TAG, "Kunde inte spara bild-URI: ${e.message}", e)
+                Log.e(logTag, "Kunde inte spara bild-URI: ${e.message}", e)
                 _brewDetailState.update { it.copy(error = "Kunde inte spara bild: ${e.message}") }
             }
         }
     }
     // --- SLUT PÅ NY FUNKTION ---
 
-    // deleteCurrentBrew (oförändrad)
+    // deleteCurrentBrew (MODIFIERAD)
     fun deleteCurrentBrew(onSuccess: () -> Unit) {
         val brewToDelete = _brewDetailState.value.brew
         if (brewToDelete != null) {
             viewModelScope.launch {
                 try {
-                    repository.deleteBrew(brewToDelete); onSuccess()
+                    // ANVÄND FUNKTION FÖR ATT RADERA OCH ÅTERSTÄLLA LAGER
+                    repository.deleteBrewAndRestoreStock(brewToDelete)
+                    onSuccess()
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Kunde inte radera bryggning: ${e.message}", e)
+                    Log.e(logTag, "Kunde inte radera bryggning: ${e.message}", e)
                     _brewDetailState.update { it.copy(error = "Kunde inte radera: ${e.message}") }
                 }
             }

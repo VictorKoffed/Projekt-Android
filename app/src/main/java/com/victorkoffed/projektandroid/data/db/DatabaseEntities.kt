@@ -83,7 +83,7 @@ data class Bean(
             parentColumns = ["bean_id"],
             childColumns = ["bean_id"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.RESTRICT // Skyddar brygghistorik
+            onDelete = ForeignKey.CASCADE // ÄNDRAD FRÅN ForeignKey.RESTRICT
         ),
         ForeignKey(
             entity = Grinder::class,

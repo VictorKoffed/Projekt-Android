@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     ],
     views = [BrewMetrics::class],
     // --- ÄNDRING 1: Versionen har ökats ---
-    version = 2,
+    version = 3,
     // --- SLUT ÄNDRING 1 ---
     exportSchema = false // Kan sättas till true för produktionsappar
 )
@@ -44,7 +44,7 @@ abstract class CoffeeDatabase : RoomDatabase() {
                 )
                     .addCallback(DatabaseCallback) // Lägger till våra Triggers
                     // --- ÄNDRING 2: Lade till fallback ---
-                    .fallbackToDestructiveMigration(false) // Raderar och återskapar DB vid versionsändring
+                    .fallbackToDestructiveMigration(false) // Använd destructive migration vid versionsökning
                     // --- SLUT ÄNDRING 2 ---
                     .build()
                 INSTANCE = instance
@@ -65,33 +65,8 @@ abstract class CoffeeDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
                 db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');") // Passar på att lägga till en till
 
-                // Trigger för att minska lager vid ny bryggning
-                db.execSQL("""
-                    CREATE TRIGGER IF NOT EXISTS trg_Brew_insert_decrement_stock
-                    AFTER INSERT ON Brew
-                    FOR EACH ROW
-                    BEGIN
-                        UPDATE Bean
-                        SET remaining_weight_g = remaining_weight_g - NEW.dose_g
-                        WHERE bean_id = NEW.bean_id;
-                        
-                        UPDATE Bean
-                        SET remaining_weight_g = 0
-                        WHERE bean_id = NEW.bean_id AND remaining_weight_g < 0;
-                    END;
-                """)
-
-                // Trigger för att återställa lager vid raderad bryggning
-                db.execSQL("""
-                    CREATE TRIGGER IF NOT EXISTS trg_Brew_delete_restore_stock
-                    AFTER DELETE ON Brew
-                    FOR EACH ROW
-                    BEGIN
-                        UPDATE Bean
-                        SET remaining_weight_g = remaining_weight_g + OLD.dose_g
-                        WHERE bean_id = OLD.bean_id;
-                    END;
-                """)
+                // Trigger för att minska lager vid ny bryggning OCH Trigger för att återställa lager vid raderad bryggning
+                // BÅDA ÄR BORTTAGNA OCH HANTERAS NU VIA KOTLIN-KOD I CoffeeDao.kt för att säkerställa Flow-uppdateringar.
             }
         }
     }

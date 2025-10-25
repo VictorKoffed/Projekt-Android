@@ -72,6 +72,10 @@ import androidx.core.graphics.withSave
 // Lokala färger för denna skärm
 private val Accent = Color(0xFFDCC7AA)
 private val CardGray = Color(0xFFF0F0F0)
+// NYTT: Definiera färgkonstant för Flow (MÅL 6)
+private val FlowBlue = Color(0xFF007BFF)
+// NYTT: Definiera färgkonstant för Weight (MÅL 6)
+private val WeightBlack = Color.Black
 
 // Specifikt för "Add Picture"-ytan (grå stil)
 private val AddPicBgGray = Color(0xFFE7E7E7)   // ljusgrå bakgrund
@@ -139,6 +143,11 @@ fun BrewDetailScreen(
     }
     // --- SLUT NYTT ---
 
+    // NYTT: Hämta de sparade anteckningarna för jämförelse (för att veta om vi ska visa spara-knappen)
+    val savedNotes = state.brew?.notes ?: ""
+    val hasUnsavedNotes = viewModel.quickEditNotes.trim() != savedNotes.trim()
+
+
     Scaffold(
         containerColor = CardGray, // grå bakgrund mellan korten
         topBar = {
@@ -186,15 +195,6 @@ fun BrewDetailScreen(
                     CircularProgressIndicator()
                 }
             }
-            // --- BORTTAGEN: Denna gren hanteras nu av LaunchedEffect ---
-            /*
-            state.error != null -> {
-                Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), Alignment.Center) {
-                    Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
-                }
-            }
-            */
-            // --- SLUT BORTTAGEN ---
             else -> {
                 val currentBrew = state.brew
                 if (currentBrew != null) {
@@ -295,19 +295,21 @@ fun BrewDetailScreen(
                         Text("Brew Progress", style = MaterialTheme.typography.titleMedium)
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // --- UPPDATERAD WEIGHT CHIP (MÅL 6) ---
                             FilterChip(
                                 selected = showWeightLine,
                                 onClick = { showWeightLine = !showWeightLine },
-                                label = { Text("Vikt") },
+                                label = { Text("Weight") }, // ÄNDRAD TILL "Weight"
                                 leadingIcon = {
                                     if (showWeightLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Accent,
-                                    selectedLabelColor = Color.Black,
-                                    selectedLeadingIconColor = Color.Black
+                                    selectedContainerColor = WeightBlack, // Använder WeightBlack
+                                    selectedLabelColor = Color.White, // Vit text
+                                    selectedLeadingIconColor = Color.White // Vit ikon
                                 )
                             )
+                            // --- UPPDATERAD FLOW CHIP (MÅL 6) ---
                             FilterChip(
                                 selected = showFlowLine,
                                 onClick = { showFlowLine = !showFlowLine },
@@ -316,9 +318,9 @@ fun BrewDetailScreen(
                                     if (showFlowLine) Icon(Icons.Default.Check, "Visas") else Icon(Icons.Default.Close, "Dold")
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Accent,
-                                    selectedLabelColor = Color.Black,
-                                    selectedLeadingIconColor = Color.Black
+                                    selectedContainerColor = FlowBlue, // Använder FlowBlue
+                                    selectedLabelColor = Color.White, // Vit text
+                                    selectedLeadingIconColor = Color.White // Vit ikon
                                 )
                             )
                         }
@@ -340,11 +342,14 @@ fun BrewDetailScreen(
                         }
 
                         Text("Notes", style = MaterialTheme.typography.titleMedium)
+
+                        // --- UPPDATERAD NOTES SEKTION (MÅL 5) ---
                         if (isEditing) {
+                            // FULL EDIT MODE
                             OutlinedTextField(
                                 value = viewModel.editNotes,
                                 onValueChange = { viewModel.onEditNotesChanged(it) },
-                                label = { Text("Noteringar") },
+                                label = { Text("Noteringar (Full Edit Mode)") },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 100.dp),
@@ -360,15 +365,46 @@ fun BrewDetailScreen(
                                 )
                             )
                         } else {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                            // QUICK EDIT MODE (editable field + manual save button)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    currentBrew.notes ?: "-",
-                                    modifier = Modifier.padding(16.dp)
+                                // Textfält för snabb redigering
+                                OutlinedTextField(
+                                    value = viewModel.quickEditNotes,
+                                    onValueChange = { viewModel.onQuickEditNotesChanged(it) },
+                                    label = { Text("Notes") },
+                                    enabled = true,
+                                    readOnly = false,
+                                    modifier = Modifier.weight(1f).heightIn(min = 100.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
+                                        disabledContainerColor = Color.White,
+                                        errorContainerColor = Color.White,
+                                        focusedBorderColor = Accent,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                        cursorColor = Accent,
+                                        focusedLabelColor = Accent
+                                    )
                                 )
+                                // Spara-knapp
+                                IconButton(
+                                    onClick = { viewModel.saveQuickEditNotes() },
+                                    enabled = hasUnsavedNotes, // Aktiveras om det finns osparade ändringar
+                                    modifier = Modifier.align(Alignment.Top).offset(y = 8.dp) // Flytta upp knappen lite
+                                ) {
+                                    Icon(
+                                        Icons.Default.Save,
+                                        contentDescription = "Save notes",
+                                        tint = if (hasUnsavedNotes) Accent else Color.Gray
+                                    )
+                                }
                             }
                         }
+                        // --- SLUT UPPDATERAD NOTES SEKTION ---
                     }
                 } else {
                     // Denna text visas nu bara om state.error är null men state.brew ändå blev null,
@@ -559,8 +595,8 @@ fun BrewSamplesGraph(
 ) {
     val density = LocalDensity.current
 
-    val massColor = Color.Black
-    val flowColor = Color(0xFF007BFF)
+    val massColor = WeightBlack // Använder WeightBlack
+    val flowColor = FlowBlue // Använder FlowBlue
     val gridLineColor = Color.LightGray
     val gridLinePaint = remember {
         Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
@@ -706,7 +742,7 @@ fun BrewSamplesGraph(
         drawContext.canvas.nativeCanvas.apply {
             drawText("Tid", graphStartX + graphWidth / 2, size.height - 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
             withSave {
-                 rotate(-90f)
+                rotate(-90f)
                 drawText(
                     "Weight (g)",
                     -(graphStartY + graphHeight / 2),

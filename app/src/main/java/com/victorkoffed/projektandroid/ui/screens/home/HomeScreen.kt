@@ -90,6 +90,18 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     // --- SLUT NYTT ---
 
+    // Logik för att avgöra om bryggning kan startas
+    val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
+
+    // Åtgärd för att starta bryggning eller visa varning
+    val startBrewAction = {
+        if (isBrewSetupEnabled) {
+            onNavigateToBrewSetup() // Denna navigerar nu med NavController
+        } else {
+            showSetupWarningDialog = true
+        }
+    }
+
     // Effekt för att hämta slumpmässig bild
     LaunchedEffect(Unit) {
         if (imageUrl == null) {
@@ -123,7 +135,7 @@ fun HomeScreen(
         // --- Ljusgrå bakgrundsfärg för Scaffold ---
         containerColor = Color(0xFFF0F0F0), // Ljusgrå bakgrund
         topBar = {
-            TopAppBar(
+            TopAppBar( // ÄNDRAD TILL TopAppBar för vänsterjustering
                 title = { Text("Home") },
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Implement Menu */ }) {
@@ -132,24 +144,16 @@ fun HomeScreen(
                 },
                 actions = {
                     // --- Logik för "Lägg till bryggning"-knappen ---
-                    val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
                     val buttonColor = MockupColor // Färgen från mockupen
                     val iconColor = Color.Black // Svart ikonfärg för kontrast
 
                     Surface(
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(40.dp)
+                            .size(48.dp) // ÖKAD STORLEK
                             .clip(CircleShape)
-                            .clickable(
-                                onClick = {
-                                    if (isBrewSetupEnabled) {
-                                        onNavigateToBrewSetup() // Denna navigerar nu med NavController
-                                    } else {
-                                        showSetupWarningDialog = true
-                                    }
-                                }
-                            ),
+                            // Klicka kör startBrewAction
+                            .clickable(onClick = startBrewAction),
                         color = buttonColor,
                         shape = CircleShape
                     ) {
@@ -157,7 +161,8 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "New brew",
-                                tint = iconColor
+                                tint = iconColor,
+                                modifier = Modifier.size(28.dp) // ÖKAD IKONSTORLEK
                             )
                         }
                     }
@@ -207,7 +212,7 @@ fun HomeScreen(
                 item {
                     NoBrewsTextWithIcon(
                         modifier = Modifier.padding(vertical = 16.dp),
-                        onNavigateToBrewSetup = onNavigateToBrewSetup
+                        onStartBrewClick = startBrewAction // UPPDATERAD: Använd conditional action
                     )
                 }
             } else {
@@ -237,7 +242,7 @@ fun HomeScreen(
     // --- SLUT PÅ DIALOG ---
 }
 
-// Rutnät för infokorten
+// Rutnät för infokorten (Oförändrad)
 @Composable
 fun InfoGrid(
     totalBrews: Int,
@@ -407,16 +412,16 @@ fun InfoCard(
     }
 }
 
-// NoBrewsTextWithIcon (Oförändrad)
+// NoBrewsTextWithIcon (MODIFIERAD)
 @Composable
 fun NoBrewsTextWithIcon(
     modifier: Modifier = Modifier,
-    onNavigateToBrewSetup: () -> Unit
+    onStartBrewClick: () -> Unit // Ändrad parameter för att ta emot den villkorliga åtgärden
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onNavigateToBrewSetup)
+            .clickable(onClick = onStartBrewClick) // Använder den villkorliga åtgärden
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -429,7 +434,7 @@ fun NoBrewsTextWithIcon(
             )
             Surface(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(32.dp) // ÄNDRAD: ÖKAD STORLEK
                     .clip(CircleShape),
                 color = MockupColor
             ) {
@@ -438,7 +443,7 @@ fun NoBrewsTextWithIcon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         tint = Color.Black,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp) // ÄNDRAD: ÖKAD IKONSTORLEK
                     )
                 }
             }

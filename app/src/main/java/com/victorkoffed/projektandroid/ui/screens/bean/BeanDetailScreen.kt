@@ -117,15 +117,6 @@ fun BeanDetailScreen(
                     CircularProgressIndicator()
                 }
             }
-            // --- BORTTAGEN: Denna gren hanteras nu av LaunchedEffect ---
-            /*
-            state.error != null -> {
-                Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), Alignment.Center) {
-                    Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
-                }
-            }
-            */
-            // --- SLUT BORTTAGEN ---
             state.bean != null -> {
                 LazyColumn(
                     modifier = Modifier
@@ -192,10 +183,11 @@ fun BeanDetailScreen(
             )
         }
 
-        // Dialog för att ta bort
+        // Dialog för att ta bort (UPPDATERAD)
         if (showDeleteConfirmDialog && state.bean != null) {
             DeleteConfirmationDialog(
                 beanName = state.bean!!.name,
+                brewCount = state.brews.size, // SKICKAR MED ANTALET BRYGGNINGAR
                 onConfirm = {
                     viewModel.deleteBean {
                         showDeleteConfirmDialog = false
@@ -208,7 +200,7 @@ fun BeanDetailScreen(
     }
 }
 
-// --- Resten av Composable-funktionerna (BeanDetailHeaderCard, BrewItemCard, DetailRow, EditBeanDialog, DeleteConfirmationDialog) är oförändrade ---
+// --- Resten av Composable-funktionerna (BeanDetailHeaderCard, BrewItemCard, DetailRow, EditBeanDialog) är oförändrade ---
 
 @Composable
 fun BeanDetailHeaderCard(bean: Bean) {
@@ -368,17 +360,21 @@ fun EditBeanDialog(
     )
 }
 
-// DeleteConfirmationDialog (Flyttad från BeanScreen.kt, ingen ändring)
+// DeleteConfirmationDialog (UPPDATERAD)
 @Composable
 fun DeleteConfirmationDialog(
     beanName: String,
+    brewCount: Int, // NY PARAMETER
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete bean?") },
-        text = { Text("Are you sure you want to delete '$beanName'? This cannot be undone.") },
+        text = {
+            val brewText = if (brewCount == 1) "1 related brew" else "$brewCount related brews"
+            Text("Are you sure you want to delete '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
+        },
         confirmButton = {
             Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Ta bort") }
         },

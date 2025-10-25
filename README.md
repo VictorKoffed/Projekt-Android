@@ -47,8 +47,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
+
 1. Rensa upp varningar och göra koden snyggare
-2. Fix the buttons in brewdetailscreen vikt and flow (vikt should be wheight) and i think the button flow shuld be same blue as the graf and white text and wheight should be black as its graph and white text?
+2. Brewdetails visar inte grindspeed? bara i edit?
+2. Göra så att man kan trycka på "notes" i brewdetailscreen utan att gå in på edit och kunna spara detta utan edit, knapp eller automatiskt?
 3. Fix imports
 4. kolla över kommentarer
 5. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)

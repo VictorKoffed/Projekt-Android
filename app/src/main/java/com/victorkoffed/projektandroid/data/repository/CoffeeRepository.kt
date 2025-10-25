@@ -31,11 +31,11 @@ interface CoffeeRepository {
     suspend fun addBrew(brew: Brew): Long
     suspend fun updateBrew(brew: Brew)
     suspend fun deleteBrew(brew: Brew)
+    suspend fun deleteBrewAndRestoreStock(brew: Brew) // NYTT
     suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long
 
     // --- NY FUNKTION ---
     fun getBrewsForBean(beanId: Long): Flow<List<Brew>>
-    // --- SLUT NY FUNKTION ---
 
     // --- BrewSample ---
     fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
