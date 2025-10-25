@@ -45,9 +45,7 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
     // --- State för att visa resultat (oförändrat) ---
     private val _completedBrewMetrics = MutableStateFlow<BrewMetrics?>(null)
-    val completedBrewMetrics: StateFlow<BrewMetrics?> = _completedBrewMetrics.asStateFlow()
     private val _completedBrewSamples = MutableStateFlow<List<BrewSample>>(emptyList())
-    val completedBrewSamples: StateFlow<List<BrewSample>> = _completedBrewSamples.asStateFlow()
 
     // --- NYTT: State för att veta om tidigare bryggningar finns ---
     val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()
@@ -60,13 +58,12 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
 
     // --- Funktioner för att uppdatera setup state (oförändrade) ---
     fun selectBean(bean: Bean?) { brewSetupState = brewSetupState.copy(selectedBean = bean) }
-    fun onDoseChange(dose: String) { if (dose.matches(Regex("^\\d*\\.?\\d*\$"))) brewSetupState = brewSetupState.copy(doseGrams = dose) }
+    fun onDoseChange(dose: String) { if (dose.matches(Regex("^\\d*\\.?\\d*$"))) brewSetupState = brewSetupState.copy(doseGrams = dose) }
     fun selectGrinder(grinder: Grinder?) { brewSetupState = brewSetupState.copy(selectedGrinder = grinder) }
     fun onGrindSettingChange(setting: String) { brewSetupState = brewSetupState.copy(grindSetting = setting) }
-    fun onGrindSpeedChange(rpm: String) { if (rpm.matches(Regex("^\\d*\$"))) brewSetupState = brewSetupState.copy(grindSpeedRpm = rpm) }
+    fun onGrindSpeedChange(rpm: String) { if (rpm.matches(Regex("^\\d*$"))) brewSetupState = brewSetupState.copy(grindSpeedRpm = rpm) }
     fun selectMethod(method: Method?) { brewSetupState = brewSetupState.copy(selectedMethod = method) }
-    fun onBrewTempChange(temp: String) { if (temp.matches(Regex("^\\d*\\.?\\d*\$"))) brewSetupState = brewSetupState.copy(brewTempCelsius = temp) }
-    fun onNotesChange(notes: String) { brewSetupState = brewSetupState.copy(notes = notes) }
+    fun onBrewTempChange(temp: String) { if (temp.matches(Regex("^\\d*\\.?\\d*$"))) brewSetupState = brewSetupState.copy(brewTempCelsius = temp) }
 
     fun isSetupValid(): Boolean { return brewSetupState.selectedBean != null && brewSetupState.doseGrams.toDoubleOrNull()?.let { it > 0 } == true && brewSetupState.selectedMethod != null }
     fun getCurrentSetup(): BrewSetupState { return brewSetupState }
@@ -153,7 +150,7 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
             try {
                 // Använd den enkla 'addBrew' istället för 'addBrewWithSamples'
                 repository.addBrew(newBrew)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Hantera fel, t.ex. logga
                 null
             }

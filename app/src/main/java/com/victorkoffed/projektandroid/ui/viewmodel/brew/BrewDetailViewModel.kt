@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue // Importera för delegated properties
 import androidx.compose.runtime.mutableStateOf // Importera för delegated properties
 import androidx.compose.runtime.setValue // Importera för delegated properties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.*
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
@@ -155,9 +154,9 @@ class BrewDetailViewModel(
     // Funktioner för att uppdatera redigerings-states från UI
     fun onEditGrinderSelected(grinder: Grinder?) { editSelectedGrinder = grinder }
     fun onEditGrindSettingChanged(value: String) { editGrindSetting = value }
-    fun onEditGrindSpeedRpmChanged(value: String) { if (value.matches(Regex("^\\d*\$"))) editGrindSpeedRpm = value }
+    fun onEditGrindSpeedRpmChanged(value: String) { if (value.matches(Regex("^\\d*$"))) editGrindSpeedRpm = value }
     fun onEditMethodSelected(method: Method?) { editSelectedMethod = method }
-    fun onEditBrewTempChanged(value: String) { if (value.matches(Regex("^\\d*\\.?\\d*\$"))) editBrewTempCelsius = value }
+    fun onEditBrewTempChanged(value: String) { if (value.matches(Regex("^\\d*\\.?\\d*$"))) editBrewTempCelsius = value }
     fun onEditNotesChanged(value: String) { editNotes = value }
 
 

@@ -1,6 +1,7 @@
 package com.victorkoffed.projektandroid.ui.screens.bean
 
 // --- Core Compose & Foundation ---
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,11 +34,11 @@ import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 // --- Java Util & Text Formatting ---
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit // <-- NY IMPORT FÖR ÅLDER
 
 // Återanvändbar date formatter
+@SuppressLint("ConstantLocale")
 private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -150,6 +151,7 @@ fun BeanCard(
 
 
 // AddBeanDialog (Oförändrad, finns kvar i BeanScreen)
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBeanDialog(

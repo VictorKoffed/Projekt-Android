@@ -6,11 +6,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-// --- NYA IMPORTER ---
-import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl
 import androidx.camera.core.FocusMeteringAction
-// --- SLUT NYA IMPORTER ---
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -19,9 +16,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-// --- NYA IMPORTER ---
 import androidx.compose.foundation.gestures.detectTapGestures
-// --- SLUT NYA IMPORTER ---
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -33,11 +28,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-// --- NYA IMPORTER ---
 import androidx.compose.ui.input.pointer.pointerInput
-// --- SLUT NYA IMPORTER ---
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -109,14 +101,12 @@ private fun CameraCaptureScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     // val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) } // <-- BORTTAGEN
 
-    var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     val imageCapture = remember { ImageCapture.Builder().build() }
-    val cameraSelector = remember(lensFacing) {
-        CameraSelector.Builder().requireLensFacing(lensFacing).build()
-    }
+    val cameraSelector = remember(lensFacing, CameraSelector.Builder().requireLensFacing(lensFacing)::build)
 
     // --- NYTT: Kom ihåg PreviewView och CameraControl ---
     val previewView = remember { PreviewView(context) }
@@ -128,7 +118,7 @@ private fun CameraCaptureScreen(
     LaunchedEffect(lensFacing) {
         val cameraProvider = context.getCameraProvider() // Använd suspend-hjälpfunktionen
         val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView.surfaceProvider)
+            it.surfaceProvider = previewView.surfaceProvider
         }
 
         try {

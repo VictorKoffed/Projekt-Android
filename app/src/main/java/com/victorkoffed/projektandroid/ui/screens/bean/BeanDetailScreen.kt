@@ -1,5 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.bean
 
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -20,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.victorkoffed.projektandroid.CoffeeJournalApplication
@@ -44,7 +44,9 @@ import kotlinx.coroutines.launch
 
 
 // Formatterare
+@SuppressLint("ConstantLocale")
 private val detailDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+@SuppressLint("ConstantLocale")
 private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,7 +94,7 @@ fun BeanDetailScreen(
                 title = { Text(state.bean?.name ?: "Loading bean...") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -282,6 +284,7 @@ fun DetailRow(label: String, value: String) {
 
 // --- Dialogrutor (Flyttade från BeanScreen.kt och Modifierade) ---
 
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditBeanDialog(
@@ -310,7 +313,7 @@ fun EditBeanDialog(
         val date = detailDateFormat.parse(editRoastDateStr)!!
         calendar.time = date
         Triple(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         calendar.time = Date()
         Triple(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
     }

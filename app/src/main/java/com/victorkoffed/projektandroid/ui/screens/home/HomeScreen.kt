@@ -5,11 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape // <-- NY IMPORT
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Menu
@@ -20,22 +19,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-// import androidx.compose.ui.draw.shadow // Behövs ej
-import androidx.compose.ui.graphics.Color // <-- NY IMPORT
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.R
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
-// --- NY IMPORT FÖR Screen ---
 import com.victorkoffed.projektandroid.ui.navigation.Screen
-// --- SLUT NY IMPORT ---
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.RecentBrewItem
@@ -44,11 +39,8 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
-
-// --- NYA IMPORTER FÖR SNACKBAR ---
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.launch
-// --- SLUT NYA IMPORTER ---
 
 
 // Färgdefinitionen antas vara tillgänglig i MainActivity eller på annat ställe.

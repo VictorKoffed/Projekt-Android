@@ -105,7 +105,7 @@ class BeanDetailViewModel(
         if (dateString.isNullOrBlank()) return null
         return try {
             dateFormat.parse(dateString)
-        } catch (e: ParseException) {
+        } catch (_: ParseException) {
             null
         }
     }

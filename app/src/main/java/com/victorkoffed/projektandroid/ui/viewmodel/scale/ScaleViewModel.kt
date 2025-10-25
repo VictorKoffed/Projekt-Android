@@ -25,6 +25,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Date
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
+import androidx.core.content.edit
+
 // --- SLUT PÅ IMPORTER ---
 
 // --- NYA KONSTANTER ---
@@ -264,7 +266,7 @@ class ScaleViewModel : AndroidViewModel {
     }
 
     fun setRememberScaleEnabled(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled).apply()
+        sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
         Log.d("ScaleViewModel", "Set remember scale enabled: $enabled")
         // Om användaren avmarkerar, glöm den sparade adressen
         if (!enabled) {
@@ -284,11 +286,11 @@ class ScaleViewModel : AndroidViewModel {
     private fun saveRememberedScaleAddress(address: String?) {
         // Spara bara om "remember" är aktiverat
         if (isRememberScaleEnabled()) {
-            sharedPreferences.edit().putString(PREF_REMEMBERED_SCALE_ADDRESS, address).apply()
+            sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
             Log.d("ScaleViewModel", "Saved scale address: $address")
         } else {
             // Om "remember" inte är aktivt, se till att adressen är rensad
-            sharedPreferences.edit().remove(PREF_REMEMBERED_SCALE_ADDRESS).apply()
+            sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
             Log.d("ScaleViewModel", "Remember scale disabled, cleared saved address.")
         }
     }

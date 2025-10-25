@@ -1,4 +1,4 @@
-package com.example.labkotlinapi
+package com.victorkoffed.projektandroid
 
 import org.junit.Test
 

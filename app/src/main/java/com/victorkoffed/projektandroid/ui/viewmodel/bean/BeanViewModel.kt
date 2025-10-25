@@ -31,7 +31,7 @@ class BeanViewModel(private val repository: CoffeeRepository) : ViewModel() {
         if (dateString.isNullOrBlank()) return null
         return try {
             SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
-        } catch (e: ParseException) {
+        } catch (_: ParseException) {
             null // Returnera null om formatet är fel
         }
     }

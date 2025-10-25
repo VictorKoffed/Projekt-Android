@@ -2,7 +2,6 @@ package com.victorkoffed.projektandroid.ui.viewmodel.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -10,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.util.Date // <-- NY IMPORT
+import java.util.Date
 
 // Data class för att hålla data som behövs för en bryggning i listan
 data class RecentBrewItem(
@@ -21,7 +20,7 @@ data class RecentBrewItem(
 /**
  * ViewModel for the Home screen.
  */
-class HomeViewModel(private val repository: CoffeeRepository) : ViewModel() {
+class HomeViewModel(repository: CoffeeRepository) : ViewModel() {
 
     // Hämta de 5 senaste bryggningarna
     val recentBrews: StateFlow<List<RecentBrewItem>> = repository.getAllBrews()

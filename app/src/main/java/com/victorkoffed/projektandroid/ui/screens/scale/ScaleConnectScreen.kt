@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,14 +21,11 @@ import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermissionLauncher
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
-import kotlinx.coroutines.flow.firstOrNull
-// --- NYA IMPORTER FÖR SNACKBAR ---
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-// --- SLUT NYA IMPORTER ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -212,7 +210,7 @@ private fun ScanningView(
         */
         // --- SLUT BORTTAGEN ---
 
-        Divider()
+        HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
         DeviceList(devices, isScanning, connectionState, onDeviceClick) // Skicka vidare
     }
 }

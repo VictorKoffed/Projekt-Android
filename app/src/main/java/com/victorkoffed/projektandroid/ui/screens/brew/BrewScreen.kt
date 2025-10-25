@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 // Importera ALLT från db-paketet för enkelhetens skull
-import com.victorkoffed.projektandroid.data.db.*
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- KONTROLLERA DENNA IMPORT
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
@@ -67,7 +66,7 @@ fun BrewScreen(
                 title = { Text("New Brew") }, // Byt titel till något mer passande
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to Home")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
                     }
                 }
             )

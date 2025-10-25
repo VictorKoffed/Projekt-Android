@@ -1,6 +1,7 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
 // Core
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,7 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 // Material 3
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 // UI helpers
 import androidx.compose.ui.Alignment
@@ -34,20 +36,15 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 // Data
-import com.victorkoffed.projektandroid.CoffeeJournalApplication
 import com.victorkoffed.projektandroid.data.db.*
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory
 // Util
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -67,6 +64,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.core.graphics.withSave
+
 // --- SLUT NYA IMPORTER ---
 
 
@@ -81,7 +80,6 @@ private val AddPicFgGray = Color(0xFF606060)   // mörkgrå ikon/text
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewDetailScreen(
-    brewId: Long,
     onNavigateBack: () -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToImageFullscreen: (String) -> Unit,
@@ -158,7 +156,7 @@ fun BrewDetailScreen(
                         }
                     } else {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Tillbaka")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tillbaka")
                         }
                     }
                 },
@@ -225,7 +223,7 @@ fun BrewDetailScreen(
                                         .height(250.dp)
                                         .clickable {
                                             if (!isEditing) {
-                                                onNavigateToImageFullscreen(currentBrew.imageUri!!)
+                                                onNavigateToImageFullscreen(currentBrew.imageUri)
                                             }
                                         }
                                 )
@@ -422,6 +420,7 @@ fun DetailRow(label: String, value: String) {
 }
 
 // ---------- Summary & rows ----------
+@SuppressLint("DefaultLocale")
 @Composable
 fun BrewSummaryCard(state: BrewDetailState) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
@@ -470,7 +469,11 @@ fun BrewEditCard(
             DetailRow("Bean:", state.bean?.name ?: "-")
             DetailRow("Date:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
             DetailRow("Dose:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
-            Divider(Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(
+                Modifier.padding(vertical = 8.dp),
+                DividerDefaults.Thickness,
+                DividerDefaults.color
+            )
             EditDropdownSelector(
                 label = "Grinder",
                 options = availableGrinders,
@@ -594,7 +597,7 @@ fun BrewSamplesGraph(
     }
 
     val hasFlowData = remember(samples) {
-        samples.any { it.flowRateGramsPerSecond != null && it.flowRateGramsPerSecond!! > 0 }
+        samples.any { it.flowRateGramsPerSecond != null && it.flowRateGramsPerSecond > 0 }
     }
 
     Canvas(modifier = modifier) {
@@ -643,10 +646,8 @@ fun BrewSamplesGraph(
                     val yHalf = graphEndY - (halfMaxFlow / maxFlow) * graphHeight
                     drawText("${halfMaxFlow.toInt()} g/s", graphEndX + 4.dp.toPx(), yHalf + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                 }
-                if (roundedMaxFlow > 4f) {
-                    val yLow = graphEndY - (2f / maxFlow) * graphHeight
-                    drawText("2 g/s", graphEndX + 4.dp.toPx(), yLow + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
-                }
+                val yLow = graphEndY - (2f / maxFlow) * graphHeight
+                drawText("2 g/s", graphEndX + 4.dp.toPx(), yLow + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
             }
 
             val timeGridInterval = 30000f
@@ -704,12 +705,23 @@ fun BrewSamplesGraph(
 
         drawContext.canvas.nativeCanvas.apply {
             drawText("Tid", graphStartX + graphWidth / 2, size.height - 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
-            save(); rotate(-90f)
-            drawText("Weight (g)", -(graphStartY + graphHeight / 2), 60.dp.toPx() / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
-            if (hasFlowData) {
-                drawText("Flow (g/s)", -(graphStartY + graphHeight / 2), size.width - 60.dp.toPx() / 2 - axisTitlePaint.descent(), axisTitlePaintFlow)
+            withSave {
+                 rotate(-90f)
+                drawText(
+                    "Weight (g)",
+                    -(graphStartY + graphHeight / 2),
+                    60.dp.toPx() / 2 + axisTitlePaint.textSize / 3,
+                    axisTitlePaint
+                )
+                if (hasFlowData) {
+                    drawText(
+                        "Flow (g/s)",
+                        -(graphStartY + graphHeight / 2),
+                        size.width - 60.dp.toPx() / 2 - axisTitlePaint.descent(),
+                        axisTitlePaintFlow
+                    )
+                }
             }
-            restore()
         }
     }
 }
@@ -777,7 +789,7 @@ fun FullscreenImageScreen(
                 title = { Text("Brew Photo", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)

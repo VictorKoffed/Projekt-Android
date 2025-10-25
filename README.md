@@ -47,8 +47,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List
 
-1. Rensa upp varningar och göra koden snyggare, kolla över kommentarer och imports (UI map left).
-2. Data migration to new device?
+1. Rensa upp varningar och göra koden snyggare
+2. Fix imports
+3. kolla över kommentarer
+4. Data migration to new device?
 
 ## 👤 Author
 

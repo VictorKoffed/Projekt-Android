@@ -1,32 +1,27 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.* // Inkluderar Spacer härifrån
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-// IMPORTERA SPECIFIKT för tydlighet
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api // VIKTIGT
-import androidx.compose.material3.FilterChip // VIKTIGT
-import androidx.compose.material3.FilterChipDefaults // VIKTIGT
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme // VIKTIGT
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-// import androidx.compose.material3.Spacer // Behövs inte separat om layout.* finns
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-// Slut på specifika importer
-
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +33,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,13 +41,11 @@ import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch // <-- DEN HÄR RADEN LADES TILL
+import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.max
-
-// --- NY IMPORT FÖR NAVIGATIONS-RUTTER ---
 import com.victorkoffed.projektandroid.ui.navigation.Screen
-// --- SLUT NY IMPORT ---
+import androidx.core.graphics.withSave
 
 @OptIn(ExperimentalMaterial3Api::class) // Se till att denna finns
 @Composable
@@ -85,10 +77,10 @@ fun LiveBrewScreen(
         // Om vi tappar anslutning (oavsett inspelningsstatus)
         if (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) {
             // Sätt specifikt felmeddelande om det är ett Error-state
-            if (connectionState is BleConnectionState.Error) {
-                alertMessage = "Error connecting to the scale: ${connectionState.message}."
+            alertMessage = if (connectionState is BleConnectionState.Error) {
+                "Error connecting to the scale: ${connectionState.message}."
             } else {
-                alertMessage = "The connection to the scale was lost."
+                "The connection to the scale was lost."
             }
             // Om inspelning eller nedräkning pågick, lägg till info om att den stoppats
             if (isRecording || isPaused || countdown != null) {
@@ -204,6 +196,7 @@ fun LiveBrewScreen(
 }
 
 // --- StatusDisplay (UPPDATERAD) ---
+@SuppressLint("DefaultLocale")
 @Composable
 fun StatusDisplay(
     currentTimeMillis: Long,
@@ -330,7 +323,7 @@ fun BrewGraph(
         // Skalning (endast tid och massa)
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples
-            .maxOfOrNull { it.massGrams ?: 0.0 }
+            .maxOfOrNull { it.massGrams }
             ?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
 
@@ -374,9 +367,15 @@ fun BrewGraph(
 
             // Axeltitlar (endast vikt och tid)
             drawText("Time", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
-            save(); rotate(-90f)
-            drawText("Weight", -size.height / 2, yLabelPadding / 2 - axisLabelPaint.descent(), axisLabelPaint)
-            restore()
+            withSave {
+                 rotate(-90f)
+                drawText(
+                    "Weight",
+                    -size.height / 2,
+                    yLabelPadding / 2 - axisLabelPaint.descent(),
+                    axisLabelPaint
+                )
+            }
         }
 
         // Rita axlar (endast vänster Y och X)
@@ -388,7 +387,7 @@ fun BrewGraph(
             val path = Path()
             samples.forEachIndexed { index, sample ->
                 val x = yAxisX + (sample.timeMillis.toFloat() / maxTime) * graphWidth
-                val mass = (sample.massGrams ?: 0.0).toFloat()
+                val mass = sample.massGrams.toFloat()
                 val y = xAxisY - (mass / maxMass) * graphHeight
                 val clampedX = x.coerceIn(yAxisX, size.width)
                 val clampedY = y.coerceIn(axisPadding, xAxisY)
@@ -500,7 +499,7 @@ fun LiveBrewScreenPreview() {
         }
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
-        var time by remember { mutableStateOf(0L) }
+        var time by remember { mutableLongStateOf(0L) }
         var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale")) }
         var countdown by remember { mutableStateOf<Int?>(null) } // <-- NYTT PREVIEW STATE
 
@@ -511,7 +510,7 @@ fun LiveBrewScreenPreview() {
 
         val currentWeight = ScaleMeasurement(
             weightGrams = if (isRec || isPaused)
-                ((nextSample?.massGrams ?: lastSample.massGrams ?: 0.0).toFloat())
+                ((nextSample?.massGrams ?: lastSample.massGrams).toFloat())
             else 0f,
             flowRateGramsPerSecond = if (isRec || isPaused)
                 ((nextSample?.flowRateGramsPerSecond ?: lastSample.flowRateGramsPerSecond ?: 0.0).toFloat())
