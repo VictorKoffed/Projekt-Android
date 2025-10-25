@@ -168,17 +168,22 @@ class BookooBleClient(private val context: Context) {
 
         Log.i("BookooBleClient", "Attempting to connect to $address...")
 
-        // Städa upp eventuell gammal GATT-instans FÖRST
+        // Steg 1: Rensa upp eventuell gammal GATT-instans (postar Disconnected event)
         handleDisconnect(gatt)
 
-        connectionState.value = BleConnectionState.Connecting // Sätter state till Connecting innan anropet till connectGatt
+        // Steg 2: Posta Connecting-state till huvudtråden. Detta event kommer att exekveras EFTER det Disconnected-event
+        // som postades i Steg 1, vilket garanterar att vår Connecting-state är den sista på tråden innan anslutning.
+        mainHandler.post {
+            connectionState.value = BleConnectionState.Connecting
+        }
 
+        // Steg 3: Starta själva anslutningsprocessen på en IO-tråd med fördröjning
         scope.launch {
             try {
                 val device = btAdapter.getRemoteDevice(address)
 
-                // En kort fördröjning kan hjälpa till att stabilisera BLE-stacken efter föregående stängning
-                delay(100L)
+                // Fördröjning för att ge tid för GATT-cleanup att slutföras i OS-lagret.
+                delay(1000L)
 
                 // Skapa en NY gatt-instans (connectGatt returnerar null om fel uppstår)
                 val newGatt = device.connectGatt(
@@ -188,8 +193,11 @@ class BookooBleClient(private val context: Context) {
                     BluetoothDevice.TRANSPORT_LE // Explicit LE transport
                 )
 
-                // Uppdatera 'gatt' variabeln på huvudtråden (trådsäkert)
+                // Steg 4: Uppdatera 'gatt' variabeln på huvudtråden (trådsäkert)
                 mainHandler.post {
+                    // Vi kan nu anta att om state är Connecting, är det vår *nya* Connecting state (från steg 2)
+                    // och att vi avser att ansluta. Den gamla checken är inte längre nödvändig men säkrar mot
+                    // andra oväntade tillstånd.
                     if (connectionState.value is BleConnectionState.Connecting) {
                         gatt = newGatt
                         if (gatt == null) {
@@ -199,7 +207,7 @@ class BookooBleClient(private val context: Context) {
                             Log.d("BookooBleClient", "connectGatt called successfully for $address. Waiting for callback...")
                         }
                     } else {
-                        // Om state ändrats under coroutinen (t.ex. avbruten), stäng den nya GATT-instansen direkt
+                        // Om state ändrats under coroutinen (t.ex. avbruten manuellt), stäng den nya GATT-instansen
                         Log.w("BookooBleClient", "State changed during connect setup for $address. Closing new GATT instance.")
                         handleDisconnect(newGatt)
                     }
@@ -284,7 +292,7 @@ class BookooBleClient(private val context: Context) {
             gattInstance?.disconnect() // Skickar signal till enheten
             gattInstance?.close() // Frigör resurser i Android-stacken
         } catch (e: SecurityException) {
-            Log.e("BookooBleClient", "Bluetooth permission missing during cleanup for $address", e)
+            Log.e("BookooBleClient", "Bluetooth permission missing under cleanup for $address", e)
         } catch (e: Exception) {
             Log.e("BookooBleClient", "Exception during GATT cleanup for $address", e)
         } finally {
