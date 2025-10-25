@@ -22,6 +22,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -187,7 +188,20 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     // --- NYTT: Lade till snackbarHost ---
-                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                    snackbarHost = {
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                            snackbar = { snackbarData ->
+                                // Använd appens primärfärg (CoffeeBrown) för bakgrund
+                                Snackbar(
+                                    snackbarData = snackbarData,
+                                    containerColor = MaterialTheme.colorScheme.primary, // DCC7AA
+                                    contentColor = MaterialTheme.colorScheme.onPrimary, // Black
+                                    actionColor = MaterialTheme.colorScheme.onPrimary // Black
+                                )
+                            }
+                        )
+                    }
                     // --- SLUT NYTT ---
                 ) { innerPadding ->
                     // --- NYTT: NavHost ersätter AnimatedContent ---

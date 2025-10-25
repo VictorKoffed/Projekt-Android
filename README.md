@@ -44,10 +44,8 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 ##  Known issue (Bugfix)
 
 1. The auto connect BLE dont work.
-2. Change background of snackbar to fit the app?
 2. Clean up warnings and refactor
 4. Check comments
-5. Check so UX is in English
 
 ##  ToDo List (Future Version 0.2)
 

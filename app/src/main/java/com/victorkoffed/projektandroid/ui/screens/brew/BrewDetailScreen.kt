@@ -62,6 +62,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -232,7 +233,14 @@ fun BrewDetailScreen(
             )
         },
         // --- NYTT: Lägg till snackbarHost ---
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { snackbarData ->
+                    Snackbar(snackbarData = snackbarData, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, actionColor = MaterialTheme.colorScheme.onPrimary)
+                }
+            )
+        }
         // --- SLUT NYTT ---
     ) { paddingValues ->
         when {
