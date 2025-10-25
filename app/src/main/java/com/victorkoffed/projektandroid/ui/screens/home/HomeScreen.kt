@@ -149,7 +149,7 @@ fun HomeScreen(
                     Surface(
                         modifier = Modifier
                             .padding(end = 8.dp)
-                            .size(48.dp) // ÖKAD STORLEK
+                            .size(38.dp) // ÖKAD STORLEK
                             .clip(CircleShape)
                             // Klicka kör startBrewAction
                             .clickable(onClick = startBrewAction),

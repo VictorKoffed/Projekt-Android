@@ -44,19 +44,16 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 ##  Known issue (Bugfix)
 
 1. The auto connect BLE dont work.
+2. Clean up warnings and refactor
+3. Fix imports
+4. Check comments
+5. Check so UX is in English
 
 ##  ToDo List (Future Version 1.1)
 
-
-1. Rensa upp varningar och göra koden snyggare
-2. Göra om start brew plustecken till samma höjd som Home, ser lite konstigt ut nu.
-2. Fix imports
-3. kolla över kommentarer
-4. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
-5. Data migration to new device? OR add a cloud database firebase?
-6. Check so UX is in English
-7. Archive old beans and brews to remove them from home?
-8. Add some templates for methods and info about them as pictures etc?
+1. Data migration to new device? OR add a cloud database firebase?
+2. Archive old beans and brews to remove them from home?
+3. Add some templates for methods and info about them as pictures etc?
 
 ## 👤 Author
 
