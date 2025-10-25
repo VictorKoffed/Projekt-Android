@@ -1,11 +1,13 @@
 package com.victorkoffed.projektandroid.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme // <-- NY IMPORT
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme // <-- NY IMPORT
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState // <-- NY IMPORT
+import androidx.compose.runtime.getValue // <-- NY IMPORT
 import androidx.compose.ui.graphics.Color
+import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager // <-- NY IMPORT
 
 
 // --- Huvudfärger (från Color.kt) ---
@@ -28,8 +30,8 @@ private val LightCoffeeColorScheme = lightColorScheme(
     tertiaryContainer = CoffeeBrown.copy(alpha = 0.3f),
     onTertiaryContainer = Black,
 
-    background = BackgroundLightGray,
-    surface = Color.White,
+    background = GentleBackground,
+    surface = GentleBackground,
     onSurface = Color.Black,
     onBackground = Color.Black,
 
@@ -72,14 +74,20 @@ private val DarkCoffeeColorScheme = darkColorScheme(
 
 /**
  * Huvudkomponent för att tillämpa temat.
- * Väljer nu tema baserat på `darkTheme`-parametern.
+ * Väljer nu tema baserat på det sparade valet i ThemePreferenceManager.
  */
 @Composable
 fun ProjektAndroidTheme(
-    // Kontrollerar systeminställningen för mörkt läge som standard
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // NYTT: Kräver ThemePreferenceManager för att hämta det sparade valet.
+    themePreferenceManager: ThemePreferenceManager,
     content: @Composable () -> Unit
 ) {
+    // Läs det sparade mörkerläge-valet från ThemePreferenceManager som ett Compose State.
+    val manualDarkMode by themePreferenceManager.isDarkMode.collectAsState()
+
+    // Använder den manuella inställningen, oavsett systeminställningen.
+    val darkTheme = manualDarkMode
+
     val colorScheme = when {
         darkTheme -> DarkCoffeeColorScheme
         else -> LightCoffeeColorScheme

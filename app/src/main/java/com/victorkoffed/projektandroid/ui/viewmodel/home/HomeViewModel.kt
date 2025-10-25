@@ -2,6 +2,7 @@ package com.victorkoffed.projektandroid.ui.viewmodel.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Date
 
 // Data class för att förenkla visning av en bryggning i listan, inkluderar bönans namn.
@@ -20,7 +22,23 @@ data class RecentBrewItem(
 /**
  * ViewModel för Hemskärmen. Tillhandahåller statistik och de senaste bryggningarna.
  */
-class HomeViewModel(repository: CoffeeRepository) : ViewModel() {
+class HomeViewModel(
+    repository: CoffeeRepository,
+    private val themePreferenceManager: ThemePreferenceManager // <-- NYTT ARGUMENT
+) : ViewModel() {
+
+    // Observera det aktuella mörkerläge-valet i ViewModel
+    val isDarkMode: StateFlow<Boolean> = themePreferenceManager.isDarkMode
+
+    /**
+     * Växlar mellan ljust och mörkt läge och sparar det manuella valet.
+     * Denna funktion kan anropas från en Composable (t.ex. en inställningsknapp).
+     */
+    fun toggleDarkMode(isDark: Boolean) {
+        viewModelScope.launch {
+            themePreferenceManager.setManualDarkMode(isDark)
+        }
+    }
 
     // StateFlow för de 5 senaste bryggningarna, mappade med respektive bönas namn.
     val recentBrews: StateFlow<List<RecentBrewItem>> = repository.getAllBrews()

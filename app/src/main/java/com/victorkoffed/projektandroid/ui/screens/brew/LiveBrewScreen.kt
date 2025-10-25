@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.withSave
 import com.victorkoffed.projektandroid.data.db.BrewSample
+import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.navigation.Screen
@@ -529,7 +531,12 @@ fun BrewControls(
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
-    ProjektAndroidTheme {
+    // Hämta en tillfällig Context för att kunna skapa ThemePreferenceManager
+    val context = LocalContext.current
+    // Skapa en dummy-instans av ThemePreferenceManager för Preview
+    val themeManager = remember { ThemePreferenceManager(context) }
+
+    ProjektAndroidTheme(themePreferenceManager = themeManager) { // <--- NYTT ARGUMENT
         // Skapar simulerade sample-data för grafen
         val previewSamples = remember {
             listOf(

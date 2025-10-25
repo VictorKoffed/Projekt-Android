@@ -27,11 +27,11 @@ val GraphWeightBlack = Color(0xFF000000)
 
 // --- PLATSHÅLLARFÄRGER (SPECIFIKA FÖR UTVALDA KOMPONENTER) ---
 
-// Ljusgrå bakgrund. Denna färg är i praktiken ersatt av MaterialTheme.colorScheme.background/surfaceVariant
-val BackgroundLightGray = Color(0xFFF0F0F0)
-
 // Grå bakgrund för "Lägg till bild"-platshållaren
 val PlaceholderGray = Color(0xFFE7E7E7)
 
 // Mörkgrå färg för ikoner/text inuti bildplatshållaren (för kontrast)
 val PlaceholderDarkGray = Color(0xFF606060)
+
+// NY FÄRG: Mjuk beige färg för bakgrund och ytor, ersätter skarp vit/ljusgrå.
+val GentleBackground = Color(0xFFF5EFE6)

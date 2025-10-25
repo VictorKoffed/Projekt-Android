@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Coffee
@@ -45,10 +43,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -124,7 +120,12 @@ fun ThemedSnackbar(data: SnackbarData) {
  */
 class MainActivity : ComponentActivity() {
 
-    // Instanser av ViewModels. Används för att injicera till Compose-funktioner via "viewModel()" i NavHost.
+    // Referens till applikationsinstansen för att komma åt repositories och hanterare.
+    private val app: CoffeeJournalApplication by lazy {
+        application as CoffeeJournalApplication
+    }
+
+    // Instanser av ViewModels.
     private lateinit var scaleVm: ScaleViewModel
     private lateinit var grinderVm: GrinderViewModel
     private lateinit var beanVm: BeanViewModel
@@ -134,14 +135,14 @@ class MainActivity : ComponentActivity() {
     // ViewModels som initialiseras via delegation och är tillgängliga för hela aktiviteten.
     private val coffeeImageVm: CoffeeImageViewModel by viewModels()
 
-    // Referens till applikationsinstansen för att komma åt repositories.
-    private lateinit var app: CoffeeJournalApplication
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // VIKTIGT: Byt tillbaka till Compose-temat (som har den mjuka bakgrunden i sin LightColorScheme)
+        // Detta måste göras efter att uppstartstemat (Theme.App.Starting) har visats.
+        setTheme(R.style.Theme_ProjektAndroid)
+
         super.onCreate(savedInstanceState)
 
-        // Hämta repositories och ViewModels från Application-instansen.
-        app = application as CoffeeJournalApplication
         val coffeeRepository = app.coffeeRepository
         val scaleRepository = BookooScaleRepositoryImpl(this) // Specifik implementering för Bookoo Scale
 
@@ -156,18 +157,19 @@ class MainActivity : ComponentActivity() {
         methodVm = ViewModelProvider(this, methodViewModelFactory)[MethodViewModel::class.java]
         val brewViewModelFactory = BrewViewModelFactory(coffeeRepository)
         brewVm = ViewModelProvider(this, brewViewModelFactory)[BrewViewModel::class.java]
-        val homeViewModelFactory = HomeViewModelFactory(coffeeRepository)
+
+        // HomeViewModel med ThemePreferenceManager-beroende
+        val homeViewModelFactory = HomeViewModelFactory(coffeeRepository, app.themePreferenceManager)
         homeVm = ViewModelProvider(this, homeViewModelFactory)[HomeViewModel::class.java]
 
 
         setContent {
-            // 1. STATE FÖR MÖRKT LÄGE (Använd DataStore/SharedPreferences för permanent lagring)
-            val systemTheme = isSystemInDarkTheme()
-            // Initialt tillstånd: spegla systemets, men kan ändras manuellt
-            var isDarkModeManual by remember { mutableStateOf(systemTheme) }
 
-            // 2. TILLÄMPA TEMAT MED DET MANUELLA TILLSTÅNDET
-            ProjektAndroidTheme(darkTheme = isDarkModeManual) {
+            // Läs det aktuella mörkerläge-valet från HomeViewModel
+            val isDarkModeManual by homeVm.isDarkMode.collectAsState()
+
+            // 2. TILLÄMPA TEMAT MED DET SPARADE VALET
+            ProjektAndroidTheme(themePreferenceManager = app.themePreferenceManager) {
 
                 // Konfigurerar Compose-navigering
                 val navController = rememberNavController()
@@ -218,7 +220,7 @@ class MainActivity : ComponentActivity() {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { isDarkModeManual = !isDarkModeManual }
+                                    .clickable { homeVm.toggleDarkMode(!isDarkModeManual) } // Klicka på raden växlar
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -226,7 +228,7 @@ class MainActivity : ComponentActivity() {
                                 Text("Dark Mode (Manual)")
                                 Switch(
                                     checked = isDarkModeManual,
-                                    onCheckedChange = { isDarkModeManual = it }
+                                    onCheckedChange = { homeVm.toggleDarkMode(it) } // Sätt nytt värde
                                 )
                             }
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
@@ -365,6 +367,7 @@ class MainActivity : ComponentActivity() {
                                     onSaveWithoutGraph = {
                                         // Använd aktivitetens scope för att spara.
                                         lifecycleScope.launch {
+                                            brewVm.getCurrentSetup()
                                             val newBrewId = brewVm.saveBrewWithoutSamples()
                                             if (newBrewId != null) {
                                                 // Navigera till detaljskärm och rensa setup-skärmen från stacken.
