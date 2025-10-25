@@ -45,17 +45,15 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. The auto connect BLE dont work.
 
-##  ToDo List
+##  ToDo List (Future)
 
 
 1. Rensa upp varningar och göra koden snyggare
-2. Brewdetails visar inte grindspeed? bara i edit?
-2. Göra så att man kan trycka på "notes" i brewdetailscreen utan att gå in på edit och kunna spara detta utan edit, knapp eller automatiskt?
-3. Fix imports
-4. kolla över kommentarer
-5. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
-6. Data migration to new device?
-7. Check so UX is in English
+2. Fix imports
+3. kolla över kommentarer
+4. den huvudsakliga accentfärgen (0xFFDCC7AA) används ibland som en hårdkodad val i Compose-filer (t.ex. i HomeScreen.kt) i stället för att konsekvent hämtas från MaterialTheme.colorScheme.primary (som är definierad i temat)
+5. Data migration to new device? OR add a cloud database firebase?
+6. Check so UX is in English
 7. Archive old beans and brews to remove them from home?
 
 ## 👤 Author

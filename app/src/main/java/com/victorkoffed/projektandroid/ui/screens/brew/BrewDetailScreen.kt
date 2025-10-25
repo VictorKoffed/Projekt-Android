@@ -481,6 +481,7 @@ fun BrewSummaryCard(state: BrewDetailState) {
             DetailRow("Method:", state.method?.name ?: "-")
             DetailRow("Grinder:", state.grinder?.name ?: "-")
             DetailRow("Grind set:", state.brew?.grindSetting ?: "-")
+            DetailRow("Grind speed:", state.brew?.grindSpeedRpm?.let { "%.0f RPM".format(it) } ?: "-")
             DetailRow("Temp:", state.brew?.brewTempCelsius?.let { "%.1f °C".format(it) } ?: "-")
         }
     }
