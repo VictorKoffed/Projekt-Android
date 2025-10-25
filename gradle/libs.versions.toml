@@ -1,31 +1,36 @@
 [versions]
 # --- ANDROID PLATFORM & KOTLIN ---
-agp = "8.13.0" # Android Gradle Plugin (AGP) version.
-kotlin = "2.2.20" # Kotlin-version (måste matcha KSP-versionen).
+# (Dina uppdaterade versioner)
+agp = "8.13.0" # Eller din uppdaterade version
+kotlin = "2.2.21" # Eller din uppdaterade version
+ksp = "2.2.20-2.0.3" # ELLER din uppdaterade version som matchar Kotlin
 
 # --- KÄRNBIBLIOTEK ---
-coreKtx = "1.17.0" # KTX extensions för Android Core.
-lifecycleRuntimeKtx = "2.9.4" # Lifecycle runtime för Coroutine-integration.
-activityCompose = "1.11.0" # Compose-integration för Activity.
+coreKtx = "1.17.0" # Eller din uppdaterade version
+lifecycleRuntimeKtx = "2.9.4" # Eller din uppdaterade version
+activityCompose = "1.11.0" # Eller din uppdaterade version
 
 # --- COMPOSE ---
-composeBom = "2025.10.00" # Compose Bill of Materials (BOM) för versionssynkronisering.
-foundation = "1.9.3" # Compose Foundation (layout- och interaktionsprimitiver).
+composeBom = "2025.10.01" # Din uppdaterade version
+# Ta bort 'foundation = "..."' här om du låter BOM styra den
 
 # --- DATALAGER ---
-room = "2.8.2" # Room databasbibliotek.
-ksp = "2.2.20-2.0.3" # Kotlin Symbol Processing (måste matcha Kotlin-versionen).
+room = "2.8.3" # Din uppdaterade version
+
+# --- HILT ---
+hilt = "2.57.2" # Din uppdaterade version (Kontrollera SENASTE STABILA)
+hiltNavigationCompose = "1.3.0" # Din uppdaterade version (Kontrollera SENASTE STABILA)
 
 # --- FUNKTIONELLA BERODEN ---
-volley = "1.2.1" # Nätverksbiblioteket Volley.
-coil = "2.7.0" # Coil för asynkron bildladdning i Compose.
-navigation-compose = "2.8.0-beta05" # Compose Navigation-bibliotek.
-camerax = "1.4.1" # CameraX-bibliotek för kamerafunktioner.
+volley = "1.2.1"
+coil = "2.7.0" # Eller din uppdaterade version
+navigation-compose = "2.9.5" # Din uppdaterade version (Kontrollera SENASTE STABILA)
+camerax = "1.5.1" # Din uppdaterade version (Kontrollera SENASTE STABILA)
 
 # --- TESTNING ---
-junit = "4.13.2" # Standard JUnit 4.
-junitVersion = "1.3.0" # AndroidX Test Ext JUnit.
-espressoCore = "3.7.0" # Espresso för UI-testning.
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
 
 
 [libraries]
@@ -33,24 +38,18 @@ espressoCore = "3.7.0" # Espresso för UI-testning.
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-# ViewModel-stöd i Compose. Använder samma version som lifecycleRuntimeKtx.
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 
 # --- COMPOSE UI ---
-# BOM för att hantera alla Compose-versioner.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-# Alla följande Compose-bibliotek (utan versionsreferens) styrs av BOM:en.
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-# Stöd för att observera LiveData i Compose.
 androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
-# Grundläggande layoutelement, men använder 'version.ref' eftersom den har en specifik version.
-androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
-# Material Icons (utökade och kärn-ikoner).
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" } # Ingen version.ref om BOM styr
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 
@@ -63,11 +62,18 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 # --- CAMERAX ---
-# Alla CameraX-moduler använder samma version (camerax).
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+
+# --- HILT ---
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+# Byt namn här för tydlighet om du använder KAPT
+hilt-compiler-kapt = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+# ELLER om du vill prova KSP för Hilt (mindre vanligt, kan kräva annan setup)
+# hilt-compiler-ksp = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 # --- ÖVRIGA FUNKTIONELLA BIBLIOTEK ---
 volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
@@ -85,3 +91,6 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+# Lägg till KAPT plugin definition
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
