@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Coffee
@@ -320,11 +321,28 @@ class MainActivity : ComponentActivity() {
                                     vm = beanVm,
                                     onBeanClick = { beanId ->
                                         navController.navigate(Screen.BeanDetail.createRoute(beanId))
-                                    }
+                                    },
+                                    onMenuClick = { // ADDED
+                                        scope.launch { drawerState.open() }
+                                    } // ADDED
                                 )
                             }
-                            composable(Screen.GrinderList.route) { GrinderScreen(grinderVm) }
-                            composable(Screen.MethodList.route) { MethodScreen(methodVm) }
+                            composable(Screen.GrinderList.route) {
+                                GrinderScreen(
+                                    grinderVm,
+                                    onMenuClick = { // ADDED
+                                        scope.launch { drawerState.open() }
+                                    } // ADDED
+                                )
+                            }
+                            composable(Screen.MethodList.route) {
+                                MethodScreen(
+                                    methodVm,
+                                    onMenuClick = { // ADDED
+                                        scope.launch { drawerState.open() }
+                                    } // ADDED
+                                )
+                            }
 
                             // --- Våg ---
                             composable(Screen.ScaleConnect.route) {

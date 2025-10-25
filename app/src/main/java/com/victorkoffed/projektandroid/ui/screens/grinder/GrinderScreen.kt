@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,10 +43,14 @@ import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 /**
  * Huvudskärm för att visa, lägga till, redigera och ta bort kvarnar.
  * Använder Compose State för att hantera vilka dialoger som visas.
+ * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GrinderScreen(vm: GrinderViewModel) {
+fun GrinderScreen(
+    vm: GrinderViewModel,
+    onMenuClick: () -> Unit // ADDED
+) {
     // Hämta kvarnar som en State från ViewModel
     val grinders by vm.allGrinders.collectAsState()
 
@@ -57,7 +62,17 @@ fun GrinderScreen(vm: GrinderViewModel) {
     var grinderToDelete by remember { mutableStateOf<Grinder?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Grinders") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Grinders") },
+                // ADDED: Navigation icon for the hamburger menu
+                navigationIcon = {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

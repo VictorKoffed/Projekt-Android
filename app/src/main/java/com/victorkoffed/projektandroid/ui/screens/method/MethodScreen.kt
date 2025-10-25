@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,10 +43,14 @@ import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 /**
  * Huvudskärm för att hantera bryggmetoder (t.ex. V60, Chemex, Aeropress).
  * Hanterar listvisning, samt tillägg, redigering och borttagning via dialoger.
+ * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MethodScreen(vm: MethodViewModel) {
+fun MethodScreen(
+    vm: MethodViewModel,
+    onMenuClick: () -> Unit // ADDED
+) {
     // Hämta listan med metoder som en Compose State
     val methods by vm.allMethods.collectAsState()
 
@@ -55,7 +60,17 @@ fun MethodScreen(vm: MethodViewModel) {
     var methodToDelete by remember { mutableStateOf<Method?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Brew Methods") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Brew Methods") },
+                // ADDED: Navigation icon for the hamburger menu
+                navigationIcon = {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

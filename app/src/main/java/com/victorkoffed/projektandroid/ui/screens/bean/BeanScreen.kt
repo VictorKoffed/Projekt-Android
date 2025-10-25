@@ -16,12 +16,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -55,18 +57,30 @@ private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
  * Hanterar visning, lägg till-dialogen och navigering till detaljvy.
  * @param vm ViewModel som tillhandahåller bönor som en Flow.
  * @param onBeanClick Callback för att navigera till detaljvyn för den klickade bönan.
+ * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BeanScreen(
     vm: BeanViewModel,
-    onBeanClick: (Long) -> Unit
+    onBeanClick: (Long) -> Unit,
+    onMenuClick: () -> Unit // ADDED
 ) {
     val beans by vm.allBeans.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Beans") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Beans") },
+                // ADDED: Navigation icon for the hamburger menu
+                navigationIcon = {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
