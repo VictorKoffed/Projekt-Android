@@ -72,15 +72,15 @@ fun GrinderScreen(vm: GrinderViewModel) {
                     items(grinders) { grinder ->
                         GrinderCard(
                             grinder = grinder,
-                            onClick = { grinderToEdit = grinder }, // Öppna redigering
-                            onDeleteClick = { grinderToDelete = grinder } // Visa bekräftelse
+                            onClick = { grinderToEdit = grinder }, // Open editing
+                            onDeleteClick = { grinderToDelete = grinder } // Show confirmation
                         )
                     }
                 }
             }
         }
 
-        // Dialog för att lägga till (oförändrad)
+        // Dialog for adding (unchanged)
         if (showAddDialog) {
             AddGrinderDialog(
                 onDismiss = { showAddDialog = false },
@@ -91,7 +91,7 @@ fun GrinderScreen(vm: GrinderViewModel) {
             )
         }
 
-        // Dialog för att redigera
+        // Dialog for editing
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
@@ -103,7 +103,7 @@ fun GrinderScreen(vm: GrinderViewModel) {
             )
         }
 
-        // Dialog för att bekräfta borttagning
+        // Dialog for delete confirmation
         grinderToDelete?.let { currentGrinder ->
             DeleteGrinderConfirmationDialog(
                 grinderName = currentGrinder.name,
@@ -128,7 +128,7 @@ fun GrinderCard(
             .fillMaxWidth()
             .clickable(onClick = onClick), // Gör kortet klickbart
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Ändring 1: Vit bakgrund
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Change 1: White background
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -143,14 +143,14 @@ fun GrinderCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete grinder",
-                    tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
+                    tint = MaterialTheme.colorScheme.primary // Change 2: DCC7AA color
                 )
             }
         }
     }
 }
 
-// Dialog för att lägga till (oförändrad)
+// Dialog for Adding (unchanged)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGrinderDialog(
@@ -165,7 +165,7 @@ fun AddGrinderDialog(
         title = { Text("Add new grinder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, singleLine = true)
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes (e.g. burrs)") })
             }
         },
@@ -179,7 +179,7 @@ fun AddGrinderDialog(
     )
 }
 
-// NY DIALOG: För att redigera kvarn
+// NEW DIALOG: For editing grinder
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditGrinderDialog(
@@ -196,8 +196,8 @@ fun EditGrinderDialog(
         title = { Text("Edit Grinder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Namn *") }, singleLine = true)
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Noteringar") })
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, singleLine = true)
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
             }
         },
         confirmButton = {
@@ -219,7 +219,7 @@ fun EditGrinderDialog(
     )
 }
 
-// NY DIALOG: För att bekräfta borttagning av kvarn
+// NEW DIALOG: For delete confirmation
 @Composable
 fun DeleteGrinderConfirmationDialog(
     grinderName: String,
@@ -234,7 +234,7 @@ fun DeleteGrinderConfirmationDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Ta bort") }
+            ) { Text("Delete") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

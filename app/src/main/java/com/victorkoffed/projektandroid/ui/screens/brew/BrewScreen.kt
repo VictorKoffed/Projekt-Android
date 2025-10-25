@@ -1,6 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
-// Importera ALLT från db-paketet för enkelhetens skull
+// Import ALL from the db package for simplicity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +46,7 @@ import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 
-// Importera grafen från sin plats (om den ligger i brew-mappen)
+// Import the graph from its location (if it is in the brew folder)
 // import com.victorkoffed.projektandroid.ui.screens.brew.BrewGraph // Används ej direkt här längre
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,11 +74,11 @@ fun BrewScreen(
     val scrollState = rememberScrollState()
     // REMOVED: val buttonColor = Color(0xFFDCC7AA) // Färgen från mockupen
 
-    // --- NYTT STATE FÖR DIALOG ---
+    // --- NEW STATE FOR DIALOG ---
     var showConnectionAlert by remember { mutableStateOf(false) }
-    // --- SLUT NYTT ---
+    // --- END NEW ---
 
-    // Rensar gamla resultat om vi navigerar hit med ett gammalt ID
+    // Clears old results if we navigate here with an old ID
     // (kan tas bort om du inte vill visa någon form av resultat här alls)
     LaunchedEffect(completedBrewId) {
         if (completedBrewId != null) {
@@ -90,7 +90,7 @@ fun BrewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Brew") }, // Byt titel till något mer passande
+                title = { Text("New Brew") }, // Change title to something more appropriate
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Home")
@@ -107,27 +107,27 @@ fun BrewScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- ENDAST "BEFORE BREW" SEKTION KVAR ---
+            // --- ONLY "BEFORE BREW" SECTION REMAINS ---
             Row( // Använd en Row för att placera titel och knapp
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween, // Fördelar utrymmet
-                verticalAlignment = Alignment.CenterVertically // Centrerar vertikalt
+                horizontalArrangement = Arrangement.SpaceBetween, // Distributes the space
+                verticalAlignment = Alignment.CenterVertically // Centers vertically
             ) {
-                // Ta bort titeln "Before Brew", den behövs inte när det är det enda som visas
+                // Remove the title "Before Brew", it is not needed when it is the only thing displayed
                 // Text("Before Brew", style = MaterialTheme.typography.headlineSmall)
 
-                // Behåll "Load latest"-knappen, den är användbar
+                // Keep the "Load latest" button, it is useful
                 TextButton(
                     onClick = { vm.loadLatestBrewSettings() },
                     enabled = hasPreviousBrews // Aktivera bara om det finns bryggningar
                 ) {
                     Icon(
-                        Icons.Default.History, // Klock-ikon
-                        contentDescription = null, // Beskrivande text inte nödvändig här
-                        modifier = Modifier.size(ButtonDefaults.IconSize) // Standard ikonstorlek
+                        Icons.Default.History, // Clock icon
+                        contentDescription = null, // Descriptive text not necessary here
+                        modifier = Modifier.size(ButtonDefaults.IconSize) // Standard icon size
                     )
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing)) // Standard avstånd
-                    Text("Load latest settings") // Tydligare text
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing)) // Standard spacing
+                    Text("Load latest settings") // Clearer button text
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -185,14 +185,14 @@ fun BrewScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            // --- UPPDATERAD START BREW-KNAPP ---
+            // --- UPDATED START BREW BUTTON ---
             Button(
                 onClick = {
-                    // Kontrollera anslutningsstatus här
+                    // Check connection status here
                     if (scaleConnectionState is BleConnectionState.Connected) {
                         onStartBrewClick(vm.getCurrentSetup())
                     } else {
-                        // Visa dialogrutan om vågen inte är ansluten
+                        // Show the dialog if the scale is not connected
                         showConnectionAlert = true
                     }
                 },
@@ -202,11 +202,11 @@ fun BrewScreen(
                     containerColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
                 )
             ) {
-                Text("Start Live Brew") // Tydligare knapptext
+                Text("Start Live Brew") // Clearer button text
             }
 
 
-            // --- ALERT DIALOG (Oförändrad) ---
+            // --- ALERT DIALOG (Unchanged) ---
             if (showConnectionAlert) {
                 AlertDialog(
                     onDismissRequest = { showConnectionAlert = false },
@@ -233,14 +233,14 @@ fun BrewScreen(
                     }
                 )
             }
-            // --- SLUT ALERT DIALOG ---
-        } // Slut på Column
-    } // Slut på Scaffold
-} // Slut på BrewScreen
+            // --- END ALERT DIALOG ---
+        } // End of Column
+    } // End of Scaffold
+} // End of BrewScreen
 
-// --- ResultMetrics FUNKTIONEN ÄR BORTTAGEN ---
+// --- The ResultMetrics FUNCTION IS REMOVED ---
 
-// DropdownSelector (Oförändrad)
+// DropdownSelector (Unchanged)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> DropdownSelector(
@@ -263,7 +263,7 @@ fun <T> DropdownSelector(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth() // menuAnchor() är viktigt
+            modifier = Modifier.menuAnchor().fillMaxWidth() // menuAnchor() is important
         )
         ExposedDropdownMenu(
             expanded = expanded,

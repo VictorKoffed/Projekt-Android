@@ -173,7 +173,7 @@ fun HomeScreen(
                 title = { Text("Home") },
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Implement Menu */ }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Meny")
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {
@@ -376,14 +376,14 @@ fun ScaleStatusCard(
             titleColor = MaterialTheme.colorScheme.onSurface // FIX: Use Theme Color
         }
         is BleConnectionState.Error -> {
-            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Fel", tint = MaterialTheme.colorScheme.error) }
+            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
             title = "Connection Error"
             subtitle = connectionState.message
             iconColor = MaterialTheme.colorScheme.error
             titleColor = MaterialTheme.colorScheme.error
         }
         BleConnectionState.Disconnected -> {
-            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
+            icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
             subtitle = "Tap to connect"
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant // FIX: Use Theme Color
@@ -535,7 +535,7 @@ fun RecentBrewCard(
                 } else {
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                        contentDescription = "BryggImage",
+                        contentDescription = "Brew Image",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -566,9 +566,9 @@ private fun formatTimeSince(lastBrewTime: Date?): String? {
             val weeks = diffDays / 7
             if (weeks >= 52) {
                 val years = weeks / 52
-                "$years år"
+                "$years y"
             } else {
-                "$weeks v"
+                "$weeks w"
             }
         }
     }

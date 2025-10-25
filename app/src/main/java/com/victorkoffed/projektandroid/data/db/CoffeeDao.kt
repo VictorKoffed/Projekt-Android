@@ -48,19 +48,19 @@ interface CoffeeDao {
     @Query("SELECT * FROM Brew WHERE brew_id = :id")
     fun observeBrew(id: Long): Flow<Brew?>
 
-    // --- Brew radering med lageråterställning (NY TRANSAKTION) ---
+    // --- Brew deletion with stock restore (NEW TRANSACTION) ---
     @Transaction
     suspend fun deleteBrewTransaction(brew: Brew) {
-        // Steg 1: Återställ lagret FÖRE raderingen
+        // Step 1: Restore stock BEFORE deletion
         incrementBeanStock(brew.beanId, brew.doseGrams)
-        // Steg 2: Radera bryggningen (CASCADE raderar Samples)
+        // Step 2: Delete the brew (CASCADE deletes Samples)
         deleteBrew(brew)
-        // Steg 3: Tvinga fram Flow-uppdatering av bönan
+        // Step 3: Force Flow update of the bean
         val bean = getBeanById(brew.beanId)
         if (bean != null) updateBean(bean)
     }
 
-    // --- NY QUERY ---
+    // --- NEW QUERY ---
     @Query("SELECT * FROM Brew WHERE bean_id = :beanId ORDER BY started_at DESC")
     fun getBrewsForBean(beanId: Long): Flow<List<Brew>>
 

@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Date
 
-// Data class för att hålla all state för brygg-setup (oförändrad)
+// Data class to hold all brew setup state (unchanged)
 data class BrewSetupState(
     val selectedBean: Bean? = null,
     val doseGrams: String = "",
@@ -59,16 +59,16 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
     private val _completedBrewMetrics = MutableStateFlow<BrewMetrics?>(null)
     private val _completedBrewSamples = MutableStateFlow<List<BrewSample>>(emptyList())
 
-    // --- NYTT: State för att veta om tidigare bryggningar finns ---
+    // --- NEW: State to know if previous brews exist ---
     val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()
-        .map { it.isNotEmpty() } // Kolla om listan inte är tom
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false) // Startvärde false
-    // --- SLUT NYTT ---
+        .map { it.isNotEmpty() } // Check if the list is not empty
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false) // Starting value false
+    // --- END NEW ---
 
 
     // ... (alla befintliga funktioner som selectBean, onDoseChange, loadBrewResults, etc. är oförändrade) ...
 
-    // --- Funktioner för att uppdatera setup state (oförändrade) ---
+    // --- Functions to update setup state (unchanged) ---
     fun selectBean(bean: Bean?) { brewSetupState = brewSetupState.copy(selectedBean = bean) }
     fun onDoseChange(dose: String) { if (dose.matches(Regex("^\\d*\\.?\\d*$"))) brewSetupState = brewSetupState.copy(doseGrams = dose) }
     fun selectGrinder(grinder: Grinder?) { brewSetupState = brewSetupState.copy(selectedGrinder = grinder) }
@@ -80,7 +80,7 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
     fun isSetupValid(): Boolean { return brewSetupState.selectedBean != null && brewSetupState.doseGrams.toDoubleOrNull()?.let { it > 0 } == true && brewSetupState.selectedMethod != null }
     fun getCurrentSetup(): BrewSetupState { return brewSetupState }
 
-    // --- FUNKTIONER FÖR RESULTAT (Oförändrade) ---
+    // --- FUNCTIONS FOR RESULTS (Unchanged) ---
     fun loadBrewResults(brewId: Long?) {
         if (brewId == null) {
             _completedBrewMetrics.value = null
@@ -109,7 +109,7 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
     }
 
 
-    // --- NY FUNKTION: Ladda inställningar från senaste bryggning ---
+    // --- NEW FUNCTION: Load settings from latest brew ---
     fun loadLatestBrewSettings() {
         viewModelScope.launch {
             val latestBrew = repository.getAllBrews().firstOrNull()?.firstOrNull()
@@ -133,10 +133,10 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
         }
     }
 
-    // --- NY FUNKTION: Spara bryggning utan graf ---
+    // --- NEW FUNCTION: Save brew without graph ---
     /**
-     * Sparar den nuvarande setupen som en ny bryggning, men utan några BrewSample-data.
-     * Returnerar ID:t för den nya bryggningen.
+     * Saves the current setup as a new brew, but without any BrewSample data.
+     * Returns the ID of the new brew.
      */
     suspend fun saveBrewWithoutSamples(): Long? {
         if (!isSetupValid()) {
@@ -146,27 +146,26 @@ class BrewViewModel(private val repository: CoffeeRepository) : ViewModel() {
         val currentSetup = brewSetupState
 
         val newBrew = Brew(
-            beanId = currentSetup.selectedBean!!.id, // Vi vet att den inte är null pga isSetupValid
-            doseGrams = currentSetup.doseGrams.toDouble(), // Vi vet att den är en giltig double
-            startedAt = Date(System.currentTimeMillis()), // Sätt starttid till "nu"
+            beanId = currentSetup.selectedBean!!.id, // We know it is not null because of isSetupValid
+            doseGrams = currentSetup.doseGrams.toDouble(), // We know it is a valid double
+            startedAt = Date(System.currentTimeMillis()), // Set start time to "now"
             grinderId = currentSetup.selectedGrinder?.id,
-            methodId = currentSetup.selectedMethod!!.id, // Vi vet att den inte är null
+            methodId = currentSetup.selectedMethod!!.id, // We know it is not null
             grindSetting = currentSetup.grindSetting.takeIf { it.isNotBlank() },
             grindSpeedRpm = currentSetup.grindSpeedRpm.toDoubleOrNull(),
             brewTempCelsius = currentSetup.brewTempCelsius.toDoubleOrNull(),
             notes = currentSetup.notes.takeIf { it.isNotBlank() }
         )
 
-        // Kör i ett async-block för att kunna returnera ID:t
+        // Run in an async block to be able to return the ID
         return viewModelScope.async {
             try {
-                // Använd den enkla 'addBrew' istället för 'addBrewWithSamples'
+                // Use the simple 'addBrew' instead of 'addBrewWithSamples'
                 repository.addBrew(newBrew)
             } catch (_: Exception) {
-                // Hantera fel, t.ex. logga
+                // Handle error, e.g. log
                 null
             }
-        }.await() // Vänta på att repository-anropet blir klart och returnera ID:t
+        }.await() // Wait for the repository call to complete and return the ID
     }
-    // --- SLUT NY FUNKTION ---
 }

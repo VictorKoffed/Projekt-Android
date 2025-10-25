@@ -126,7 +126,7 @@ fun MethodCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Ändring 1: Vit bakgrund
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // Change 1: White background
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
@@ -137,7 +137,7 @@ fun MethodCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete method",
-                    tint = MaterialTheme.colorScheme.primary // Ändring 2: DCC7AA färg
+                    tint = MaterialTheme.colorScheme.primary // Change 2: DCC7AA color
                 )
             }
         }
@@ -191,7 +191,7 @@ fun EditMethodDialog(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Metodnamn *") },
+                label = { Text("Method Name *") },
                 singleLine = true
             )
         },
@@ -219,13 +219,13 @@ fun DeleteMethodConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete method?") },
-        text = { Text("ÄAre you sure you want to delete '$methodName'? Brews that used this method will lose the connection.") },
+        text = { Text("Are you sure you want to delete '$methodName'? Brews that used this method will lose the connection.") },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 // Behåller error-färg här för att indikera en permanent, destruktiv åtgärd (trots önskemål om tema-färg, är rött standard UX för Delete)
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Ta bort") }
+            ) { Text("Delete") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

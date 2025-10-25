@@ -354,7 +354,7 @@ fun EditBeanDialog(
         title = { Text("Edit Bean") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = editName, onValueChange = onNameChange, label = { Text("Namn *") }, singleLine = true)
+                OutlinedTextField(value = editName, onValueChange = onNameChange, label = { Text("Name *") }, singleLine = true)
                 OutlinedTextField(value = editRoaster, onValueChange = onRoasterChange, label = { Text("Roaster") }, singleLine = true)
                 OutlinedTextField(
                     value = editRoastDateStr,
@@ -405,7 +405,7 @@ fun DeleteConfirmationDialog(
             Text("Are you sure you want to delete '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
         },
         confirmButton = {
-            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Ta bort") }
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
