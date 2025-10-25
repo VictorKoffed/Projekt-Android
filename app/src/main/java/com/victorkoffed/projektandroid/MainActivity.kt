@@ -52,17 +52,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel // <-- NY IMPORT
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel // Behålls för BrewDetailViewModel initialt
+// import androidx.lifecycle.viewmodel.compose.viewModel // <-- TAS BORT ELLER ANVÄNDS EJ FÖR DESSA
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager // <-- NY IMPORT (eller injicera)
+import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.navigation.Screen
-import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
+import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen // Se till att denna är uppdaterad utan beanId-parameter
 import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewDetailScreen
 import com.victorkoffed.projektandroid.ui.screens.brew.BrewScreen
@@ -75,23 +75,18 @@ import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModelFactory // <-- BORTTAGEN
+// import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory // <-- BEHÅLLS TILLFÄLLIGT
+// import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModelFactory // <-- BORTTAGEN
-import dagger.hilt.android.AndroidEntryPoint // <-- NY IMPORT
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import javax.inject.Inject // <-- NY IMPORT (för ThemeManager)
+import javax.inject.Inject
 
 // Dataklass som definierar varje objekt i bottennavigeringen.
 data class NavItem(
@@ -122,35 +117,17 @@ fun ThemedSnackbar(data: SnackbarData) {
 @AndroidEntryPoint // <-- NY ANNOTERING
 class MainActivity : ComponentActivity() {
 
-    // Injicera ThemePreferenceManager direkt här (alternativ till att hämta från Application)
+    // Injicera ThemePreferenceManager direkt här
     @Inject
     lateinit var themePreferenceManager: ThemePreferenceManager
 
-    // Ta bort manuell instansiering av ViewModels och deras fabriker.
-    // Hilt kommer att hantera detta.
-    // private lateinit var scaleVm: ScaleViewModel
-    // private lateinit var grinderVm: GrinderViewModel
-    // private lateinit var beanVm: BeanViewModel
-    // private lateinit var methodVm: MethodViewModel
-    // private lateinit var brewVm: BrewViewModel
-    // private lateinit var homeVm: HomeViewModel
-
     // CoffeeImageViewModel kan fortfarande skapas så här eftersom den inte har komplexa beroenden (ännu)
-    // Om den behöver beroenden senare, använd Hilt även för den.
     private val coffeeImageVm: CoffeeImageViewModel by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_ProjektAndroid)
         super.onCreate(savedInstanceState)
-
-        // Ta bort all kod som skapar repository- och ViewModel-instanser manuellt här.
-        // Hilt kommer att tillhandahålla dem via moduler och @Inject.
-        // val coffeeRepository = app.coffeeRepository
-        // val scaleRepository = BookooScaleRepositoryImpl(this)
-        // val scaleViewModelFactory = ScaleViewModelFactory(app, scaleRepository, coffeeRepository)
-        // scaleVm = ViewModelProvider(this, scaleViewModelFactory)[ScaleViewModel::class.java]
-        // ... (liknande för grinderVm, beanVm, methodVm, brewVm, homeVm) ...
 
         setContent {
 
@@ -219,6 +196,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
+                            // Lägg till fler inställningar här vid behov
                         }
                     }
                 ) {
@@ -272,22 +250,21 @@ class MainActivity : ComponentActivity() {
 
                             // --- Home ---
                             composable(Screen.Home.route) {
-                                // HomeViewModel hämtas med hiltViewModel() direkt här
                                 HomeScreen(
-                                    homeVm = hiltViewModel(), // <-- Använd Hilt
-                                    coffeeImageVm = coffeeImageVm, // Behåll denna som den är
-                                    scaleVm = hiltViewModel(), // <-- Använd Hilt
+                                    homeVm = homeVm, // Använd instansen från ovan
+                                    coffeeImageVm = coffeeImageVm,
+                                    scaleVm = scaleVm, // Använd instansen från ovan
                                     snackbarHostState = snackbarHostState,
                                     navigateToScreen = { screenName -> navController.navigate(screenName) },
                                     onNavigateToBrewSetup = {
-                                        brewVm.clearBrewResults() // BrewVm är redan hämtad ovan
+                                        brewVm.clearBrewResults()
                                         navController.navigate(Screen.BrewSetup.route)
                                     },
                                     onBrewClick = { brewId ->
                                         navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                     },
-                                    availableBeans = availableBeans, // Från brewVm ovan
-                                    availableMethods = availableMethods, // Från brewVm ovan
+                                    availableBeans = availableBeans,
+                                    availableMethods = availableMethods,
                                     onMenuClick = {
                                         scope.launch { drawerState.open() }
                                     }
@@ -297,7 +274,7 @@ class MainActivity : ComponentActivity() {
                             // --- Huvudmenyns skärmar ---
                             composable(Screen.BeanList.route) {
                                 BeanScreen(
-                                    vm = hiltViewModel<BeanViewModel>(), // <-- Använd Hilt
+                                    vm = hiltViewModel<BeanViewModel>(),
                                     onBeanClick = { beanId ->
                                         navController.navigate(Screen.BeanDetail.createRoute(beanId))
                                     },
@@ -308,7 +285,7 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(Screen.GrinderList.route) {
                                 GrinderScreen(
-                                    vm = hiltViewModel<GrinderViewModel>(), // <-- Använd Hilt
+                                    vm = hiltViewModel<GrinderViewModel>(),
                                     onMenuClick = {
                                         scope.launch { drawerState.open() }
                                     }
@@ -316,7 +293,7 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(Screen.MethodList.route) {
                                 MethodScreen(
-                                    vm = hiltViewModel<MethodViewModel>(), // <-- Använd Hilt
+                                    vm = hiltViewModel<MethodViewModel>(),
                                     onMenuClick = {
                                         scope.launch { drawerState.open() }
                                     }
@@ -326,7 +303,7 @@ class MainActivity : ComponentActivity() {
                             // --- Våg ---
                             composable(Screen.ScaleConnect.route) {
                                 ScaleConnectScreen(
-                                    vm = hiltViewModel<ScaleViewModel>(), // <-- Använd Hilt
+                                    vm = scaleVm, // Använd instansen från ovan
                                     onNavigateBack = { navController.popBackStack() }
                                 )
                             }
@@ -336,7 +313,7 @@ class MainActivity : ComponentActivity() {
                                 BrewScreen(
                                     vm = brewVm, // Använd instansen från ovan
                                     completedBrewId = null,
-                                    scaleConnectionState = scaleConnectionState, // Från scaleVm ovan
+                                    scaleConnectionState = scaleConnectionState,
                                     onStartBrewClick = {
                                         brewVm.clearBrewResults()
                                         navController.navigate(Screen.LiveBrew.route)
@@ -365,7 +342,6 @@ class MainActivity : ComponentActivity() {
 
                             // --- Flöde för ny bryggning (Live) ---
                             composable(Screen.LiveBrew.route) {
-                                // Samlar in state från scaleVm instansen ovan
                                 val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                 val time by scaleVm.recordingTimeMillis.collectAsState()
                                 val isRecording by scaleVm.isRecording.collectAsState()
@@ -419,67 +395,50 @@ class MainActivity : ComponentActivity() {
                                 route = Screen.BrewDetail.route,
                                 arguments = listOf(navArgument("brewId") { type = NavType.LongType })
                             ) { backStackEntry ->
-                                val brewId = backStackEntry.arguments?.getLong("brewId")
-                                if (brewId != null) {
-                                    // VIKTIGT: För att BrewDetailViewModel ska få rätt brewId MED Hilt,
-                                    // behöver vi antingen använda Hilt Assisted Injection (mer avancerat)
-                                    // ELLER låta BrewDetailViewModel ta SavedStateHandle injectat och hämta brewId därifrån.
-                                    // Vi behåller din Factory TILLFÄLLIGT här för att inte bryta funktionaliteten NU.
-                                    // SENARE STEG: Refaktorera BrewDetailViewModel att använda SavedStateHandle.
-                                    val brewDetailViewModel: BrewDetailViewModel = viewModel(
-                                        key = "brewDetail_$brewId",
-                                        factory = BrewDetailViewModelFactory(
-                                            (application as CoffeeJournalApplication).coffeeRepository, // Tillfällig lösning
-                                            brewId
-                                        )
-                                    )
+                                // Hämta ViewModel med Hilt. SavedStateHandle injiceras automatiskt.
+                                // Använder nyckel för att få unika instanser vid snabb navigering
+                                val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(key = "brewDetail_${backStackEntry.arguments?.getLong("brewId")}")
 
-                                    BrewDetailScreen(
-                                        onNavigateBack = { navController.popBackStack() },
-                                        onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
-                                        onNavigateToImageFullscreen = { uri ->
-                                            val encodedUri = Uri.encode(uri)
-                                            navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
-                                        },
-                                        viewModel = brewDetailViewModel, // Skicka in den skapade ViewModel
-                                        navBackStackEntry = backStackEntry
-                                    )
-                                } else {
-                                    Log.e("MainActivity", "Brew ID saknas vid navigering till BrewDetail.")
-                                    LaunchedEffect(Unit) { navController.popBackStack() }
-                                }
+                                BrewDetailScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
+                                    onNavigateToImageFullscreen = { uri ->
+                                        val encodedUri = Uri.encode(uri)
+                                        navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
+                                    },
+                                    viewModel = brewDetailViewModel, // Skicka in Hilt-skapade ViewModel
+                                    navBackStackEntry = backStackEntry
+                                )
+                                // Ingen manuell ID-kontroll behövs här, ViewModel hanterar det.
                             }
 
                             composable(
                                 route = Screen.BeanDetail.route,
                                 arguments = listOf(navArgument("beanId") { type = NavType.LongType })
                             ) { backStackEntry ->
-                                val beanId = backStackEntry.arguments?.getLong("beanId")
-                                if (beanId != null) {
-                                    // Liknande som BrewDetail: Vi behåller Factory TILLFÄLLIGT.
-                                    // SENARE STEG: Refaktorera BeanDetailViewModel att använda SavedStateHandle.
-                                    /* val beanDetailViewModel: BeanDetailViewModel = hiltViewModel() // Funkar ej direkt pga beanId */
+                                // ID-kontroll behövs fortfarande för att säkerställa att argumentet finns
+                                val beanIdArg = backStackEntry.arguments?.getLong("beanId")
+                                if (beanIdArg != null && beanIdArg > 0) {
+                                    // BeanDetailScreen hämtar nu sin egen ViewModel med hiltViewModel() internt
                                     BeanDetailScreen(
-                                        beanId = beanId,
+                                        // beanId tas inte emot som parameter längre
                                         onNavigateBack = { navController.popBackStack() },
                                         onBrewClick = { brewId ->
                                             navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                         }
-                                        // ViewModel skapas internt i BeanDetailScreen med sin factory
+                                        // ViewModel skapas internt via hiltViewModel()
                                     )
                                 } else {
-                                    Log.e("MainActivity", "Bean ID saknas vid navigering till BeanDetail.")
+                                    Log.e("MainActivity", "Bean ID saknas eller är ogiltigt vid navigering till BeanDetail.")
                                     LaunchedEffect(Unit) { navController.popBackStack() }
                                 }
                             }
 
                             // --- Kamera ---
                             composable(Screen.Camera.route) {
-                                // Ta bort onImageCaptured här, hanteras av CameraViewModel senare
                                 CameraScreen(
                                     onNavigateBack = { navController.popBackStack() },
-                                    // Vi skickar in navController så CameraViewModel kan poppa stacken
-                                    navController = navController // <-- NY PARAMETER
+                                    navController = navController // Skicka in NavController för ViewModel
                                 )
                             }
 
@@ -501,10 +460,11 @@ class MainActivity : ComponentActivity() {
                                     LaunchedEffect(Unit) { navController.popBackStack() }
                                 }
                             }
-                        }
-                    }
-                } // Slut ModalNavigationDrawer
-            } // Slut ProjektAndroidTheme
-        } // Slut setContent
-    } // Slut onCreate
-} // Slut MainActivity
+                        } // Slut NavHost
+                    } // Slut Scaffold Content Scope
+                } // Slut Scaffold
+            } // Slut ModalNavigationDrawer Content Scope
+        } // Slut ProjektAndroidTheme
+    } // Slut setContent
+} // Slut onCreate
+ // Slut MainActivity
