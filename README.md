@@ -62,6 +62,9 @@ förenkla MainActivity.kt och förbättra testbarheten.
 förenklas/göras säkrare genom att använda Hilt/Koin för att injicera en SavedStateHandle i en CameraViewModel eller genom att använda Navigation-bibliotekets 
 specifika API för resultathantering.
 7. lägga till pogram att följa med instruktioner. flöde. välj recept i new brew screen. sedan i livegraphscteeb så kommer instrutioner upp live när man ska hälla och vikt och tidpunkt mm?
+Reddit · r/pourover
+Fler än 10 kommentarer · för 1 år sedan
+Hario V60-recept : r/pourover
 
 ## 👤 Author
 
