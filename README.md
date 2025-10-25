@@ -3,7 +3,7 @@
 A mobile app built in **Kotlin** using **Jetpack Compose**.  
 The app lets coffee enthusiasts record and visualize their brews with a simple and modern interface.
 
-## ✨ Features 
+## ✨ Features (For Version 1.0)
 
 **Done ✅**
 - Fetch random coffee images via the **Coffee API** using **Volley** 
