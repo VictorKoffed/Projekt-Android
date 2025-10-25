@@ -43,7 +43,7 @@ import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.launch
 
 
-// REMOVED: private val MockupColor = Color(0xFFDCC7AA)
+// Hårdkodad färg för MockupColor har tagits bort och ersatts av MaterialTheme.colorScheme.primary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,8 +131,8 @@ fun HomeScreen(
     // --- SLUT NYTT ---
 
     Scaffold(
-        // --- Ljusgrå bakgrundsfärg för Scaffold ---
-        containerColor = Color(0xFFF0F0F0), // Ljusgrå bakgrund
+        // --- Använder temats bakgrundsfärg ---
+        containerColor = MaterialTheme.colorScheme.background, // FIX: Use Theme Color
         topBar = {
             TopAppBar( // ÄNDRAD TILL TopAppBar för vänsterjustering
                 title = { Text("Home") },
@@ -143,8 +143,8 @@ fun HomeScreen(
                 },
                 actions = {
                     // --- Logik för "Lägg till bryggning"-knappen ---
-                    val buttonColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
-                    val iconColor = Color.Black // Svart ikonfärg för kontrast
+                    val buttonColor = MaterialTheme.colorScheme.primary // Använder temats primärfärg
+                    val iconColor = MaterialTheme.colorScheme.onPrimary // Använder temats onPrimary färg (svart/vitt)
 
                     Surface(
                         modifier = Modifier
@@ -214,7 +214,8 @@ fun HomeScreen(
                         onStartBrewClick = startBrewAction // UPPDATERAD: Använd conditional action
                     )
                 }
-            } else {
+            }
+            else {
                 items(recentBrews) { brewItem ->
                     RecentBrewCard(
                         brewItem = brewItem,
@@ -241,7 +242,7 @@ fun HomeScreen(
     // --- SLUT PÅ DIALOG ---
 }
 
-// Rutnät för infokorten (Oförändrad)
+// Rutnät för infokorten (Tematiska justeringar)
 @Composable
 fun InfoGrid(
     totalBrews: Int,
@@ -266,11 +267,11 @@ fun InfoGrid(
                 Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                     when {
                         imageLoading -> CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                        // --- ÄNDRING: Ta bort Text-visningen av felet ---
+                        // --- ÄNDRING: Använder tematiska färger för ikoner ---
                         imageError != null -> {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                // Behåll bara ikonen och knappen
-                                Icon(Icons.Default.Warning, "Error loading image", tint = Color.Gray)
+                                // Använder temats onSurfaceVariant som en gråton
+                                Icon(Icons.Default.Warning, "Error loading image", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 IconButton(onClick = onReloadImage, modifier= Modifier.size(32.dp)) {
                                     Icon(Icons.Default.Refresh, "Reload")
                                 }
@@ -285,7 +286,7 @@ fun InfoGrid(
                                 modifier = Modifier.fillMaxSize().clickable { onReloadImage() }
                             )
                         }
-                        else -> Text("Image", color = Color.Gray)
+                        else -> Text("Image", color = MaterialTheme.colorScheme.onSurfaceVariant) // FIX: Use Theme Color
                     }
                 }
             }
@@ -311,7 +312,7 @@ fun InfoGrid(
     }
 }
 
-// Composable för Vågstatus-kortet (Oförändrad)
+// Composable för Vågstatus-kortet (Tematiska justeringar)
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
@@ -330,14 +331,14 @@ fun ScaleStatusCard(
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
             subtitle = "Tap to disconnect"
             iconColor = MaterialTheme.colorScheme.primary
-            titleColor = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
+            titleColor = MaterialTheme.colorScheme.primary
         }
         is BleConnectionState.Connecting -> {
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
             title = "Connecting..."
             subtitle = "Please wait"
-            iconColor = LocalContentColor.current.copy(alpha = 0.6f)
-            titleColor = LocalContentColor.current
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant // FIX: Use Theme Color
+            titleColor = MaterialTheme.colorScheme.onSurface // FIX: Use Theme Color
         }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Fel", tint = MaterialTheme.colorScheme.error) }
@@ -350,8 +351,8 @@ fun ScaleStatusCard(
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Frånkopplad") }
             title = "Scale disconnected"
             subtitle = "Tap to connect"
-            iconColor = LocalContentColor.current.copy(alpha = 0.6f)
-            titleColor = LocalContentColor.current
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant // FIX: Use Theme Color
+            titleColor = MaterialTheme.colorScheme.onSurface // FIX: Use Theme Color
         }
     }
 
@@ -375,13 +376,13 @@ fun ScaleStatusCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = titleColor)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) // FIX: Use Theme Color
         }
     }
 }
 
 
-// InfoCard (Oförändrad)
+// InfoCard (Tematiska justeringar)
 @Composable
 fun InfoCard(
     modifier: Modifier = Modifier,
@@ -404,14 +405,14 @@ fun InfoCard(
         ) {
             if (content != null) { content() }
             else if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary) // FIX: Use Theme Color
-                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center) }
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) } // FIX: Use Theme Color
             }
         }
     }
 }
 
-// NoBrewsTextWithIcon (MODIFIERAD)
+// NoBrewsTextWithIcon (Tematiska justeringar)
 @Composable
 fun NoBrewsTextWithIcon(
     modifier: Modifier = Modifier,
@@ -429,19 +430,19 @@ fun NoBrewsTextWithIcon(
         ) {
             Text(
                 "No brews saved yet, tap ",
-                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray)
+                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) // FIX: Use Theme Color
             )
             Surface(
                 modifier = Modifier
                     .size(32.dp) // ÄNDRAD: ÖKAD STORLEK
                     .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary // FIX: Use Theme Color
+                color = MaterialTheme.colorScheme.primary
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = Color.Black,
+                        tint = MaterialTheme.colorScheme.onPrimary, // FIX: Use Theme Color
                         modifier = Modifier.size(24.dp) // ÄNDRAD: ÖKAD IKONSTORLEK
                     )
                 }
@@ -449,14 +450,14 @@ fun NoBrewsTextWithIcon(
         }
         Text(
             "to create one.",
-            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray),
+            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)), // FIX: Use Theme Color
             modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
 
 
-// RecentBrewCard (Oförändrad)
+// RecentBrewCard (Tematiska justeringar)
 @Composable
 fun RecentBrewCard(
     brewItem: RecentBrewItem,
@@ -477,7 +478,7 @@ fun RecentBrewCard(
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text("${dateFormat.format(brewItem.brew.startedAt)} ${timeFormat.format(brewItem.brew.startedAt)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) // FIX: Use Theme Color
                 Spacer(Modifier.height(4.dp))
                 Text(brewItem.beanName ?: "Unknown bean", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }

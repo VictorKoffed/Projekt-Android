@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -221,9 +222,9 @@ fun StatusDisplay(
             containerColor = when {
                 // --- NY: Sätt en färg för nedräkning ---
                 countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-                isPaused -> Color.Gray
+                isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // FIX: Use Theme Color
                 isRecording -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> Color.Gray // Ändrad till grå när ingen inspelning pågår
+                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // FIX: Use Theme Color
             }
         )
     ) {
@@ -287,16 +288,23 @@ fun BrewGraph(
     // INGA ANDRA PARAMETRAR HÄR!
 ) {
     val density = LocalDensity.current
+
+    // Tematiska Färger
+    val graphLineColor = MaterialTheme.colorScheme.tertiary // Vår "WeightBlack"
+    val textColor = MaterialTheme.colorScheme.onBackground.toArgb() // Svart/vit textfärg
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant // Grå ton för axlar
+    val gridLineColor = Color.LightGray // Låt denna vara ljusgrå då den är en svag separator
+
     val textPaint = remember {
         android.graphics.Paint().apply {
-            color = android.graphics.Color.DKGRAY
+            color = textColor
             textAlign = android.graphics.Paint.Align.CENTER
             textSize = 10.sp.value * density.density
         }
     }
     val axisLabelPaint = remember {
         android.graphics.Paint().apply {
-            color = android.graphics.Color.BLACK
+            color = textColor
             textAlign = android.graphics.Paint.Align.CENTER
             textSize = 14.sp.value * density.density
             isFakeBoldText = true
@@ -308,7 +316,6 @@ fun BrewGraph(
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
         )
     }
-    val gridLineColor = Color.LightGray
 
     Canvas(modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)) {
         val axisPadding = 0f
@@ -344,7 +351,7 @@ fun BrewGraph(
                     strokeWidth = gridLinePaint.width,
                     pathEffect = gridLinePaint.pathEffect
                 )
-                drawText("${currentMassGrid.toInt()}g", yLabelPadding / 2, y + textPaint.textSize / 3, textPaint.apply { textAlign = android.graphics.Paint.Align.CENTER })
+                drawText("${currentMassGrid.toInt()}g", yLabelPadding / 2, y + textPaint.textSize / 3, textPaint)
                 currentMassGrid += massGridInterval
             }
 
@@ -368,7 +375,7 @@ fun BrewGraph(
             // Axeltitlar (endast vikt och tid)
             drawText("Time", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
             withSave {
-                 rotate(-90f)
+                rotate(-90f)
                 drawText(
                     "Weight",
                     -size.height / 2,
@@ -379,8 +386,8 @@ fun BrewGraph(
         }
 
         // Rita axlar (endast vänster Y och X)
-        drawLine(Color.Gray, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY)) // Y
-        drawLine(Color.Gray, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY)) // X
+        drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY)) // Y FIX: Use Theme Color
+        drawLine(axisColor, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY)) // X FIX: Use Theme Color
 
         // Rita BARA vikt-linjen
         if (samples.size > 1) {
@@ -397,7 +404,7 @@ fun BrewGraph(
                     path.lineTo(clampedX, clampedY)
                 }
             }
-            drawPath(path = path, color = Color.Black, style = Stroke(width = 2.dp.toPx()))
+            drawPath(path = path, color = graphLineColor, style = Stroke(width = 2.dp.toPx())) // FIX: Use Theme Color
         }
     }
 }

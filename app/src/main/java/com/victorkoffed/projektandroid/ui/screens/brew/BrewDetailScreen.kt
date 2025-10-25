@@ -819,7 +819,7 @@ fun FullscreenImageScreen(
     onNavigateBack: () -> Unit
 ) {
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = Color.Black, // Svart bakgrund är OK här då det är en helskärmsbildvisare
         topBar = {
             TopAppBar(
                 title = { Text("Brew Photo", color = Color.White) },
