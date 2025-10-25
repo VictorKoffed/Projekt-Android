@@ -89,7 +89,8 @@ fun HomeScreen(
     onNavigateToBrewSetup: () -> Unit, // Callback för att starta ny bryggning
     onBrewClick: (Long) -> Unit, // Callback för att visa bryggdetaljer
     availableBeans: List<Bean>, // Data för att kontrollera förutsättningar
-    availableMethods: List<Method> // Data för att kontrollera förutsättningar
+    availableMethods: List<Method>, // Data för att kontrollera förutsättningar
+    onMenuClick: () -> Unit // NYTT: Callback för att öppna navigeringslådan
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -165,7 +166,8 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Home") },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO: Implement Menu */ }) {
+                    // NYTT: Använder den nya onMenuClick callbacken
+                    IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
