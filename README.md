@@ -44,8 +44,9 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 ##  Known issue (Bugfix)
 
 1. Archive old beans when reaching zero and brews to remove them from home?
-2. The auto connect BLE dont work.
-3. Clean up warnings and refactor ∞
+2. replace volley with modern hilt option
+3. The auto connect BLE dont work.
+4. Clean up warnings and refactor ∞
 
 ##  ToDo List (Future Version 0.2)
 
