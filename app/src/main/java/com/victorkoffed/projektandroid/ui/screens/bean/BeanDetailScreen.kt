@@ -55,14 +55,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-// import androidx.lifecycle.viewmodel.compose.viewModel // Redan inkluderad via hiltViewModel
 import androidx.hilt.navigation.compose.hiltViewModel // Ny import för Hilt
-import com.victorkoffed.projektandroid.CoffeeJournalApplication // Behåll om ThemedSnackbar behöver den, annars kan den tas bort
 import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModelFactory // TAS BORT
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar

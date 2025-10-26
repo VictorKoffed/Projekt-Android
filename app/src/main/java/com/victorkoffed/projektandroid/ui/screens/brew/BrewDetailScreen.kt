@@ -441,8 +441,8 @@ fun BrewDetailScreen(
                     }
 
                     // Dialogruta för att bekräfta radering
-                    val brewToDelete = state.brew
-                    if (showDeleteConfirmDialog && brewToDelete != null) {
+                    state.brew
+                    if (showDeleteConfirmDialog) {
                         AlertDialog(
                             onDismissRequest = { showDeleteConfirmDialog = false },
                             title = { Text("Delete brew?") },

@@ -53,16 +53,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 2. Archive old beans and brews to remove them from home?
 3. Add some templates for methods and info about them and pictures etc?
 4. Implement the graph as a module for more modular code?
-5. Du använder för närvarande manuella ViewModel Factories (...ViewModelFactory.kt) för att injicera CoffeeRepository och ScaleRepository. 
-Detta fungerar, men i större projekt blir det omständligt. Att integrera ett modernt DI-ramverk som Hilt skulle automatisera beroendehanteringen, 
-förenkla MainActivity.kt och förbättra testbarheten.
-6. I BrewDetailScreen.kt skickas en bild-URI tillbaka via navBackStackEntry.savedStateHandle. Detta är en giltig Compose Navigation-metod men kan 
-förenklas/göras säkrare genom att använda Hilt/Koin för att injicera en SavedStateHandle i en CameraViewModel eller genom att använda Navigation-bibliotekets 
-specifika API för resultathantering.
-7. lägga till pogram att följa med instruktioner. flöde. välj recept i new brew screen. sedan i livegraphscteeb så kommer instrutioner upp live när man 
+5. lägga till pogram att följa med instruktioner. flöde. välj recept i new brew screen. sedan i livegraphscteeb så kommer instrutioner upp live när man 
 ska hälla och vikt och tidpunkt mm?
 https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.reddit.com/r/pourover/comments/19btejo/hario_v60_recipes/%3Ftl%3Dsv&ved=2ahUKEwiX9NT-37-QAxVOIhAIHZgCEFIQFnoECG0QAQ&usg=AOvVaw3YHTRmWHd8Mue3geD4Q4Mq
-8. Lägga till att användare kan skapa egna recept att följa i livebrewgrapgsceen.
+6. Lägga till att användare kan skapa egna recept att följa i livebrewgrapgscreen.
 
 ## 👤 Author
 

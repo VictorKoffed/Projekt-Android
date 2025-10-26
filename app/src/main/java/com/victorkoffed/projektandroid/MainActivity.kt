@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel // <-- NY IMPORT
 import androidx.lifecycle.lifecycleScope
-// import androidx.lifecycle.viewmodel.compose.viewModel // <-- TAS BORT ELLER ANVÄNDS EJ FÖR DESSA
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -75,9 +74,7 @@ import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
-// import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModelFactory // <-- BORTTAGEN
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
