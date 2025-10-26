@@ -55,7 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel // Ny import för Hilt
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew

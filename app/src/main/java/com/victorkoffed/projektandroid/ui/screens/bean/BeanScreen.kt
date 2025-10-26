@@ -64,7 +64,7 @@ private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 fun BeanScreen(
     vm: BeanViewModel,
     onBeanClick: (Long) -> Unit,
-    onMenuClick: () -> Unit // ADDED
+    onMenuClick: () -> Unit
 ) {
     val beans by vm.allBeans.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -73,7 +73,7 @@ fun BeanScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Beans") },
-                // ADDED: Navigation icon for the hamburger menu
+
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -169,7 +169,6 @@ fun BeanCard(
                 bean.initialWeightGrams?.let { Text("Initial: %.1f g".format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
                 bean.notes?.let { Text("Notes: $it", style = MaterialTheme.typography.bodySmall) }
             }
-            // Redigerings- och raderingsknappar har flyttats till BeanDetailScreen.
         }
     }
 }

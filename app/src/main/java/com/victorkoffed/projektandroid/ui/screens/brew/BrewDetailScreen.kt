@@ -530,31 +530,28 @@ fun BrewEditCard(
     availableMethods: List<Method>
 ) {
     // Redigeringskort för bryggningsdetaljer. Använder separata `edit*` state-variabler i ViewModel.
-    // FIX: Hämta state från ViewModel
-    val grinder = viewModel.editSelectedGrinder // <-- Måste skapas i VM
-    val method = viewModel.editSelectedMethod   // <-- Måste skapas i VM
+    val grinder = viewModel.editSelectedGrinder
+    val method = viewModel.editSelectedMethod
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        // FIX: Använd tematisk ytfärg istället för hårdkodad vit
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Edit Details", style = MaterialTheme.typography.titleLarge)
-            // ... (Resten av InfoRows har tagits bort här för enkelhetens skull, men de finns i den version som orsakade felet)
 
             // Dropdown för att välja kvarn
             EditDropdownSelector(
                 label = "Grinder",
                 options = availableGrinders,
-                selectedOption = grinder, // FIX: Använd det nya VM-fältet
-                onOptionSelected = { viewModel.onEditGrinderSelected(it) }, // FIX: Använd den nya VM-funktionen
+                selectedOption = grinder,
+                onOptionSelected = { viewModel.onEditGrinderSelected(it) },
                 optionToString = { it?.name ?: "Select grinder..." }
             )
             // Textfält för inställningar
             OutlinedTextField(
-                value = viewModel.editGrindSetting, // <-- Måste skapas i VM
-                onValueChange = { viewModel.onEditGrindSettingChanged(it) }, // <-- Måste skapas i VM
+                value = viewModel.editGrindSetting,
+                onValueChange = { viewModel.onEditGrindSettingChanged(it) },
                 label = { Text("Grind Setting") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -569,8 +566,8 @@ fun BrewEditCard(
                 )
             )
             OutlinedTextField(
-                value = viewModel.editGrindSpeedRpm, // <-- Måste skapas i VM
-                onValueChange = { viewModel.onEditGrindSpeedRpmChanged(it) }, // <-- Måste skapas i VM
+                value = viewModel.editGrindSpeedRpm,
+                onValueChange = { viewModel.onEditGrindSpeedRpmChanged(it) },
                 label = { Text("Grind Speed (RPM)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -589,13 +586,13 @@ fun BrewEditCard(
             EditDropdownSelector(
                 label = "Method",
                 options = availableMethods,
-                selectedOption = method, // FIX: Använd det nya VM-fältet
-                onOptionSelected = { viewModel.onEditMethodSelected(it) }, // FIX: Använd den nya VM-funktionen
+                selectedOption = method,
+                onOptionSelected = { viewModel.onEditMethodSelected(it) },
                 optionToString = { it?.name ?: "Select method..." }
             )
             OutlinedTextField(
-                value = viewModel.editBrewTempCelsius, // <-- Måste skapas i VM
-                onValueChange = { viewModel.onEditBrewTempChanged(it) }, // <-- Måste skapas i VM
+                value = viewModel.editBrewTempCelsius,
+                onValueChange = { viewModel.onEditBrewTempChanged(it) },
                 label = { Text("Water Temperature (°C)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
@@ -621,7 +618,6 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp),
-        // FIX: Använd tematisk ytfärg istället för hårdkodad vit
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -630,7 +626,6 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Ratio", style = MaterialTheme.typography.labelMedium)
-                // FIX: Använd metrics.ratio
                 Text(
                     text = metrics.ratio?.let { "1:%.1f".format(it) } ?: "-",
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
@@ -638,7 +633,6 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Water", style = MaterialTheme.typography.labelMedium)
-                // FIX: Använd metrics.waterUsedGrams
                 Text(
                     text = "%.1f g".format(metrics.waterUsedGrams),
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
@@ -646,7 +640,6 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Dose", style = MaterialTheme.typography.labelMedium)
-                // FIX: Använd metrics.doseGrams
                 Text(
                     text = "%.1f g".format(metrics.doseGrams),
                     style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
@@ -727,9 +720,7 @@ fun BrewSamplesGraph(
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
 
         // Bestämma maximala värden för skalning (med lite marginal)
-        // FIX: Använd timeMillis
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
-        // FIX: Använd massGrams
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
 
@@ -793,7 +784,6 @@ fun BrewSamplesGraph(
             var flowPathStarted = false
             samples.forEachIndexed { index, s ->
                 val x = graphStartX + (s.timeMillis.toFloat() / maxTime) * graphWidth
-                // FIX: Använd massGrams
                 val yMass = xAxisY - (s.massGrams.toFloat() / maxMass) * graphHeight
                 val cx = x.coerceIn(graphStartX, graphEndX)
                 val cyMass = yMass.coerceIn(0f, xAxisY)
@@ -803,7 +793,6 @@ fun BrewSamplesGraph(
                 }
 
                 // Rita flödeskurvan, men bara om datan är inom det synliga intervallet
-                // FIX: Använd flowRateGramsPerSecond
                 if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null) {
                     val yFlow = xAxisY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
                     val cyFlow = yFlow.coerceIn(0f, xAxisY)
@@ -881,7 +870,6 @@ fun <T> EditDropdownSelector(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                // FIX: Använd tematisk ytfärg
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 disabledContainerColor = MaterialTheme.colorScheme.surface,

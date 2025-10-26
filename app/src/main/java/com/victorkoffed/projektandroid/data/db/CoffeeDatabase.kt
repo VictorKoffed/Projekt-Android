@@ -70,10 +70,6 @@ abstract class CoffeeDatabase : RoomDatabase() {
                 // För-populera med vanliga bryggmetoder
                 db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
                 db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');")
-
-                // Notera: Logik för lagerhantering (decrement/increment) har flyttats
-                // till @Transaction-metoder i CoffeeDao.kt. Detta görs för att säkerställa
-                // att UI:et reaktivt uppdateras via Room Flows efter lagermodifiering.
             }
         }
     }

@@ -65,10 +65,10 @@ import kotlin.coroutines.suspendCoroutine
  */
 @Composable
 fun CameraScreen(
-    navController: NavController, // <-- NY PARAMETER
+    navController: NavController,
     onNavigateBack: () -> Unit,
-    // onImageCaptured: (Uri) -> Unit, // <-- BORTTAGEN PARAMETER
-    viewModel: CameraViewModel = hiltViewModel() // <-- HÄMTA VIEWMODEL MED HILT
+
+    viewModel: CameraViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     var hasCamPermission by remember { mutableStateOf(false) }
@@ -107,10 +107,10 @@ fun CameraScreen(
 
 @Composable
 private fun CameraCaptureScreen(
-    viewModel: CameraViewModel, // <-- NY PARAMETER
-    navController: NavController, // <-- NY PARAMETER
-    onNavigateBack: () -> Unit // Behålls för knappen
-    // onImageCaptured: (Uri) -> Unit, // <-- BORTTAGEN PARAMETER
+    viewModel: CameraViewModel,
+    navController: NavController,
+    onNavigateBack: () -> Unit
+
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current

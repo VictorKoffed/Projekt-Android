@@ -49,7 +49,7 @@ import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 @Composable
 fun GrinderScreen(
     vm: GrinderViewModel,
-    onMenuClick: () -> Unit // ADDED
+    onMenuClick: () -> Unit
 ) {
     // Hämta kvarnar som en State från ViewModel
     val grinders by vm.allGrinders.collectAsState()
@@ -65,7 +65,6 @@ fun GrinderScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Grinders") },
-                // ADDED: Navigation icon for the hamburger menu
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")

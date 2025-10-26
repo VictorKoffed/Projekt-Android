@@ -224,7 +224,7 @@ fun LiveBrewScreen(
     }
 }
 
-// --- StatusDisplay (UPPDATERAD) ---
+// --- StatusDisplay  ---
 @SuppressLint("DefaultLocale")
 @Composable
 fun StatusDisplay(
@@ -448,7 +448,7 @@ fun BrewGraph(
 // --- SLUT FÖRENKLAD BrewGraph ---
 
 
-// --- BrewControls (UPPDATERAD) ---
+// --- BrewControls ---
 @Composable
 fun BrewControls(
     isRecording: Boolean,
@@ -536,7 +536,7 @@ fun LiveBrewScreenPreview() {
     // Skapa en dummy-instans av ThemePreferenceManager för Preview
     val themeManager = remember { ThemePreferenceManager(context) }
 
-    ProjektAndroidTheme(themePreferenceManager = themeManager) { // <--- NYTT ARGUMENT
+    ProjektAndroidTheme(themePreferenceManager = themeManager) {
         // Skapar simulerade sample-data för grafen
         val previewSamples = remember {
             listOf(

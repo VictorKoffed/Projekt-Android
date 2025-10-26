@@ -61,7 +61,6 @@ class BeanDetailViewModel @Inject constructor( // <-- @Inject constructor
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     init {
-        // Kontrollera att beanId faktiskt finns (även om vi redan kastat ovan)
         if (beanId > 0) {
             loadBeanDetails()
         } else {
@@ -73,7 +72,6 @@ class BeanDetailViewModel @Inject constructor( // <-- @Inject constructor
         viewModelScope.launch {
             _beanDetailState.update { it.copy(isLoading = true, error = null) }
             try {
-                // Samma logik som tidigare, använder nu 'beanId' från klassens egenskap
                 val beanFlow = repository.getAllBeans().map { list -> list.find { it.id == beanId } }
                 val brewsFlow = repository.getBrewsForBean(beanId)
 
@@ -100,7 +98,6 @@ class BeanDetailViewModel @Inject constructor( // <-- @Inject constructor
         }
     }
 
-    // --- Resten av funktionerna (startEditing, saveChanges, deleteBean etc.) är oförändrade ---
     fun startEditing() {
         resetEditFieldsToCurrentState()
         isEditing = true
