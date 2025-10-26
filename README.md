@@ -43,20 +43,12 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  Known issue (Bugfix)
 
-1. The auto connect BLE dont work.
-2. Clean up warnings and refactor ∞
-3. fix the start screen to a more gentle color than white?
+1. Archive old beans when reaching zero and brews to remove them from home?
+2. The auto connect BLE dont work.
+3. Clean up warnings and refactor ∞
 
 ##  ToDo List (Future Version 0.2)
 
-1. Data migration to new device? OR add a cloud database firebase?
-2. Archive old beans and brews to remove them from home?
-3. Add some templates for methods and info about them and pictures etc?
-4. Implement the graph as a module for more modular code?
-5. lägga till pogram att följa med instruktioner. flöde. välj recept i new brew screen. sedan i livegraphscteeb så kommer instrutioner upp live när man 
-ska hälla och vikt och tidpunkt mm?
-https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.reddit.com/r/pourover/comments/19btejo/hario_v60_recipes/%3Ftl%3Dsv&ved=2ahUKEwiX9NT-37-QAxVOIhAIHZgCEFIQFnoECG0QAQ&usg=AOvVaw3YHTRmWHd8Mue3geD4Q4Mq
-6. Lägga till att användare kan skapa egna recept att följa i livebrewgrapgscreen.
 
 ## 👤 Author
 
