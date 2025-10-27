@@ -45,8 +45,10 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 1. Archive old beans when reaching zero or choose to manual and brews to remove them from home?
 2. replace volley with modern hilt option
-3. The auto connect BLE dont work.
-4. Clean up warnings and refactor ∞
+3. Flow in detailbrew dont cap flow to 20g/s
+4. Tare and auto tare in livebrew must tare 2 times to zero
+5. The auto connect BLE dont work.
+6. Clean up warnings and refactor ∞
 
 ##  ToDo List (Future Version 0.2)
 
