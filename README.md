@@ -52,6 +52,7 @@ https://www.figma.com/proto/LbyNuDuzUL5rzdC0vUEnVo/Systemutveckling-f%C3%B6r-mob
 
 ##  ToDo List (Future Version 0.2)
 
+1. I last coffe is less than 1h write sufficiently caffeinated.
 
 ## 👤 Author
 
