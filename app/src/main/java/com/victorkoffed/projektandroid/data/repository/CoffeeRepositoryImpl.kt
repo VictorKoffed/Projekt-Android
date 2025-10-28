@@ -42,7 +42,8 @@ class CoffeeRepositoryImpl @Inject constructor(
     override fun getTotalBeanCount(): Flow<Int> = dao.getTotalBeanCount()
 
     // --- Bryggning (Brew) ---
-    override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews() // För listan
+    override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews() // För listan (endast aktiva)
+    override fun getAllBrewsIncludingArchived(): Flow<List<Brew>> = dao.getAllBrewsIncludingArchived() // NY IMPLEMENTATION
     override suspend fun getBrewById(id: Long): Brew? = dao.getBrewById(id)
     override suspend fun addBrew(brew: Brew): Long = dao.addBrew(brew)
     override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew)
@@ -52,7 +53,6 @@ class CoffeeRepositoryImpl @Inject constructor(
         dao.addBrewWithSamples(brew, samples)
     override fun observeBrew(brewId: Long): Flow<Brew?> = dao.observeBrew(brewId)
     override fun getBrewsForBean(beanId: Long): Flow<List<Brew>> = dao.getBrewsForBean(beanId)
-    // TILLAGD IMPLEMENTATION
     override fun getTotalBrewCount(): Flow<Int> = dao.getTotalBrewCount() // För räknaren
 
     // --- Mätpunkter (BrewSample) ---

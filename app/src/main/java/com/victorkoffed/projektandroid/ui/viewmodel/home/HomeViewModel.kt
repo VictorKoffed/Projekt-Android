@@ -34,6 +34,7 @@ class HomeViewModel @Inject constructor(
 
     // Hämtar de 5 senaste bryggningarna (som inte är kopplade till arkiverade bönor)
     // för visning på hemskärmen. Kombinerar med bönnamn.
+    // ANVÄNDER FORTFARANDE getAllBrews() FÖR DENNA LISTA
     val recentBrews: StateFlow<List<RecentBrewItem>> = repository.getAllBrews()
         .map { brews -> brews.take(5) }
         .combine(repository.getAllBeans()) { brews, beans ->
@@ -56,7 +57,7 @@ class HomeViewModel @Inject constructor(
             initialValue = 0
         )
 
-    // UPPDATERAD: StateFlow för det totala antalet genomförda bryggningar (ALLA)
+    // StateFlow för det totala antalet genomförda bryggningar (ALLA)
     val totalBrewCount: StateFlow<Int> = repository.getTotalBrewCount() // Använder den nya metoden
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -79,9 +80,9 @@ class HomeViewModel @Inject constructor(
         .map { beans -> beans.sumOf { it.remainingWeightGrams } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // StateFlow för tidpunkten då den *senaste* AKTIVA bryggningen startade.
-    val lastBrewTime: StateFlow<Date?> = repository.getAllBrews()
-        .map { brews -> brews.firstOrNull()?.startedAt }
+    // UPPDATERAD: StateFlow för tidpunkten då den *senaste* bryggningen (inklusive arkiverade) startade.
+    val lastBrewTime: StateFlow<Date?> = repository.getAllBrewsIncludingArchived() // ANVÄND NY FUNKTION
+        .map { brews -> brews.firstOrNull()?.startedAt } // Hämta den första (senaste) från den sorterade listan
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

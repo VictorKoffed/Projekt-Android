@@ -54,9 +54,14 @@ interface CoffeeDao {
         ORDER BY B.started_at DESC
     """)
     fun getAllBrews(): Flow<List<Brew>> // Denna hämtar fortfarande bara aktiva för listan
+
+    // NY FUNKTION: Hämta ALLA brews, oavsett bönans arkivstatus, sorterade efter datum
+    @Query("SELECT * FROM Brew ORDER BY started_at DESC")
+    fun getAllBrewsIncludingArchived(): Flow<List<Brew>>
+
     @Query("SELECT * FROM Brew WHERE brew_id = :id") fun observeBrew(id: Long): Flow<Brew?>
 
-    // NYTT: Räkna ALLA bryggningar
+    // Räkna ALLA bryggningar
     @Query("SELECT COUNT(*) FROM Brew")
     fun getTotalBrewCount(): Flow<Int> // Returnerar ett Flow med totala antalet
 
@@ -64,8 +69,9 @@ interface CoffeeDao {
     suspend fun deleteBrewTransaction(brew: Brew) {
         incrementBeanStock(brew.beanId, brew.doseGrams)
         deleteBrew(brew)
-        val bean = getBeanById(brew.beanId)
-        if (bean != null) updateBean(bean)
+        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
+        // val bean = getBeanById(brew.beanId)
+        // if (bean != null) updateBean(bean)
     }
 
     @Query("SELECT * FROM Brew WHERE bean_id = :beanId ORDER BY started_at DESC")
@@ -87,8 +93,9 @@ interface CoffeeDao {
         val samplesWithBrewId = samples.map { it.copy(brewId = brewId) }
         insertBrewSamples(samplesWithBrewId)
         decrementBeanStock(brew.beanId, brew.doseGrams)
-        val bean = getBeanById(brew.beanId)
-        if (bean != null) updateBean(bean)
+        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
+        // val bean = getBeanById(brew.beanId)
+        // if (bean != null) updateBean(bean)
         return brewId
     }
 
@@ -96,8 +103,9 @@ interface CoffeeDao {
     suspend fun addBrew(brew: Brew): Long {
         val brewId = insertBrew(brew)
         decrementBeanStock(brew.beanId, brew.doseGrams)
-        val bean = getBeanById(brew.beanId)
-        if (bean != null) updateBean(bean)
+        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
+        // val bean = getBeanById(brew.beanId)
+        // if (bean != null) updateBean(bean)
         return brewId
     }
 }

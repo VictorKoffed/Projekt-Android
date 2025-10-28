@@ -53,13 +53,17 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
 
     private val logTag = "BrewDetailVM"
 
-    // Hämta brewId från SavedStateHandle
+    // Hämta brewId från SavedStateHandle (obligatoriskt argument)
     private val brewId: Long = savedStateHandle.get<Long>("brewId") ?: throw IllegalArgumentException("brewId not found in SavedStateHandle")
+
+    // Hämta beanIdToArchivePrompt från SavedStateHandle (valfritt argument, kan vara null eller -1L)
+    // VI GÖR DETTA I INIT ISTÄLLET FÖR ATT UPPDATERA STATE DIREKT
+    // private val initialBeanIdToArchivePrompt: Long? = savedStateHandle.get<Long>("beanIdToArchivePrompt")?.takeIf { it > 0 }
 
     private val _brewDetailState = MutableStateFlow(BrewDetailState())
     val brewDetailState: StateFlow<BrewDetailState> = _brewDetailState.asStateFlow()
 
-    // NYTT: State för att visa arkiveringsdialog vid start
+    // State för att visa arkiveringsdialog vid start
     private val _showArchivePromptOnEntry = MutableStateFlow<Long?>(null) // Håller beanId
     val showArchivePromptOnEntry: StateFlow<Long?> = _showArchivePromptOnEntry.asStateFlow()
 
@@ -92,21 +96,26 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         // Kontrollera att brewId är giltigt
         if (brewId > 0) {
             loadBrewDetails()
-            // NYTT: Kolla om vi ska visa arkiveringsprompt direkt
+            // Kolla om vi ska visa arkiveringsprompt direkt baserat på navArgument
             checkForArchivePromptOnEntry()
         } else {
             _brewDetailState.update { it.copy(isLoading = false, error = "Invalid Brew ID provided.") }
         }
     }
 
-    // NYTT: Funktion för att kolla SavedStateHandle
+    // Funktion för att kolla SavedStateHandle för arkiveringsargumentet
     private fun checkForArchivePromptOnEntry() {
+        // Använd nyckeln från navArgument ("beanIdToArchivePrompt")
         val beanIdToPrompt: Long? = savedStateHandle.get<Long>("beanIdToArchivePrompt")
-        if (beanIdToPrompt != null) {
-            Log.d(logTag, "Received beanIdToArchivePrompt: $beanIdToPrompt")
+        // Kontrollera om värdet är giltigt (inte null och inte default -1L)
+        if (beanIdToPrompt != null && beanIdToPrompt > 0) {
+            Log.d(logTag, "Received beanIdToArchivePrompt via navArg: $beanIdToPrompt")
             _showArchivePromptOnEntry.value = beanIdToPrompt
-            // Rensa direkt för att undvika att prompten visas igen vid rotation etc.
-            savedStateHandle.remove<Long>("beanIdToArchivePrompt")
+            // Rensa argumentet från SavedStateHandle för att undvika att prompten visas igen vid rotation etc.
+            // SavedStateHandle är mutable.
+            savedStateHandle.set("beanIdToArchivePrompt", -1L) // Sätt tillbaka till default
+        } else {
+            Log.d(logTag, "No valid beanIdToArchivePrompt found in navArgs.")
         }
     }
 
@@ -278,7 +287,7 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
     // --- Arkiveringsprompt (från LiveBrew) ---
 
     /**
-     * NYTT: Funktion för att arkivera bönan (anropas från UI när prompten visas).
+     * Funktion för att arkivera bönan (anropas från UI när prompten visas).
      * Denna funktion anropar direkt repositoryt för att uppdatera arkivstatus.
      */
     fun archiveBeanFromPrompt(beanId: Long) {
@@ -289,7 +298,17 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
                 // Om den arkiverade bönan är den som visas på skärmen (vilket den borde vara),
                 // ladda om detaljerna för att reflektera ändringen.
                 if (beanId == _brewDetailState.value.bean?.id) {
-                    loadBrewDetails() // Ladda om för att visa uppdaterad bönstatus
+                    // VI BEHÖVER INTE LADDA OM HELA - observeBean uppdaterar automatiskt
+                    // loadBrewDetails() // Ladda om för att visa uppdaterad bönstatus
+                    // Istället, bara uppdatera lokalt state om det inte redan reflekterats
+                    _brewDetailState.update { currentState ->
+                        if (currentState.bean?.id == beanId && currentState.bean.isArchived == false) {
+                            currentState.copy(bean = currentState.bean.copy(isArchived = true))
+                        } else {
+                            currentState
+                        }
+                    }
+
                 }
             } catch (e: Exception) {
                 Log.e(logTag, "Failed to archive bean $beanId from prompt", e)
@@ -300,7 +319,7 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         }
     }
 
-    /** NYTT: Funktion för att avvisa arkiveringsprompten. */
+    /** Funktion för att avvisa arkiveringsprompten. */
     fun dismissArchivePromptOnEntry() {
         _showArchivePromptOnEntry.value = null
     }

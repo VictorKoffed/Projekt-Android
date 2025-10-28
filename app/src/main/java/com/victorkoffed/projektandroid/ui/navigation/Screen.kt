@@ -1,5 +1,8 @@
 package com.victorkoffed.projektandroid.ui.navigation
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 /**
  * En förseglad klass som definierar alla navigeringsvägar (routes) i applikationen.
  * Detta säkerställer att alla vägar hanteras på ett centralt och säkert sätt.
@@ -25,11 +28,31 @@ sealed class Screen(val route: String) {
 
     /**
      * Navigeringsväg för att visa detaljer för en bryggning. Kräver ID:t för bryggningen.
+     * NYTT: Lägger till ett valfritt argument för att signalera arkiveringsprompt.
      */
-    object BrewDetail : Screen("brew_detail/{brewId}") {
-        /** Bygger den fullständiga rutten med det specifika bryggnings-ID:t. */
-        fun createRoute(brewId: Long) = "brew_detail/$brewId"
+    object BrewDetail : Screen("brew_detail/{brewId}?beanIdToArchivePrompt={beanIdToArchivePrompt}") {
+        // Argumentdefinitioner
+        val arguments = listOf(
+            navArgument("brewId") { type = NavType.LongType },
+            // Valfritt argument med standardvärde -1 (eller annat ogiltigt ID)
+            navArgument("beanIdToArchivePrompt") {
+                type = NavType.LongType
+                defaultValue = -1L
+            }
+        )
+
+        /** Bygger den fullständiga rutten med det specifika bryggnings-ID:t och eventuellt bön-ID för arkivering. */
+        fun createRoute(brewId: Long, beanIdToArchivePrompt: Long? = null): String {
+            val baseRoute = "brew_detail/$brewId"
+            // Lägg till query parameter endast om beanIdToArchivePrompt har ett giltigt värde
+            return if (beanIdToArchivePrompt != null && beanIdToArchivePrompt > 0) {
+                "$baseRoute?beanIdToArchivePrompt=$beanIdToArchivePrompt"
+            } else {
+                baseRoute // Ingen query parameter behövs
+            }
+        }
     }
+
 
     /**
      * Navigeringsväg för att visa detaljer för en böna. Kräver ID:t för bönan.

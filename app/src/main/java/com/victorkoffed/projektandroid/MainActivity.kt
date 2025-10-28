@@ -255,6 +255,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate(Screen.BrewSetup.route)
                                     },
                                     onBrewClick = { brewId ->
+                                        // Använd createRoute UTAN beanIdToArchivePrompt här
                                         navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                     },
                                     availableBeans = availableBeans,
@@ -317,6 +318,7 @@ class MainActivity : ComponentActivity() {
                                             brewVm.getCurrentSetup()
                                             val newBrewId = brewVm.saveBrewWithoutSamples()
                                             if (newBrewId != null) {
+                                                // Använd createRoute UTAN beanIdToArchivePrompt här
                                                 navController.navigate(Screen.BrewDetail.createRoute(newBrewId)) {
                                                     popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                                 }
@@ -363,22 +365,24 @@ class MainActivity : ComponentActivity() {
                                             val saveResult = scaleVm.stopRecordingAndSave(currentSetup)
 
                                             if (saveResult.brewId != null) {
-                                                // Navigera till detaljvyn
-                                                val route = Screen.BrewDetail.createRoute(saveResult.brewId)
+                                                // Navigera till detaljvyn och skicka med eventuellt bön-ID för arkivering
+                                                val route = Screen.BrewDetail.createRoute(
+                                                    brewId = saveResult.brewId,
+                                                    beanIdToArchivePrompt = saveResult.beanIdReachedZero // Skicka med detta!
+                                                )
 
                                                 navController.navigate(route) {
                                                     // Rensa LiveBrew och BrewSetup från stacken
                                                     popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                                     launchSingleTop = true // Undvik flera instanser av detaljvyn
 
-                                                    // NYTT: Spara beanId för arkivering i SavedStateHandle för nästa skärm
-                                                    saveResult.beanIdReachedZero?.let { beanId ->
-                                                        // Använd en unik nyckel
-                                                        navController.currentBackStackEntry
-                                                            ?.savedStateHandle
-                                                            ?.set("beanIdToArchivePrompt", beanId)
-                                                        Log.d("MainActivity", "Setting beanIdToArchivePrompt: $beanId")
-                                                    }
+                                                    // --- BORTTAGET: Hanteras nu via navArgument ---
+                                                    // saveResult.beanIdReachedZero?.let { beanId ->
+                                                    //     navController.currentBackStackEntry
+                                                    //         ?.savedStateHandle
+                                                    //         ?.set("beanIdToArchivePrompt", beanId)
+                                                    //     Log.d("MainActivity", "Setting beanIdToArchivePrompt: $beanId")
+                                                    // }
                                                 }
                                             } else {
                                                 // Hantera fel vid sparande
@@ -404,14 +408,17 @@ class MainActivity : ComponentActivity() {
 
                             // --- Detalj-skärmar (med argument) ---
                             composable(
+                                // ANVÄND Screen.BrewDetail.route HÄR
                                 route = Screen.BrewDetail.route,
-                                arguments = listOf(navArgument("brewId") { type = NavType.LongType })
+                                // ANVÄND Screen.BrewDetail.arguments HÄR
+                                arguments = Screen.BrewDetail.arguments
                             ) { backStackEntry ->
                                 // Hämta ViewModel med Hilt. SavedStateHandle injiceras automatiskt.
                                 // Nyckel för unika instanser vid snabb navigering
                                 val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(key = "brewDetail_${backStackEntry.arguments?.getLong("brewId")}")
 
-                                // Skicka med backStackEntry så BrewDetailScreen kan läsa SavedStateHandle
+                                // Skicka med backStackEntry så BrewDetailScreen kan läsa SavedStateHandle.
+                                // Argumentet beanIdToArchivePrompt kommer att finnas i backStackEntry.arguments
                                 BrewDetailScreen(
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
@@ -424,6 +431,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+
                             composable(
                                 route = Screen.BeanDetail.route,
                                 arguments = listOf(navArgument("beanId") { type = NavType.LongType })
@@ -434,6 +442,7 @@ class MainActivity : ComponentActivity() {
                                     BeanDetailScreen(
                                         onNavigateBack = { navController.popBackStack() },
                                         onBrewClick = { brewId ->
+                                            // Använd createRoute UTAN beanIdToArchivePrompt här
                                             navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                         }
                                     )
@@ -471,9 +480,8 @@ class MainActivity : ComponentActivity() {
                             }
                         } // Slut NavHost
                     } // Slut Scaffold Content Scope
-                } // Slut Scaffold
-            } // Slut ModalNavigationDrawer Content Scope
-        } // Slut ProjektAndroidTheme
-    } // Slut setContent
-} // Slut onCreate
-// Slut MainActivity
+                } // Slut ModalNavigationDrawer Content Scope
+            } // Slut ProjektAndroidTheme
+        } // Slut setContent
+    } // Slut onCreate
+} // Slut MainActivity
