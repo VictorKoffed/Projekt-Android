@@ -87,11 +87,10 @@ com.victorkoffed.projektandroid/
 ##  Known issue (Bugfix)
 ---
 
-1. Archive old beans when reaching zero and brews to remove them from home?
-2. The auto connect BLE dont work.
-3. Flow in detailbrew dont cap flow to 20g/s
-4. Tare and auto tare in livebrew must tare 2 times to zero
-5. Clean up warnings and refactor ∞
+1. The auto connect BLE dont work.
+2. Flow in detailbrew dont cap flow to 20g/s
+3. Tare and auto tare in livebrew must tare 2 times to zero
+4. Clean up warnings and refactor ∞
 
 ---
 
