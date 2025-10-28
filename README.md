@@ -126,7 +126,7 @@ graph TD
 
 ---
 
-## 🧪 Testning
+## 🧪 Testning (Inga test än..)
 
 - **Enhetstester:** `app/src/test` – platshållare (ExampleUnitTest.kt)  
 - **Instrumenterade tester:** `app/src/androidTest` – platshållare (ExampleInstrumentedTest.kt)
