@@ -105,7 +105,7 @@ graph TD
   Repo --> Data["Data Sources"]
   Data --> Room["Room/SQLite DB"]
   Data --> BLE["BookooBleClient / BLE"]
-  Data --> Network["Volley / Coffee API"]
+  Data --> Network["Kotlin Coroutines / Coffee API"]
   DI["Hilt DI"] --- VM
   DI --- Repo
   DI --- Data
@@ -119,13 +119,14 @@ graph TD
 
 ## 🧩 Avancerade Kotlin/Android-koncept som används
 
-| Område            | Exempel i koden                                       | Förklaring                                             |
-|-------------------|-------------------------------------------------------|--------------------------------------------------------|
-| Kotlin Flows      | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI.              |
-| BLE-kommunikation | `callbackFlow`, `BluetoothGatt`                       | Coroutines & Flows för asynkrona BLE-händelser.        |
-| Room Data         | `@DatabaseView`, `ForeignKey.CASCADE`                 | Avancerad databasmodellering med vyer och constraints. |
-| Coroutines        | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                 |
-| CameraX           | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.          |
+| Område                | Exempel i koden                                       | Förklaring                                                                                             |
+|-----------------------|-------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| Kotlin Flows          | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI.                                                              |
+| BLE-kommunikation     | `callbackFlow`, `BluetoothGatt`                       | Coroutines & Flows för asynkrona BLE-händelser.                                                        |
+| Room Data             | `@DatabaseView`, `ForeignKey.CASCADE`                 | Avancerad databasmodellering med vyer och constraints.                                                 |
+| Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                                                                 |
+| CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                                                          |
+| Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion, vilket ersätter volley-biblioteket. |
 
 ---
 
