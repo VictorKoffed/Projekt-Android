@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     ],
     views = [BrewMetrics::class],
     // Databasversion. Måste ökas vid schemaändringar (t.ex. ny tabell eller kolumn).
-    version = 3,
+    version = 4, // UPPDATERAD TILL VERSION 4
     // exportSchema bör vara 'false' i utveckling för att undvika varningar
     exportSchema = false
 )

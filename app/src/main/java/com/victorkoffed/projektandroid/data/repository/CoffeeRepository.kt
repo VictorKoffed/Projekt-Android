@@ -8,10 +8,6 @@ import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Kontraktet (interfacet) för att hantera all kafferelaterad data.
- * Alla CRUD-operationer mot databasen ska gå via denna repository.
- */
 interface CoffeeRepository {
     // --- Kvarn (Grinder) ---
     fun getAllGrinders(): Flow<List<Grinder>>
@@ -29,35 +25,31 @@ interface CoffeeRepository {
 
     // --- Böna (Bean) ---
     fun getAllBeans(): Flow<List<Bean>>
+    fun getArchivedBeans(): Flow<List<Bean>>
     suspend fun addBean(bean: Bean)
     suspend fun updateBean(bean: Bean)
     suspend fun getBeanById(id: Long): Bean?
+    fun observeBean(beanId: Long): Flow<Bean?>
     suspend fun deleteBean(bean: Bean)
+    suspend fun updateBeanArchivedStatus(id: Long, isArchived: Boolean)
+    fun getTotalBeanCount(): Flow<Int>
 
     // --- Bryggning (Brew) ---
-    fun getAllBrews(): Flow<List<Brew>>
+    fun getAllBrews(): Flow<List<Brew>> // Hämtar fortfarande bara aktiva för listan
     suspend fun getBrewById(id: Long): Brew?
-    /** Lägger till en bryggning och returnerar dess ID, minskar bönlagret. */
     suspend fun addBrew(brew: Brew): Long
     suspend fun updateBrew(brew: Brew)
     suspend fun deleteBrew(brew: Brew)
-    /** Utför en transaktionell radering av bryggningen och återställer bönans lagersaldo. */
     suspend fun deleteBrewAndRestoreStock(brew: Brew)
-    /** Lägger till en bryggning och dess associerade mätpunkter (Samples) i en transaktion, minskar lagret. */
     suspend fun addBrewWithSamples(brew: Brew, samples: List<BrewSample>): Long
-
-    /** Reaktiv observation av en enskild bryggning. Användbart för att visa detaljer. */
     fun observeBrew(brewId: Long): Flow<Brew?>
-
-    /** Hämtar alla bryggningar som gjorts med en specifik böna. */
     fun getBrewsForBean(beanId: Long): Flow<List<Brew>>
+    fun getTotalBrewCount(): Flow<Int> // TILLAGD: Hämtar totalt antal bryggningar
 
     // --- Mätpunkter (BrewSample) ---
-    /** Hämtar tidsseriedata (mätpunkter) för en specifik bryggning. */
     fun getSamplesForBrew(brewId: Long): Flow<List<BrewSample>>
     suspend fun addBrewSamples(samples: List<BrewSample>)
 
     // --- Beräknade Mått (BrewMetrics) ---
-    /** Hämtar de beräknade nyckeltalen (t.ex. ratio, vattenmängd) för en bryggning. */
     fun getBrewMetrics(brewId: Long): Flow<BrewMetrics?>
 }

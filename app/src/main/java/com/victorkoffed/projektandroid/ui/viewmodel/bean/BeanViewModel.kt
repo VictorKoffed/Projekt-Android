@@ -17,8 +17,9 @@ import javax.inject.Inject // <-- NY IMPORT
 
 /**
  * ViewModel för hantering av Kaffebönor.
- * Huvudansvaret är att tillhandahålla listan över alla bönor och hantera tillägg av nya.
- * (Redigering/Borttagning hanteras nu i BeanDetailViewModel).
+ * Huvudansvaret är att tillhandahålla listan över alla AKTIVA och ARKIVERADE bönor
+ * samt hantera tillägg av nya.
+ * (Redigering/Borttagning/Arkivering hanteras nu i BeanDetailViewModel).
  */
 @HiltViewModel // <-- NY ANNOTERING
 class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
@@ -26,15 +27,24 @@ class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
 ) : ViewModel() {
 
     /**
-     * Exponerar ett StateFlow av alla bönor från databasen.
+     * Exponerar ett StateFlow av alla AKTIVA bönor från databasen.
      * StateIn används för att konvertera Flow till StateFlow, vilket gör den livscykelmedveten.
      */
-    val allBeans: StateFlow<List<Bean>> = repository.getAllBeans()
+    val allBeans: StateFlow<List<Bean>> = repository.getAllBeans() // Denna hämtar nu bara aktiva
         .stateIn(
             scope = viewModelScope,
-            // Dela flödet och håll det aktivt i 5 sekunder efter att sista observatören försvinner
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList() // Startvärde
+            initialValue = emptyList()
+        )
+
+    /**
+     * NYTT: Exponerar ett StateFlow av alla ARKIVERADE bönor från databasen.
+     */
+    val archivedBeans: StateFlow<List<Bean>> = repository.getArchivedBeans() // Ny DAO-metod
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
     /**
@@ -56,6 +66,7 @@ class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
      * Lägger till en ny böna i databasen.
      * Hanterar konvertering av stränginput från UI (roastDateString, initialWeightString)
      * till de korrekta typerna (Date, Double) för datamodellen.
+     * Nya bönor är alltid aktiva (isArchived=false) som standard.
      */
     fun addBean(
         name: String,
@@ -76,7 +87,8 @@ class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
             roastDate = roastDate,
             initialWeightGrams = initialWeight,
             remainingWeightGrams = remainingWeight,
-            notes = notes?.takeIf { it.isNotBlank() } // Spara endast om icke-tom
+            notes = notes?.takeIf { it.isNotBlank() }, // Spara endast om icke-tom
+            isArchived = false // Nya bönor är alltid aktiva
         )
         viewModelScope.launch {
             // Utför databasoperationen asynkront

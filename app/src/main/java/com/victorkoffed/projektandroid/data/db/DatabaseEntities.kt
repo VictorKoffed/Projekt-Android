@@ -71,6 +71,10 @@ data class Bean(
     // Standardvärdet garanterar att fältet aldrig är null i databasen.
     val remainingWeightGrams: Double = 0.0,
 
+    // NYTT: Markerar om bönan är arkiverad (dold från huvudlistor)
+    @ColumnInfo(name = "is_archived")
+    val isArchived: Boolean = false, // FALSE som standard
+
     val notes: String?
 )
 

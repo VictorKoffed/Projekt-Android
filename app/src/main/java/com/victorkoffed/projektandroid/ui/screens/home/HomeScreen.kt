@@ -1,3 +1,4 @@
+// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/home/HomeScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.home
 
 import androidx.compose.foundation.Image
@@ -90,14 +91,14 @@ fun HomeScreen(
     onBrewClick: (Long) -> Unit, // Callback för att visa bryggdetaljer
     availableBeans: List<Bean>, // Data för att kontrollera förutsättningar
     availableMethods: List<Method>, // Data för att kontrollera förutsättningar
-    onMenuClick: () -> Unit // NYTT: Callback för att öppna navigeringslådan
+    onMenuClick: () -> Unit // Callback för att öppna navigeringslådan
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
-    val totalBrews by homeVm.totalBrewCount.collectAsState()
-    val uniqueBeans by homeVm.uniqueBeanCount.collectAsState()
+    val beansExplored by homeVm.beansExploredCount.collectAsState()
     val availableWeight by homeVm.totalAvailableBeanWeight.collectAsState()
     val lastBrewTime by homeVm.lastBrewTime.collectAsState()
+    val totalBrews by homeVm.totalBrewCount.collectAsState() // HÄMTA TOTALT ANTAL BRYGGNINGAR
 
     // States för slumpmässig bild
     val imageUrl by coffeeImageVm.imageUrl
@@ -166,7 +167,6 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("Home") },
                 navigationIcon = {
-                    // NYTT: Använder den nya onMenuClick callbacken
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
@@ -213,8 +213,8 @@ fun HomeScreen(
             item {
                 // Rutnät för statistik och statuskort
                 InfoGrid(
-                    totalBrews = totalBrews,
-                    uniqueBeans = uniqueBeans,
+                    totalBrews = totalBrews, // SKICKA MED totalBrews
+                    beansExplored = beansExplored,
                     availableWeight = availableWeight,
                     imageUrl = imageUrl,
                     imageLoading = imageLoading,
@@ -276,8 +276,9 @@ fun HomeScreen(
  */
 @Composable
 fun InfoGrid(
+    // LÄGG TILLBAKA totalBrews
     totalBrews: Int,
-    uniqueBeans: Int,
+    beansExplored: Int,
     availableWeight: Double,
     imageUrl: String?,
     imageLoading: Boolean,
@@ -328,18 +329,21 @@ fun InfoGrid(
             )
         }
 
-        // Andra och tredje raden: Statistik
+        // Andra raden: Brews och Tid sedan kaffe
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // LÄGG TILLBAKA KORTET FÖR TOTAL BREWS
             InfoCard(title = totalBrews.toString(), subtitle = "Brews", modifier = Modifier.weight(1f).height(otherRowHeight))
             InfoCard(title = timeSinceLastCoffee, subtitle = "Since last coffee", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
+
+        // Tredje raden: Beans explored och Beans available
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(title = uniqueBeans.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
-            // Använd %.0f g för att formatera vikt utan decimaler (inte specificerat, men vanligare för totalvikt)
+            InfoCard(title = beansExplored.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
             InfoCard(title = "%.0f g".format(availableWeight), subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
     }
 }
+
 
 /**
  * Visar vågens anslutningsstatus med dynamiska ikoner och färger.

@@ -18,10 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Archive // Importera Archive-ikonen
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Unarchive // Importera Unarchive-ikonen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,7 +80,6 @@ private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.get
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BeanDetailScreen(
-    // beanId: Long, // <-- PARAMETER BORTTAGEN
     onNavigateBack: () -> Unit,
     onBrewClick: (Long) -> Unit,
     // Hämta ViewModel direkt här med Hilt.
@@ -85,12 +88,15 @@ fun BeanDetailScreen(
     // UI-states från ViewModel
     val state by viewModel.beanDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
+    val showArchivePrompt by viewModel.showArchivePromptAfterSave.collectAsState() // Nytt state för prompt
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showArchiveWeightWarningDialog by remember { mutableStateOf(false) }
 
     // Snackbar-hantering
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Effekt för felmeddelanden
     LaunchedEffect(state.error) {
         if (state.error != null) {
             scope.launch {
@@ -108,20 +114,54 @@ fun BeanDetailScreen(
             TopAppBar(
                 title = { Text(state.bean?.name ?: "Loading bean...") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    // Avbryt-knapp i redigeringsläge, annars tillbaka-knapp
+                    IconButton(onClick = { if (isEditing) viewModel.cancelEditing() else onNavigateBack() }) {
+                        Icon(
+                            if (isEditing) Icons.Default.Cancel else Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (isEditing) "Cancel editing" else "Back"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.startEditing() }, enabled = state.bean != null) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-                    IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.bean != null) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    if (isEditing) {
+                        // Spara-knapp i redigeringsläge
+                        IconButton(onClick = { viewModel.saveChanges() }, enabled = state.bean != null) {
+                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    } else {
+                        // Visa Redigera-knapp
+                        IconButton(onClick = { viewModel.startEditing() }, enabled = state.bean != null) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
+
+                        state.bean?.let { bean ->
+                            if (bean.isArchived) {
+                                // --- Arkiverad status ---
+                                // Av-arkivera-knapp
+                                IconButton(onClick = { viewModel.unarchiveBean() }, enabled = !state.isLoading) {
+                                    Icon(Icons.Default.Unarchive, contentDescription = "Unarchive Bean", tint = MaterialTheme.colorScheme.primary)
+                                }
+                                // Permanent Radera-knapp
+                                IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = !state.isLoading) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Bean permanently", tint = MaterialTheme.colorScheme.error)
+                                }
+                            } else {
+                                // --- Aktiv status ---
+                                // Arkivera-knapp (visar Archive-ikon)
+                                IconButton(
+                                    onClick = {
+                                        if (bean.remainingWeightGrams == 0.0) {
+                                            viewModel.archiveBean { /* Stannar kvar på sidan */ }
+                                        } else {
+                                            showArchiveWeightWarningDialog = true // Visa varning om vikt > 0
+                                        }
+                                    },
+                                    enabled = !state.isLoading
+                                ) {
+                                    Icon(Icons.Default.Archive, contentDescription = "Archive Bean", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
                     }
                 }
             )
@@ -168,15 +208,15 @@ fun BeanDetailScreen(
                             )
                         }
                     } else {
-                        items(state.brews) { brew ->
+                        items(state.brews, key = { it.id }) { brew ->
                             BrewItemCard(brew = brew, onClick = { onBrewClick(brew.id) })
                         }
                     }
                 }
             }
-            else -> { // Fallback om bönan är null och inte laddar (t.ex. vid fel ID)
+            else -> { // Fallback om bönan är null och inte laddar
                 Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
-                    Text(state.error ?: "Bean not found.")
+                    Text(state.error ?: "Bean not found or has been deleted.")
                 }
             }
         } // Slut when
@@ -184,6 +224,7 @@ fun BeanDetailScreen(
         // --- Dialogrutor ---
         if (isEditing && state.bean != null) {
             EditBeanDialog(
+                // ... (samma som tidigare)
                 editName = viewModel.editName,
                 editRoaster = viewModel.editRoaster,
                 editRoastDateStr = viewModel.editRoastDateStr,
@@ -201,15 +242,43 @@ fun BeanDetailScreen(
             )
         }
 
+        // NYTT: Dialogruta för att bekräfta arkivering efter sparande till noll
+        if (showArchivePrompt && state.bean != null && !state.bean!!.isArchived) {
+            ArchiveConfirmationDialog(
+                beanName = state.bean!!.name,
+                onConfirm = { viewModel.confirmAndArchiveBean() }, // Bekräfta arkivering
+                onDismiss = { viewModel.dismissArchivePrompt() }  // Avbryt arkivering
+            )
+        }
+
+
+        // Varningsdialog vid försök att arkivera med vikt > 0
+        if (showArchiveWeightWarningDialog) {
+            AlertDialog(
+                onDismissRequest = { showArchiveWeightWarningDialog = false },
+                title = { Text("Cannot archive bean") },
+                text = { Text("The remaining weight for this bean must be zero (0.0 g) before it can be archived. Archiving hides the bean from the main list.") },
+                confirmButton = {
+                    TextButton(onClick = { showArchiveWeightWarningDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
+        // Borttagningsbekräftelse
         if (showDeleteConfirmDialog && state.bean != null) {
             DeleteConfirmationDialog(
                 beanName = state.bean!!.name,
                 brewCount = state.brews.size,
+                isArchived = state.bean!!.isArchived, // Skicka med arkivstatus
                 onConfirm = {
+                    // Försök radera via ViewModel (som kollar isArchived)
                     viewModel.deleteBean {
                         showDeleteConfirmDialog = false
-                        onNavigateBack()
+                        onNavigateBack() // Gå tillbaka endast vid lyckad radering
                     }
+                    // Dialogen stängs inte automatiskt om deleteBean sätter ett fel
                 },
                 onDismiss = { showDeleteConfirmDialog = false }
             )
@@ -225,7 +294,18 @@ fun BeanDetailHeaderCard(bean: Bean) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(bean.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            // Visa arkivstatus
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(bean.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                if (bean.isArchived) {
+                    Text(
+                        " (Archived)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
 
             DetailRow("Roaster:", bean.roaster ?: "-")
 
@@ -359,24 +439,51 @@ fun EditBeanDialog(
     )
 }
 
+/**
+ * NYTT: Dialog för att bekräfta arkivering när vikten når noll.
+ */
 @Composable
-fun DeleteConfirmationDialog(
+fun ArchiveConfirmationDialog(
     beanName: String,
-    brewCount: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete bean?") },
+        title = { Text("Archive Bean?") },
+        text = { Text("The remaining weight for '$beanName' is now zero. Do you want to archive this bean? Archived beans are hidden from the main list but can still be viewed.") },
+        confirmButton = {
+            Button(onClick = onConfirm) { Text("Archive") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not Now") } }
+    )
+}
+
+
+@Composable
+fun DeleteConfirmationDialog(
+    beanName: String,
+    brewCount: Int,
+    isArchived: Boolean, // Tar emot arkivstatus
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isArchived) "Delete bean permanently?" else "Cannot delete active bean") },
         text = {
-            val brewText = if (brewCount == 1) "1 related brew" else "$brewCount related brews"
-            Text("Are you sure you want to delete '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
+            if (isArchived) {
+                val brewText = if (brewCount == 1) "1 related brew" else "$brewCount related brews"
+                Text("Are you sure you want to permanently delete the ARCHIVED bean '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
+            } else {
+                Text("Bönan '$beanName' är fortfarande aktiv. Du måste först tömma bönan (sätta Remaining Weight till 0.0 g) och sedan arkivera den innan den kan raderas permanent. Arkivering döljer bönan från den huvudsakliga bönlistan.")
+            }
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                enabled = isArchived, // Endast aktiv om bönan är arkiverad
+                colors = ButtonDefaults.buttonColors(containerColor = if (isArchived) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ) { Text("Delete") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }

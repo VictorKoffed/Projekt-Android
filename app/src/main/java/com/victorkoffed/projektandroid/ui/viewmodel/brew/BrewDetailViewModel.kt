@@ -59,6 +59,10 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
     private val _brewDetailState = MutableStateFlow(BrewDetailState())
     val brewDetailState: StateFlow<BrewDetailState> = _brewDetailState.asStateFlow()
 
+    // NYTT: State för att visa arkiveringsdialog vid start
+    private val _showArchivePromptOnEntry = MutableStateFlow<Long?>(null) // Håller beanId
+    val showArchivePromptOnEntry: StateFlow<Long?> = _showArchivePromptOnEntry.asStateFlow()
+
     var quickEditNotes by mutableStateOf("")
         private set
 
@@ -88,10 +92,24 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         // Kontrollera att brewId är giltigt
         if (brewId > 0) {
             loadBrewDetails()
+            // NYTT: Kolla om vi ska visa arkiveringsprompt direkt
+            checkForArchivePromptOnEntry()
         } else {
             _brewDetailState.update { it.copy(isLoading = false, error = "Invalid Brew ID provided.") }
         }
     }
+
+    // NYTT: Funktion för att kolla SavedStateHandle
+    private fun checkForArchivePromptOnEntry() {
+        val beanIdToPrompt: Long? = savedStateHandle.get<Long>("beanIdToArchivePrompt")
+        if (beanIdToPrompt != null) {
+            Log.d(logTag, "Received beanIdToArchivePrompt: $beanIdToPrompt")
+            _showArchivePromptOnEntry.value = beanIdToPrompt
+            // Rensa direkt för att undvika att prompten visas igen vid rotation etc.
+            savedStateHandle.remove<Long>("beanIdToArchivePrompt")
+        }
+    }
+
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun loadBrewDetails() {
@@ -99,13 +117,16 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         viewModelScope.launch {
             _brewDetailState.update { it.copy(isLoading = true, error = null) }
 
-            // Samma logik som tidigare, använder nu 'brewId' från klassens egenskap
+            // Använd observeBrew för att få reaktiva uppdateringar
             repository.observeBrew(brewId)
                 .flatMapLatest { brew ->
                     if (brew == null) {
-                        flowOf(BrewDetailState(isLoading = false, error = "Brew not found"))
+                        // Om bryggningen inte finns (t.ex. raderad), sätt ett felmeddelande
+                        flowOf(BrewDetailState(isLoading = false, error = "Brew not found or has been deleted"))
                     } else {
-                        val beanFlow = flow { emit(repository.getBeanById(brew.beanId)) }
+                        // Flöden för att hämta relaterade data (Bean, Grinder, Method, Samples, Metrics)
+                        // Använder flowOf för att hantera null-värden elegant
+                        val beanFlow = flow { emit(repository.getBeanById(brew.beanId)) } // Hämtar bönan oavsett arkivstatus
                         val grinderFlow = brew.grinderId?.let { id -> flow { emit(repository.getGrinderById(id)) } }
                             ?: flowOf<Grinder?>(null)
                         val methodFlow = brew.methodId?.let { id -> flow { emit(repository.getMethodById(id)) } }
@@ -113,6 +134,7 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
                         val samplesFlow = repository.getSamplesForBrew(brew.id)
                         val metricsFlow = repository.getBrewMetrics(brew.id)
 
+                        // Kombinera alla flöden till ett enda state-objekt
                         combine(beanFlow, grinderFlow, methodFlow, samplesFlow, metricsFlow) { bean, grinder, method, samples, metrics ->
                             BrewDetailState(
                                 brew = brew, bean = bean, grinder = grinder, method = method,
@@ -122,51 +144,60 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
                     }
                 }
                 .catch { e ->
+                    // Hantera fel under datainhämtningen
                     Log.e(logTag, "Error in loadBrewDetails flow", e)
-                    emit(BrewDetailState(isLoading = false, error = "Failed to load brew: ${e.message}"))
+                    emit(BrewDetailState(isLoading = false, error = "Failed to load brew details: ${e.message}"))
                 }
                 .collectLatest { state ->
+                    // Uppdatera ViewModel-state
                     _brewDetailState.value = state
-                    if (!isEditing) {
-                        val dbNotes = state.brew?.notes ?: ""
+                    // Uppdatera quickEditNotes och redigeringsfälten om vi inte redigerar
+                    if (!isEditing && state.brew != null) {
+                        val dbNotes = state.brew.notes ?: ""
                         if (quickEditNotes != dbNotes) quickEditNotes = dbNotes
-                        resetEditFieldsToCurrentState()
+                        resetEditFieldsToCurrentState() // Säkerställ att redigeringsfälten matchar det laddade state
                     }
                 }
         }
     }
 
-    // --- Resten av funktionerna (startEditing, saveChanges, deleteCurrentBrew etc.) är oförändrade ---
+    // --- Redigeringsfunktioner ---
     fun startEditing() {
-        resetEditFieldsToCurrentState()
+        resetEditFieldsToCurrentState() // Se till att fälten är uppdaterade innan redigering
         isEditing = true
     }
 
     fun cancelEditing() {
         isEditing = false
+        // Återställ eventuella osparade ändringar i fälten
+        resetEditFieldsToCurrentState()
     }
 
     fun saveChanges() {
         val currentBrew = _brewDetailState.value.brew ?: return
         viewModelScope.launch {
             try {
+                // Skapa en uppdaterad Brew-entitet med värden från redigeringsfälten
                 val updatedBrew = currentBrew.copy(
                     grinderId = editSelectedGrinder?.id,
                     grindSetting = editGrindSetting.takeIf { it.isNotBlank() },
                     grindSpeedRpm = editGrindSpeedRpm.toDoubleOrNull(),
                     methodId = editSelectedMethod?.id,
                     brewTempCelsius = editBrewTempCelsius.toDoubleOrNull(),
-                    notes = editNotes.takeIf { it.isNotBlank() }
+                    notes = editNotes.takeIf { it.isNotBlank() } // Spara bara icke-tomma anteckningar
                 )
+                // Spara ändringarna via repositoryt
                 repository.updateBrew(updatedBrew)
-                isEditing = false
+                isEditing = false // Avsluta redigeringsläget
             } catch (e: Exception) {
+                // Hantera sparfel
                 Log.e(logTag, "Failed to save changes: ${e.message}", e)
                 _brewDetailState.update { it.copy(error = "Failed to save changes: ${e.message}") }
             }
         }
     }
 
+    // Funktioner för att uppdatera redigeringsfälten från UI
     fun onEditGrinderSelected(grinder: Grinder?) { editSelectedGrinder = grinder }
     fun onEditGrindSettingChanged(value: String) { editGrindSetting = value }
     fun onEditGrindSpeedRpmChanged(value: String) { if (value.matches(Regex("^\\d*$"))) editGrindSpeedRpm = value }
@@ -174,6 +205,7 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
     fun onEditBrewTempChanged(value: String) { if (value.matches(Regex("^\\d*\\.?\\d*$"))) editBrewTempCelsius = value }
     fun onEditNotesChanged(value: String) { editNotes = value }
 
+    // Återställer redigeringsfälten till det aktuella state (används vid start/avbryt redigering)
     private fun resetEditFieldsToCurrentState() {
         val currentState = _brewDetailState.value
         editSelectedGrinder = currentState.grinder
@@ -184,6 +216,7 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         editNotes = currentState.brew?.notes ?: ""
     }
 
+    // --- Snabbredigering av anteckningar ---
     fun onQuickEditNotesChanged(value: String) {
         quickEditNotes = value
     }
@@ -193,9 +226,11 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         viewModelScope.launch {
             try {
                 val notesToSave = quickEditNotes.takeIf { it.isNotBlank() }
+                // Spara endast om anteckningarna faktiskt har ändrats
                 if (notesToSave != currentBrew.notes) {
                     val updatedBrew = currentBrew.copy(notes = notesToSave)
                     repository.updateBrew(updatedBrew)
+                    // Uppdatera quickEditNotes igen för att reflektera det sparade värdet (kan vara null)
                     quickEditNotes = updatedBrew.notes ?: ""
                 }
             } catch (e: Exception) {
@@ -205,12 +240,14 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         }
     }
 
+    // --- Bildhantering ---
     fun updateBrewImageUri(uri: String?) {
         val currentBrew = _brewDetailState.value.brew ?: return
         viewModelScope.launch {
             try {
                 val updatedBrew = currentBrew.copy(imageUri = uri)
                 repository.updateBrew(updatedBrew)
+                // Uppdatera lokalt state direkt för snabbare UI-respons
                 _brewDetailState.update { it.copy(brew = updatedBrew) }
             } catch (e: Exception) {
                 Log.e(logTag, "Kunde inte spara bild-URI: ${e.message}", e)
@@ -219,13 +256,15 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         }
     }
 
+    // --- Radering av bryggning ---
     fun deleteCurrentBrew(onSuccess: () -> Unit) {
         val brewToDelete = _brewDetailState.value.brew
         if (brewToDelete != null) {
             viewModelScope.launch {
                 try {
+                    // Använder transaktionen som återställer lagersaldot
                     repository.deleteBrewAndRestoreStock(brewToDelete)
-                    onSuccess()
+                    onSuccess() // Kör callback för att t.ex. navigera tillbaka
                 } catch (e: Exception) {
                     Log.e(logTag, "Failed to delete brew: ${e.message}", e)
                     _brewDetailState.update { it.copy(error = "Failed to delete brew: ${e.message}") }
@@ -236,6 +275,38 @@ class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
         }
     }
 
+    // --- Arkiveringsprompt (från LiveBrew) ---
+
+    /**
+     * NYTT: Funktion för att arkivera bönan (anropas från UI när prompten visas).
+     * Denna funktion anropar direkt repositoryt för att uppdatera arkivstatus.
+     */
+    fun archiveBeanFromPrompt(beanId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.updateBeanArchivedStatus(beanId, true)
+                Log.d(logTag, "Bean $beanId archived successfully from prompt.")
+                // Om den arkiverade bönan är den som visas på skärmen (vilket den borde vara),
+                // ladda om detaljerna för att reflektera ändringen.
+                if (beanId == _brewDetailState.value.bean?.id) {
+                    loadBrewDetails() // Ladda om för att visa uppdaterad bönstatus
+                }
+            } catch (e: Exception) {
+                Log.e(logTag, "Failed to archive bean $beanId from prompt", e)
+                _brewDetailState.update { it.copy(error = "Could not archive the bean: ${e.message}") }
+            } finally {
+                dismissArchivePromptOnEntry() // Dölj prompten oavsett resultat
+            }
+        }
+    }
+
+    /** NYTT: Funktion för att avvisa arkiveringsprompten. */
+    fun dismissArchivePromptOnEntry() {
+        _showArchivePromptOnEntry.value = null
+    }
+
+
+    // --- Felhantering ---
     fun clearError() {
         _brewDetailState.update { it.copy(error = null) }
     }
