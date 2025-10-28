@@ -35,3 +35,6 @@ val PlaceholderDarkGray = Color(0xFF606060)
 
 // NY FÄRG: Mjuk beige färg för bakgrund och ytor, ersätter skarp vit/ljusgrå.
 val GentleBackground = Color(0xFFF5EFE6)
+
+// NY FÄRG: Ljusgrå för huvudbakgrund
+val AppBackgroundGray = Color(0xFFF0F0F0)

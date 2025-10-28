@@ -1,20 +1,15 @@
 package com.victorkoffed.projektandroid.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme // <-- NY IMPORT
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState // <-- NY IMPORT
-import androidx.compose.runtime.getValue // <-- NY IMPORT
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager // <-- NY IMPORT
+import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 
 
-// --- Huvudfärger (från Color.kt) ---
-// CoffeeBrown = Color(0xFFDCC7AA)
-// CoffeeDark = Color(0xFF331A15)
-
-// [LightCoffeeColorScheme definitionen förblir oförändrad]
 private val LightCoffeeColorScheme = lightColorScheme(
     primary = CoffeeBrown,
     onPrimary = Black,
@@ -30,8 +25,10 @@ private val LightCoffeeColorScheme = lightColorScheme(
     tertiaryContainer = CoffeeBrown.copy(alpha = 0.3f),
     onTertiaryContainer = Black,
 
-    background = GentleBackground,
-    surface = GentleBackground,
+    // UPPDATERAD FÄRG: Bakgrund ska vara Ljusgrå (för bakom korten)
+    background = AppBackgroundGray,
+    // UPPDATERAD FÄRG: Ytor (kort, TopAppBar, NavigationBar/Bottom Bar) ska vara Vit
+    surface = Color.White,
     onSurface = Color.Black,
     onBackground = Color.Black,
 
