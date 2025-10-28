@@ -1,17 +1,21 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.coffee
 
-import android.app.Application
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
-import com.victorkoffed.projektandroid.data.network.NetworkRequestQueue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepository
+import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import kotlinx.coroutines.launch
+import javax.inject.Inject // <-- NY IMPORT
 
 /**
  * ViewModel för att hantera logiken kring att hämta en slumpmässig kaffebild från ett externt API.
- * Använder Volley för nätverksanrop och håller state som Compose-UI:et observerar.
+ * Använder en Hilt-injicerad Repository och Coroutines för nätverksanrop.
  */
-class CoffeeImageViewModel(app: Application) : AndroidViewModel(app) {
+@HiltViewModel
+class CoffeeImageViewModel @Inject constructor( // <-- ANVÄND @Inject Constructor
+    private val imageRepository: CoffeeImageRepository // <-- NY INJICERAD DEPENDENCY
+) : ViewModel() { // <-- ÄRV FRÅN ViewModel ISTÄLLET FÖR AndroidViewModel
 
     // State för den slumpmässigt hämtade bildens URL.
     val imageUrl = mutableStateOf<String?>(null)
@@ -20,38 +24,30 @@ class CoffeeImageViewModel(app: Application) : AndroidViewModel(app) {
     // Håller ett eventuellt felmeddelande från nätverksanropet.
     val error = mutableStateOf<String?>(null)
 
-    // Skapar en referens till den globala nätverkskön (Volley Singleton).
-    private val queue = NetworkRequestQueue.Companion.getInstance(app).queue
-
-    companion object {
-        // Den API-URL som används för att hämta en slumpmässig kaffebild.
-        private const val RANDOM_COFFEE_API_URL = "https://coffee.alexflipnote.dev/random.json"
-    }
-
     /**
      * Utför ett nätverksanrop för att hämta URL:en till en slumpmässig kaffebild från API:t
      * och uppdaterar det observerbara Compose-state:t.
      */
     fun loadRandomCoffeeImage() {
+        if (loading.value) return // Förhindra dubbla anrop
+
         loading.value = true
         error.value = null
 
-        val request = JsonObjectRequest(
-            Request.Method.GET, RANDOM_COFFEE_API_URL, null,
-            { json ->
-                // Lyckad förfrågan → spara bildens URL, nyckeln är "file" i JSON-svaret.
-                imageUrl.value = json.optString("file")
-                loading.value = false
-            },
-            { err ->
-                // Något gick fel under nätverksanropet → spara felmeddelande.
-                error.value = err.message ?: "Okänt nätverksfel" // Översatte felmeddelandet.
+        viewModelScope.launch {
+            try {
+                val url = imageRepository.fetchRandomCoffeeImageUrl()
+                imageUrl.value = url
+                if (url == null) {
+                    error.value = "Kunde inte hitta bild-URL i API-svar."
+                }
+            } catch (e: Exception) {
+                // Fånga eventuella fel (t.ex. I/O-fel) från repositoryt
+                error.value = "Nätverksfel: ${e.message ?: "Okänt fel"}"
+            } finally {
                 loading.value = false
             }
-        )
-
-        // Lägg till förfrågan i Volley-kön för att starta anropet.
-        queue.add(request)
+        }
     }
 
     /**

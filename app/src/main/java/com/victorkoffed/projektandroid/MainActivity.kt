@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels // Behålls för coffeeImageVm initialt
+import androidx.activity.viewModels // Behålls för coffeeImageVm initialt <--- RADERAD/UPPDATERAD
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
     lateinit var themePreferenceManager: ThemePreferenceManager
 
     // CoffeeImageViewModel kan fortfarande skapas så här eftersom den inte har komplexa beroenden (ännu)
-    private val coffeeImageVm: CoffeeImageViewModel by viewModels()
+    // private val coffeeImageVm: CoffeeImageViewModel by viewModels() <--- BORTTAGEN
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,6 +151,7 @@ class MainActivity : ComponentActivity() {
                 val homeVm: HomeViewModel = hiltViewModel()
                 val brewVm: BrewViewModel = hiltViewModel()
                 val scaleVm: ScaleViewModel = hiltViewModel()
+                val coffeeImageVm: CoffeeImageViewModel = hiltViewModel() // <--- NY HILT VIEWMODEL HÄMTNING
 
                 // Observerar state direkt från Hilt ViewModel
                 val isDarkModeManual by homeVm.isDarkMode.collectAsState()
@@ -464,4 +465,4 @@ class MainActivity : ComponentActivity() {
         } // Slut ProjektAndroidTheme
     } // Slut setContent
 } // Slut onCreate
- // Slut MainActivity
+// Slut MainActivity

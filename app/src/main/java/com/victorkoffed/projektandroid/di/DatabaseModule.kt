@@ -5,6 +5,8 @@ import android.content.Context
 import com.victorkoffed.projektandroid.data.db.CoffeeDao
 import com.victorkoffed.projektandroid.data.db.CoffeeDatabase
 import com.victorkoffed.projektandroid.data.repository.BookooScaleRepositoryImpl
+import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepository
+import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepositoryImpl
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepositoryImpl
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
@@ -34,4 +36,8 @@ object DatabaseModule {
 
     @Provides @Singleton
     fun provideScaleRepository(impl: BookooScaleRepositoryImpl): ScaleRepository = impl
+
+    // --- NYTT: Coffee Image Repository ---
+    @Provides @Singleton
+    fun provideCoffeeImageRepository(impl: CoffeeImageRepositoryImpl): CoffeeImageRepository = impl
 }

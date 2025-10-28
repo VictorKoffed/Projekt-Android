@@ -15,6 +15,7 @@ android {
         applicationId = "com.example.projektandroid"
         minSdk = 24
         targetSdk = 36
+
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -25,6 +26,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
+
                 "proguard-rules.pro"
             )
         }
@@ -43,7 +45,8 @@ android {
 }
 
 dependencies {
-    // --- COMPOSE ---
+    // --- COMPOSE
+    // ---
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
@@ -61,13 +64,14 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     // --- ÖVRIGA ---
-    implementation(libs.volley)
+    // implementation(libs.volley) <--- BORTTAGEN
     implementation(libs.coil.compose)
 
     // --- ROOM (KSP) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler) // Room använder KSP
+
 
     // --- NAVIGATION ---
     implementation(libs.androidx.navigation.compose)

@@ -22,7 +22,7 @@ hilt = "2.57.2" # Din uppdaterade version (Kontrollera SENASTE STABILA)
 hiltNavigationCompose = "1.3.0" # Din uppdaterade version (Kontrollera SENASTE STABILA)
 
 # --- FUNKTIONELLA BERODEN ---
-volley = "1.2.1"
+# volley = "1.2.1" <--- BORTTAGEN
 coil = "2.7.0" # Eller din uppdaterade version
 navigation-compose = "2.9.5" # Din uppdaterade version (Kontrollera SENASTE STABILA)
 camerax = "1.5.1" # Din uppdaterade version (Kontrollera SENASTE STABILA)
@@ -76,7 +76,7 @@ hilt-compiler-kapt = { group = "com.google.dagger", name = "hilt-compiler", vers
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 # --- ÖVRIGA FUNKTIONELLA BIBLIOTEK ---
-volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
+# volley = { group = "com.android.volley", name = "volley", version.ref = "volley" } <--- BORTTAGEN
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # --- TESTNING ---
