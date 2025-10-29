@@ -136,10 +136,12 @@ Kör tester:
 ---
 
 ## 🖼️ Skärmbilder
+📱 Wireframe (Grundide)
+<p > <img src="docs/images/wireframe_home.png" alt="Mockup Home" width="1048"/> </p>
 📱 Mockup (Designidé)
-<p > <img src="docs/images/mockup_home.png" alt="Mockup Home" width="372"/> </p>
+<p > <img src="docs/images/mockup_home.png" alt="Mockup Home" width="1296"/> </p>
 📲 Faktisk app (Körande version)
-<p > <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="396"/> </p>
+<p > <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="1299"/> </p>
 
 ---
 
