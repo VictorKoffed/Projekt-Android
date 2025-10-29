@@ -402,10 +402,13 @@ class MainActivity : ComponentActivity() {
 
                             // --- Flöde för ny bryggning (Live) ---
                             composable(Screen.LiveBrew.route) {
+                                // Hämta alla nödvändiga states från ScaleViewModel
                                 val samples by scaleVm.recordedSamplesFlow.collectAsState()
                                 val time by scaleVm.recordingTimeMillis.collectAsState()
                                 val isRecording by scaleVm.isRecording.collectAsState()
                                 val isPaused by scaleVm.isPaused.collectAsState()
+                                // FIX 2: Hämta det nya state från scaleVm
+                                val isPausedDueToDisconnect by scaleVm.isPausedDueToDisconnect.collectAsState()
                                 val currentMeasurement by scaleVm.measurement.collectAsState()
                                 val weightAtPause by scaleVm.weightAtPause.collectAsState()
                                 val countdown by scaleVm.countdown.collectAsState()
@@ -416,6 +419,8 @@ class MainActivity : ComponentActivity() {
                                     currentTimeMillis = time,
                                     isRecording = isRecording,
                                     isPaused = isPaused,
+                                    // FIX 2: Skicka med det nya state
+                                    isPausedDueToDisconnect = isPausedDueToDisconnect,
                                     weightAtPause = weightAtPause,
                                     connectionState = scaleConnectionState,
                                     countdown = countdown,
@@ -445,7 +450,8 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onTareClick = { scaleVm.tareScale() },
                                     onNavigateBack = { navController.popBackStack() },
-                                    onResetRecording = { scaleVm.stopRecording() },
+                                    // FIX 1: Ta bort onResetRecording härifrån
+                                    // onResetRecording = { scaleVm.stopRecording() },
                                     navigateTo = { route -> navController.navigate(route) }
                                 )
                             }

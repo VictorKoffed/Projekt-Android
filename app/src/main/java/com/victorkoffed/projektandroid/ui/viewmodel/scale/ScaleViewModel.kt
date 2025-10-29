@@ -37,6 +37,7 @@ private const val PREF_AUTO_CONNECT_ENABLED = "auto_connect_enabled"
 
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
+// Översättare för BLE-felmeddelanden (behålls som den var)
 private object BleErrorTranslator {
     fun translate(rawMessage: String?): String {
         if (rawMessage == null) return "Ett okänt fel uppstod."
@@ -87,6 +88,10 @@ class ScaleViewModel @Inject constructor(
     val isRecording: StateFlow<Boolean> = _isRecording
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused
+    // NYTT STATE: Indikerar om pausen beror på frånkoppling
+    private val _isPausedDueToDisconnect = MutableStateFlow(false)
+    val isPausedDueToDisconnect: StateFlow<Boolean> = _isPausedDueToDisconnect.asStateFlow()
+
     private val _recordedSamplesFlow = MutableStateFlow<List<BrewSample>>(emptyList())
     val recordedSamplesFlow: StateFlow<List<BrewSample>> = _recordedSamplesFlow
     private val _recordingTimeMillis = MutableStateFlow(0L)
@@ -102,7 +107,7 @@ class ScaleViewModel @Inject constructor(
     private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
     val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
     private var measurementJob: Job? = null
-    private var manualTimerJob: Job? = null // *** Variabel för manuell timer ***
+    private var manualTimerJob: Job? = null
 
     init {
         observeScaleMeasurements()
@@ -117,32 +122,27 @@ class ScaleViewModel @Inject constructor(
                 .collect { rawData ->
                     _rawMeasurement.value = rawData
 
-                    // *** MODIFIERAD TIDSHANTERING ***
+                    // Tidshantering (behålls som tidigare)
                     if (_isRecording.value && !_isPaused.value && manualTimerJob == null && rawData.timeMillis != null) {
-                        // Uppdatera bara om den manuella timern inte körs (dvs. före första pausen/återupptagningen)
-                        // och om tiden faktiskt ändrats från vågen
                         if (_recordingTimeMillis.value != rawData.timeMillis) {
                             _recordingTimeMillis.value = rawData.timeMillis
                         }
                     } else if (!_isRecording.value && !_isPaused.value && _recordingTimeMillis.value != 0L) {
-                        // Återställ om inspelning stoppats helt och manuell timer inte körs
                         if (manualTimerJob == null) {
                             _recordingTimeMillis.value = 0L
                         }
                     }
-                    // *** SLUT MODIFIERAD TIDSHANTERING ***
 
-                    // Add sample point if recording and not paused
-                    // Använder nu _recordingTimeMillis för BrewSample timestamp via addSamplePoint
+                    // Lägg till mätpunkt om inspelning pågår och INTE är pausad (oavsett orsak)
                     if (_isRecording.value && !_isPaused.value) {
-                        addSamplePoint(measurement.value) // measurement.value innehåller vikt/flöde från vågen
+                        addSamplePoint(measurement.value)
                     }
                 }
         }
     }
 
 
-    // --- Skanning & Anslutning ---
+    // --- Skanning & Anslutning (behålls som tidigare) ---
     fun startScan() {
         if (_isScanning.value) return
         _devices.value = emptyList(); clearError(); _isScanning.value = true; reconnectAttempted = false
@@ -156,6 +156,7 @@ class ScaleViewModel @Inject constructor(
     fun tareScale() { scaleRepo.tareScale(); _tareOffset.value = _rawMeasurement.value.weightGrams; if (_isRecording.value && !_isPaused.value) addSamplePoint(measurement.value) }
 
     // --- Inspelning ---
+    // startRecording (behålls som tidigare)
     fun startRecording() {
         if (_isRecording.value || _isPaused.value || _countdown.value != null) return
         if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Connected) { _error.value = "Scale not connected."; return }
@@ -167,108 +168,117 @@ class ScaleViewModel @Inject constructor(
                 _countdown.value = 2; delay(1000L)
                 _countdown.value = 1; delay(1000L)
 
-                // Send tare/start AFTER countdown
                 scaleRepo.tareScaleAndStartTimer()
                 Log.d("ScaleViewModel", "Sent Tare and Start Timer command.")
-                delay(150L) // Brief pause for scale
+                delay(150L) // Kort paus för vågen
 
                 _countdown.value = null
-                internalStartRecording() // Start app's recording state
+                internalStartRecording() // Starta appens inspelningsläge
 
             } catch (e: Exception) {
                 Log.e("ScaleViewModel", "Error starting recording", e);
                 _countdown.value = null; _error.value = "Could not start."
-                // Reset timer on scale if start failed?
                 if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) scaleRepo.resetTimer()
             }
         }
     }
 
-    // *** MODIFIERAD internalStartRecording ***
+    // internalStartRecording (behålls som tidigare)
     private fun internalStartRecording() {
-        manualTimerJob?.cancel() // Säkerställ att den är avbruten
-        manualTimerJob = null    // Sätt till null
+        manualTimerJob?.cancel()
+        manualTimerJob = null
         _recordedSamplesFlow.value = emptyList()
-        _recordingTimeMillis.value = 0L // *** Nollställ tiden här vid start ***
+        _recordingTimeMillis.value = 0L
         _isPaused.value = false
+        _isPausedDueToDisconnect.value = false // Säkerställ att denna är false vid start
         _weightAtPause.value = null
         _isRecording.value = true
-        // Första mätvärdet sätter starttiden via observeScaleMeasurements
         Log.d("ScaleViewModel", "Internal recording state started.")
     }
 
-    // *** MODIFIERAD pauseRecording ***
-    fun pauseRecording() {
+    // UPPDATERAD: pauseRecording - Sätter inte _isPausedDueToDisconnect
+    fun pauseRecording() { // Detta är nu för *manuell* paus
         if (!_isRecording.value || _isPaused.value) return
-        manualTimerJob?.cancel() // Avbryt manuell timer
+        manualTimerJob?.cancel() // Avbryt manuell timer om den körs
         _isPaused.value = true
+        _isPausedDueToDisconnect.value = false // Säkerställ att denna är false vid manuell paus
         _weightAtPause.value = measurement.value.weightGrams
-        // Send Stop Timer command
         if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
-            scaleRepo.stopTimer()
+            scaleRepo.stopTimer() // Skicka Stop Timer-kommando
         }
-        Log.d("ScaleViewModel", "Paused. Sent Stop Timer.")
+        Log.d("ScaleViewModel", "Manually paused. Sent Stop Timer if connected.")
     }
 
-    // *** MODIFIERAD resumeRecording ***
+    // UPPDATERAD: resumeRecording - Återställer _isPausedDueToDisconnect
     fun resumeRecording() {
         if (!_isRecording.value || !_isPaused.value) return
         _isPaused.value = false
+        _isPausedDueToDisconnect.value = false // Återställ denna vid återupptagning
         _weightAtPause.value = null
-        // Send Start Timer command
+        // Skicka Start Timer-kommando endast om ansluten
         if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
             scaleRepo.startTimer()
+            Log.d("ScaleViewModel", "Resumed. Sent Start Timer.")
+        } else {
+            Log.w("ScaleViewModel", "Resumed but scale not connected. Timer command not sent.")
+            // Sätt error? Eller låt UI hantera detta? UI visar nu ett meddelande.
         }
-        Log.d("ScaleViewModel", "Resumed. Sent Start Timer.")
 
-        // Starta manuell timer för display
-        manualTimerJob?.cancel() // Avbryt eventuell gammal
+        // Starta manuell timer för display (behålls som tidigare)
+        manualTimerJob?.cancel()
         manualTimerJob = viewModelScope.launch {
-            while (isActive && _isRecording.value && !_isPaused.value) { // Använd isActive här
-                delay(100L) // Uppdateringsintervall
-                // Kontrollera igen innan uppdatering
+            while (isActive && _isRecording.value && !_isPaused.value) {
+                delay(100L)
                 if (isActive && _isRecording.value && !_isPaused.value) {
-                    _recordingTimeMillis.update { it + 100L } // Räkna upp
+                    _recordingTimeMillis.update { it + 100L }
                 }
             }
         }
     }
 
-
+    // stopRecordingAndSave (behålls i princip som tidigare, men kontrollerar nu _isPaused också)
     suspend fun stopRecordingAndSave(setupState: BrewSetupState): SaveBrewResult {
-        if (_countdown.value != null || (!_isRecording.value && !_isPaused.value)) { stopRecording(); return SaveBrewResult(null) }
+        // Avbryt om nedräkning pågår, eller om inspelning varken pågår eller är pausad
+        if (_countdown.value != null || (!_isRecording.value && !_isPaused.value)) {
+            stopRecording(); return SaveBrewResult(null)
+        }
         val finalTimeMillis = _recordingTimeMillis.value; val finalSamples = _recordedSamplesFlow.value;
-        stopRecording() // This now sends Reset Timer
+        stopRecording() // Detta skickar nu Reset Timer om den var aktiv
 
+        // Validera att tillräckligt med data finns (behålls som tidigare)
         if (finalSamples.size < 2 || finalTimeMillis <= 0) { _error.value = "Not enough data."; return SaveBrewResult(null) }
 
+        // Skapa Brew-objekt (behålls som tidigare)
         val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis; val beanId = setupState.selectedBean?.id; val doseGrams = setupState.doseGrams.toDoubleOrNull()
         if (beanId == null || doseGrams == null) { _error.value = "Missing bean/dose."; return SaveBrewResult(null) }
         val scaleInfo = (connectionState.replayCache.lastOrNull() as? BleConnectionState.Connected)?.let { " via ${it.deviceName}" } ?: ""
         val newBrew = Brew(beanId = beanId, doseGrams = doseGrams, startedAt = Date(actualStartTimeMillis), grinderId = setupState.selectedGrinder?.id, methodId = setupState.selectedMethod?.id, grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() }, grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(), brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(), notes = "Recorded${scaleInfo} on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}")
 
+        // Spara Brew och Samples (behålls som tidigare)
         val savedBrewId: Long? = viewModelScope.async { try { val id = coffeeRepo.addBrewWithSamples(newBrew, finalSamples); clearError(); id } catch (e: Exception) { _error.value = "Save failed: ${e.message}"; null } }.await()
         var beanIdReachedZero: Long? = null; if (savedBrewId != null) { try { val bean = coffeeRepo.getBeanById(beanId); if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) beanIdReachedZero = beanId } catch (e: Exception) { Log.e("ScaleVM", "Check weight failed", e) } }
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
-    // *** MODIFIERAD stopRecording ***
-    fun stopRecording() { // Also used for Reset button
+    // UPPDATERAD: stopRecording - Återställer nu även _isPausedDueToDisconnect
+    fun stopRecording() { // Används för Reset-knapp och manuell avslutning/frånkoppling
+        // Avbryt om inget pågår (ingen inspelning, paus, eller nedräkning)
         if (!_isRecording.value && !_isPaused.value && _countdown.value == null) return
 
-        val wasActive = _isRecording.value || _isPaused.value
+        val wasRecordingOrPaused = _isRecording.value || _isPaused.value
         manualTimerJob?.cancel() // Avbryt manuell timer
         manualTimerJob = null    // Nollställ jobbet
 
         _countdown.value = null
         _isRecording.value = false
         _isPaused.value = false
+        _isPausedDueToDisconnect.value = false // Återställ denna flagga
         _weightAtPause.value = null
-        _recordedSamplesFlow.value = emptyList()
+        _recordedSamplesFlow.value = emptyList() // Rensa insamlad data
         _recordingTimeMillis.value = 0L // Nollställ tiden
 
-        // Send Reset Timer command if recording was active and connected
-        if (wasActive && connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
+        // Skicka Reset Timer-kommando om inspelning var aktiv/pausad och vi fortfarande är anslutna
+        if (wasRecordingOrPaused && connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
             scaleRepo.resetTimer()
             Log.d("ScaleViewModel", "Recording stopped/reset. Sent Reset Timer.")
         } else {
@@ -276,30 +286,26 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
-    // *** MODIFIERAD addSamplePoint ***
+    // addSamplePoint (behålls som tidigare)
     private fun addSamplePoint(measurementData: ScaleMeasurement) {
-        // Använd ALLTID _recordingTimeMillis för BrewSample timestamp
-        val sampleTimeMillis = _recordingTimeMillis.value // Använd appens interna timer
-        if (sampleTimeMillis < 0) return // Behåll säkerhetskoll
+        val sampleTimeMillis = _recordingTimeMillis.value
+        if (sampleTimeMillis < 0) return
 
-        // Använd measurementData för vikt och flöde, men sampleTimeMillis för tiden
         val weightGramsDouble = String.format(Locale.US, "%.1f", measurementData.weightGrams).toDouble()
-        // Säkerställ att flowRateGramsPerSecond inte är null innan formatering
         val flowRateDouble = measurementData.flowRateGramsPerSecond?.let { flow ->
             String.format(Locale.US, "%.1f", flow).toDouble()
-        } ?: 0.0 // Använd 0.0 om flowRate är null
+        } ?: 0.0
 
         val newSample = BrewSample(
-            brewId = 0, // Sätts korrekt när den sparas i databasen
-            timeMillis = sampleTimeMillis, // *** Använder nu appens tid ***
+            brewId = 0,
+            timeMillis = sampleTimeMillis,
             massGrams = weightGramsDouble,
-            flowRateGramsPerSecond = flowRateDouble // Använd det säkert hanterade värdet
+            flowRateGramsPerSecond = flowRateDouble
         )
 
-        // Undvik att lägga till punkter med exakt samma tidsstämpel flera gånger
         _recordedSamplesFlow.update { list ->
             if (list.lastOrNull()?.timeMillis == newSample.timeMillis && list.isNotEmpty()) {
-                list // Lägg inte till om tiden är identisk med senaste
+                list
             } else {
                 list + newSample
             }
@@ -307,7 +313,7 @@ class ScaleViewModel @Inject constructor(
     }
 
 
-    // --- Kom ihåg/Auto-connect ---
+    // --- Kom ihåg/Auto-connect (behålls som tidigare) ---
     fun setRememberScaleEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
         _rememberScaleEnabled.value = enabled
@@ -328,43 +334,75 @@ class ScaleViewModel @Inject constructor(
         val addr = loadRememberedScaleAddress(); if (addr != null) { isManualDisconnect = false; clearError(); scaleRepo.connect(addr) }
     }
 
-    // --- Connection State Change Handler ---
+    // --- UPPDATERAD: Connection State Change Handler ---
     private fun handleConnectionStateChange(state: BleConnectionState) {
         when (state) {
             is BleConnectionState.Connected -> {
                 Log.i("ScaleViewModel", "Connected to ${state.deviceName}.")
                 reconnectAttempted = false; if (_rememberScaleEnabled.value) saveRememberedScaleAddress(state.deviceAddress); isManualDisconnect = false; clearError()
-                observeScaleMeasurements() // Start/Restart observation
+                observeScaleMeasurements() // Starta/Omstarta observation av mätvärden
+
+                // NYTT: Om vi var pausade pga disconnect, återställ den flaggan.
+                // Användaren måste fortfarande trycka på resume manuellt.
+                if (_isPausedDueToDisconnect.value) {
+                    _isPausedDueToDisconnect.value = false
+                    Log.d("ScaleViewModel", "Reconnected while paused due to disconnect. Ready to resume.")
+                    // Timern startas inte automatiskt här, det görs i resumeRecording()
+                }
             }
-            is BleConnectionState.Disconnected -> {
-                Log.d("ScaleViewModel", "Disconnected. Manual: $isManualDisconnect")
-                measurementJob?.cancel(); measurementJob = null // Stop observation
+            is BleConnectionState.Disconnected, is BleConnectionState.Error -> { // Hantera både Disconnected och Error här
+                val logMessage = if (state is BleConnectionState.Disconnected) "Disconnected. Manual: $isManualDisconnect" else "Connection error: ${(state as BleConnectionState.Error).message}"
+                Log.d("ScaleViewModel", logMessage)
+
+                measurementJob?.cancel(); measurementJob = null // Stoppa observation av mätvärden
                 manualTimerJob?.cancel(); manualTimerJob = null // Stoppa manuell timer
-                if(!isManualDisconnect && (_isRecording.value || _isPaused.value || _countdown.value != null)) { stopRecording() } // Reset recording state
-                // Auto-reconnect logic
+
+                // NY LOGIK: Pausa istället för att stoppa/återställa om inspelning pågick
+                if (!isManualDisconnect && _isRecording.value && !_isPaused.value) { // KÖR ENDAST OM INSPELNING PÅGICK och inte redan pausad
+                    _isPaused.value = true
+                    _isPausedDueToDisconnect.value = true // Sätt den nya flaggan
+                    _weightAtPause.value = measurement.value.weightGrams // Spara vikten vid paus
+                    // Försök skicka Stop Timer (kan misslyckas om disconnect redan skett helt)
+                    // scaleRepo.stopTimer() // Ta bort detta? Kan ge fel. Vågen stoppar troligen själv.
+                    Log.w("ScaleViewModel", "Recording paused due to disconnect/error.")
+                } else if (!isManualDisconnect && _countdown.value != null) {
+                    // Om nedräkning pågick, avbryt den (stopRecording hanterar detta)
+                    stopRecording()
+                    Log.w("ScaleViewModel", "Countdown cancelled due to disconnect/error.")
+                }
+
+                // Auto-återanslutningslogik (behålls som tidigare)
                 val shouldRetry = !isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted
-                if (shouldRetry) { viewModelScope.launch { delay(2000L); val cs = connectionState.replayCache.lastOrNull(); val stillNeeds = cs is BleConnectionState.Disconnected && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted; if (stillNeeds) { reconnectAttempted = true; attemptAutoConnect() } } }
+                if (shouldRetry) {
+                    viewModelScope.launch {
+                        delay(2000L) // Vänta lite innan återförsök
+                        // Dubbelkolla att vi fortfarande behöver återansluta
+                        val currentState = connectionState.replayCache.lastOrNull()
+                        val stillNeedsReconnect = currentState !is BleConnectionState.Connected &&
+                                currentState !is BleConnectionState.Connecting &&
+                                _rememberScaleEnabled.value && _autoConnectEnabled.value &&
+                                !reconnectAttempted
+                        if (stillNeedsReconnect) {
+                            Log.d("ScaleViewModel", "Attempting auto-reconnect...")
+                            reconnectAttempted = true
+                            attemptAutoConnect()
+                        }
+                    }
+                }
             }
-            is BleConnectionState.Error -> {
-                Log.e("ScaleViewModel", "Connection error: ${state.message}")
-                measurementJob?.cancel(); measurementJob = null // Stop observation
-                manualTimerJob?.cancel(); manualTimerJob = null // Stoppa manuell timer
-                if(_isRecording.value || _isPaused.value || _countdown.value != null) { stopRecording() } // Reset recording state
-                // Auto-reconnect logic
-                val shouldRetry = !isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted
-                if (shouldRetry) { viewModelScope.launch { delay(2000L); val cs = connectionState.replayCache.lastOrNull(); val stillNeeds = cs !is BleConnectionState.Connected && cs !is BleConnectionState.Connecting && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted; if (stillNeeds) { reconnectAttempted = true; attemptAutoConnect() } } }
+            is BleConnectionState.Connecting -> {
+                Log.d("ScaleViewModel", "Connecting..."); clearError()
             }
-            is BleConnectionState.Connecting -> { Log.d("ScaleViewModel", "Connecting..."); clearError() }
         }
     }
 
-    // --- Övriga funktioner ---
+    // --- Övriga funktioner (behålls som tidigare) ---
     fun retryConnection() {
         clearError(); reconnectAttempted = false; val addr = loadRememberedScaleAddress(); if (addr != null) { val state = connectionState.replayCache.lastOrNull(); if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return; isManualDisconnect = false; scaleRepo.connect(addr) } else { _error.value = "No scale remembered." }
     }
     fun clearError() { if (_error.value != null) _error.value = null }
     override fun onCleared() {
-        super.onCleared(); Log.d("ScaleViewModel", "onCleared."); stopScan(); measurementJob?.cancel(); scanTimeoutJob?.cancel(); manualTimerJob?.cancel() // Avbryt manuell timer
+        super.onCleared(); Log.d("ScaleViewModel", "onCleared."); stopScan(); measurementJob?.cancel(); scanTimeoutJob?.cancel(); manualTimerJob?.cancel()
         if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) { isManualDisconnect = true; disconnect() }
     }
 }

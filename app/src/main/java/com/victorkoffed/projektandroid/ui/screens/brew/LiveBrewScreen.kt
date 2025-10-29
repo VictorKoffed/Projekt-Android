@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BluetoothSearching // NY IKON
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
@@ -33,6 +34,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor // Importen fanns redan här
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -82,49 +84,59 @@ fun LiveBrewScreen(
     currentTimeMillis: Long,
     isRecording: Boolean,
     isPaused: Boolean,
+    isPausedDueToDisconnect: Boolean, // NYTT STATE
     weightAtPause: Float?,
     connectionState: BleConnectionState,
-    countdown: Int?, // Aktuell nedräkning (null om inte aktiv)
+    countdown: Int?,
     onStartClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
     onStopAndSaveClick: () -> Unit,
     onTareClick: () -> Unit,
     onNavigateBack: () -> Unit,
-    onResetRecording: () -> Unit,
+    // onResetRecording tas bort härifrån, anropas direkt från ViewModel vid disconnect nu
     navigateTo: (String) -> Unit
 ) {
-    // Styr visningen av flödesdata i StatusDisplay
     var showFlowInfo by remember { mutableStateOf(true) }
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
-    // UPPDATERAD: State för dialogens titel
     var alertTitle by remember { mutableStateOf("Connection Lost") }
+    // NYTT: State för att visa återanslutningsmeddelande
+    var showReconnectingMessage by remember(connectionState, isPausedDueToDisconnect) {
+        mutableStateOf(isPausedDueToDisconnect && connectionState !is BleConnectionState.Connected)
+    }
 
 
-    // Övervakar anslutningsstatus och reagerar på avbrott/fel
-    LaunchedEffect(connectionState) {
-        if (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) {
-
-            // UPPDATERAD: Sätt titel och meddelande baserat på state
-            if (connectionState is BleConnectionState.Error) {
-                alertTitle = "Connection Error"
-                // Meddelandet kommer nu färdigöversatt från ViewModel
-                alertMessage = connectionState.message
+    // Övervakar anslutningsstatus
+    LaunchedEffect(connectionState, isRecording, isPaused, isPausedDueToDisconnect) {
+        // Om vi tappar anslutningen MEDAN inspelning/paus pågår (och det INTE är en manuell paus)
+        if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
+            (isRecording || isPaused) && // Inspelning eller paus pågick
+            !isPausedDueToDisconnect && // Och pausen berodde *inte* redan på disconnect (för att undvika loop)
+            !isPaused // Säkerställ att den inte var *manuellt* pausad just nu
+        ) {
+            // Sätt titel och meddelande
+            alertTitle = if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost"
+            alertMessage = if (connectionState is BleConnectionState.Error) {
+                connectionState.message + " Recording paused." // Lägg till pausinfo
             } else {
-                alertTitle = "Connection Lost"
-                alertMessage = "The connection to the scale was lost."
+                "The connection to the scale was lost. Recording paused." // Lägg till pausinfo
             }
+            // Visa dialogen som informerar om att inspelningen är pausad
+            showDisconnectedAlert = true
+            showReconnectingMessage = true // Visa återanslutningsmeddelande
+            // ViewModel hanterar nu själva pausen via handleConnectionStateChange
 
-            // Om vi spelade in, pausa/återställ inspelningen och informera användaren
-            if (isRecording || isPaused || countdown != null) {
-                alertMessage += " Recording has been stopped."
-                onResetRecording() // Återställ inspelning/nedräkning i VM
-            }
-            showDisconnectedAlert = true // Visa alltid dialogen vid fel/frånkoppling
-        } else {
-            // Dölj dialogen om anslutningen återupprättas eller är stabil
-            showDisconnectedAlert = false
+        } else if (connectionState is BleConnectionState.Connected && isPausedDueToDisconnect) {
+            // Om vi återansluter MEDAN vi är pausade pga disconnect
+            showDisconnectedAlert = false // Dölj dialogen
+            showReconnectingMessage = false // Dölj återanslutningsmeddelandet
+            // Visa ett meddelande i StatusDisplay eller liknande att man kan återuppta? (Hanteras nu i StatusDisplay)
+
+        } else if (connectionState !is BleConnectionState.Connected && !isPausedDueToDisconnect) {
+            // Om vi är frånkopplade men INTE pausade pga disconnect (t.ex. vid skärmstart, eller manuell paus)
+            // Dölj återanslutningsmeddelandet om det mot förmodan var synligt
+            showReconnectingMessage = false
         }
     }
 
@@ -140,7 +152,7 @@ fun LiveBrewScreen(
                 actions = {
                     TextButton(
                         onClick = onStopAndSaveClick,
-                        // Aktivera om inspelning/paus/nedräkning pågår, så att användaren kan avbryta och spara
+                        // Aktivera om inspelning/paus/nedräkning pågår (oavsett orsak till paus)
                         enabled = isRecording || isPaused || countdown != null
                     ) {
                         Text("Done")
@@ -156,18 +168,16 @@ fun LiveBrewScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Visar tid, vikt, flöde eller nedräkning
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
-                // Visa vikt vid paus om 'weightAtPause' finns, annars nuvarande mätning
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
+                isPausedDueToDisconnect = isPausedDueToDisconnect, // Skicka med nya state
                 showFlow = showFlowInfo,
                 countdown = countdown
             )
             Spacer(Modifier.height(16.dp))
-            // Grafen visar endast viktlinjen i Live Brew-läge för att förenkla UI
             BrewGraph(
                 samples = samples,
                 modifier = Modifier
@@ -176,8 +186,6 @@ fun LiveBrewScreen(
                     .padding(vertical = 8.dp)
             )
             Spacer(Modifier.height(8.dp))
-
-            // FilterChip för att växla Flow-visning i StatusDisplay
             FilterChip(
                 selected = showFlowInfo,
                 onClick = { showFlowInfo = !showFlowInfo },
@@ -194,45 +202,45 @@ fun LiveBrewScreen(
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
                 )
             )
-
             Spacer(Modifier.height(16.dp))
-
-            // Kontrollknappar (Start/Paus/Återuppta/Nollställ/Tara)
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
+                isPausedDueToDisconnect = isPausedDueToDisconnect, // Skicka med nya state
                 isConnected = connectionState is BleConnectionState.Connected,
                 countdown = countdown,
                 onStartClick = onStartClick,
-                onPauseClick = onPauseClick,
+                onPauseClick = onPauseClick, // För manuell paus
                 onResumeClick = onResumeClick,
                 onTareClick = onTareClick,
-                onResetClick = onResetRecording
+                onResetClick = { /* ViewModel hanterar reset vid disconnect internt */ } // Lambda för manuell reset (inaktiv vid disconnect)
             )
         }
 
-        // Dialog vid anslutningsfel
+        // Dialog vid anslutningsfel under pågående inspelning/paus
         if (showDisconnectedAlert) {
             AlertDialog(
                 onDismissRequest = {
                     showDisconnectedAlert = false
-                    // Navigera bara om vi faktiskt är frånkopplade (inte vid Error)
-                    if (connectionState is BleConnectionState.Disconnected) {
-                        navigateTo(Screen.ScaleConnect.route)
-                    }
+                    // Navigera inte automatiskt här, låt användaren stanna kvar
                 },
-                // UPPDATERAD: Använd dynamisk titel
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        // Navigera bara om vi faktiskt är frånkopplade
-                        if (connectionState is BleConnectionState.Disconnected) {
-                            navigateTo(Screen.ScaleConnect.route) // Navigera till anslutningsskärmen
-                        }
+                        // Navigera inte, låt användaren försöka återansluta eller spara
                     }) {
                         Text("OK")
+                    }
+                },
+                // NYTT: Knapp för att avbryta och spara direkt från dialogen
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDisconnectedAlert = false
+                        onStopAndSaveClick() // Anropa spara-funktionen
+                    }) {
+                        Text("Stop & Save As Is")
                     }
                 }
             )
@@ -241,7 +249,7 @@ fun LiveBrewScreen(
     }
 }
 
-// --- StatusDisplay  ---
+// --- StatusDisplay (UPPDATERAD) ---
 @SuppressLint("DefaultLocale")
 @Composable
 fun StatusDisplay(
@@ -249,16 +257,15 @@ fun StatusDisplay(
     currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
+    isPausedDueToDisconnect: Boolean, // NYTT STATE
     showFlow: Boolean,
     countdown: Int?
 ) {
-    // Formatering av tid, vikt och flöde
     val timeString = remember(currentTimeMillis) {
         val minutes = (currentTimeMillis / 1000 / 60).toInt()
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
         String.format("%02d:%02d", minutes, seconds)
     }
-
     val weightString = remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
     val flowString = remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
 
@@ -266,9 +273,9 @@ fun StatusDisplay(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                // Sätt färg baserat på status: Nedräkning, Paus, Inspelning, eller inaktiv
                 countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-                isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                isPausedDueToDisconnect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) // Röd vid disconnect-paus
+                isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Grå vid manuell paus
                 isRecording -> MaterialTheme.colorScheme.tertiaryContainer
                 else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             }
@@ -278,13 +285,12 @@ fun StatusDisplay(
             modifier = Modifier
                 .padding(vertical = 16.dp)
                 .fillMaxWidth()
-                // Fast minsta höjd för att förhindra hopp när innehållet byts
                 .defaultMinSize(minHeight = 180.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Visa nedräkning om 'countdown' har ett värde
             if (countdown != null) {
+                // Nedräkningsvy (behålls som tidigare)
                 Text(
                     text = "Starting in...",
                     style = MaterialTheme.typography.titleLarge,
@@ -297,7 +303,7 @@ fun StatusDisplay(
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             } else {
-                // Visa normala mätvärden
+                // Normal mätvy
                 Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -309,7 +315,6 @@ fun StatusDisplay(
                         Text("Weight", style = MaterialTheme.typography.labelMedium)
                         Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
                     }
-                    // Visa flödesdata endast om showFlow är sann
                     if (showFlow) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Flow", style = MaterialTheme.typography.labelMedium)
@@ -317,9 +322,18 @@ fun StatusDisplay(
                         }
                     }
                 }
+                // NYTT: Visa statusmeddelande vid paus
                 if (isPaused) {
                     Spacer(Modifier.height(4.dp))
-                    Text("Paused", fontSize = 14.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isPausedDueToDisconnect) {
+                            Icon(Icons.Default.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(4.dp))
+                            Text("Paused - Reconnecting...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                        } else {
+                            Text("Paused", fontSize = 14.sp)
+                        }
+                    }
                 }
             }
         }
@@ -327,14 +341,13 @@ fun StatusDisplay(
 }
 
 
-// --- FÖRENKLAD BrewGraph (visar BARA vikt) ---
+// --- BrewGraph (Inga ändringar behövs här) ---
 @Composable
 fun BrewGraph(
     samples: List<BrewSample>,
     modifier: Modifier = Modifier
 ) {
-    // Denna graf är avsiktligt förenklad jämfört med BrewDetailScreen.
-    // Den visar endast VILTLINJEN för att minska komplexiteten i realtid.
+    // ... (samma kod som tidigare) ...
     val density = LocalDensity.current
 
     val graphLineColor = MaterialTheme.colorScheme.tertiary
@@ -463,64 +476,78 @@ fun BrewGraph(
         }
     }
 }
-// --- SLUT FÖRENKLAD BrewGraph ---
+// --- SLUT BrewGraph ---
 
 
-// --- BrewControls ---
+// --- BrewControls (UPPDATERAD) ---
 @Composable
 fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
+    isPausedDueToDisconnect: Boolean, // NYTT STATE
     isConnected: Boolean,
     countdown: Int?,
     onStartClick: () -> Unit,
-    onPauseClick: () -> Unit,
+    onPauseClick: () -> Unit, // Manuell paus
     onResumeClick: () -> Unit,
     onTareClick: () -> Unit,
-    onResetClick: () -> Unit
+    onResetClick: () -> Unit // Behövs fortfarande för manuell reset
 ) {
-    // Kontrollera om UI är upptaget med en nedräkning
     val isBusy = countdown != null
+    // Återställningsknappen ska vara inaktiv om paus beror på disconnect
+    val enableReset = (isRecording || isPaused) && !isBusy && !isPausedDueToDisconnect
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Återställ (Replay) knapp
+        // Återställ (Replay) knapp - Inaktiv om pausad pga disconnect
         IconButton(
             onClick = onResetClick,
-            // Aktivera endast om inspelning eller paus pågår, och inte under nedräkning
-            enabled = (isRecording || isPaused) && !isBusy
+            enabled = enableReset
         ) {
             Icon(
                 imageVector = Icons.Default.Replay,
-                contentDescription = "Reset recording"
+                contentDescription = "Reset recording",
+                // Använd LocalContentColor för standardfärg när den är aktiv
+                tint = if (enableReset) LocalContentColor.current else Color.Gray // Gråa ut om inaktiv
             )
         }
+
         // Huvudknapp (Start/Paus/Återuppta)
         Button(
             onClick = {
                 when {
+                    // Om pausad (oavsett orsak), försök återuppta
                     isPaused -> onResumeClick()
+                    // Om inspelning pågår, pausa manuellt
                     isRecording -> onPauseClick()
-                    else -> onStartClick() // Startar sekvensen (som kan inkludera nedräkning)
+                    // Annars, starta ny inspelning
+                    else -> onStartClick()
                 }
             },
             modifier = Modifier.size(72.dp),
             contentPadding = PaddingValues(0.dp),
-            // Endast aktiv om vågen är ansluten och inte under nedräkning
-            enabled = isConnected && !isBusy
+            // Logik för att aktivera knappen:
+            // - Inte under nedräkning
+            // - Antingen:
+            //   - Ansluten (för start/manuell paus/manuell resume)
+            //   - ELLER Pausad pga disconnect (för att tillåta försök att återuppta när anslutningen återkommer)
+            enabled = !isBusy && (isConnected || isPausedDueToDisconnect)
         ) {
             Icon(
                 imageVector = when {
-                    isBusy -> Icons.Default.Timer // Timerikon vid nedräkning
+                    isBusy -> Icons.Default.Timer
+                    // Visa Play om pausad (oavsett orsak)
                     isPaused -> Icons.Default.PlayArrow
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
                 },
                 contentDescription = when {
                     isBusy -> "Starting..."
+                    // Ändra text om pausad pga disconnect
+                    isPausedDueToDisconnect -> "Resume when connected"
                     isPaused -> "Resume"
                     isRecording -> "Pause"
                     else -> "Start"
@@ -528,12 +555,15 @@ fun BrewControls(
                 modifier = Modifier.size(40.dp)
             )
         }
+
         // Tara-knapp (T)
         OutlinedButton(
             onClick = onTareClick,
-            // Endast aktiv när vågen är ansluten och inte under nedräkning
-            // TILLÅT TARA ÄVEN UNDER PAUS
-            enabled = isConnected && !isBusy && (!isRecording || isPaused) ,
+            // Logik för att aktivera Tara:
+            // - Måste vara ansluten
+            // - Inte under nedräkning
+            // - Inte under aktiv inspelning (såvida den inte är pausad, oavsett orsak)
+            enabled = isConnected && !isBusy && (!isRecording || isPaused),
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
             contentPadding = PaddingValues(0.dp)
@@ -546,17 +576,15 @@ fun BrewControls(
     }
 }
 
+
 // --- Preview (UPPDATERAD) ---
 @Preview(showBackground = true, heightDp = 600)
 @Composable
 fun LiveBrewScreenPreview() {
-    // Hämta en tillfällig Context för att kunna skapa ThemePreferenceManager
     val context = LocalContext.current
-    // Skapa en dummy-instans av ThemePreferenceManager för Preview
     val themeManager = remember { ThemePreferenceManager(context) }
 
     ProjektAndroidTheme(themePreferenceManager = themeManager) {
-        // Skapar simulerade sample-data för grafen
         val previewSamples = remember {
             listOf(
                 BrewSample(brewId = 1, timeMillis = 0, massGrams = 0.0, flowRateGramsPerSecond = 0.0),
@@ -567,26 +595,24 @@ fun LiveBrewScreenPreview() {
                 BrewSample(brewId = 1, timeMillis = 180000, massGrams = 420.0, flowRateGramsPerSecond = 1.5)
             )
         }
-        // Lokalt state för preview-simulering
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
+        var isPausedDc by remember { mutableStateOf(false) } // NYTT preview state
         var time by remember { mutableLongStateOf(0L) }
-        // UPPDATERAD: Lade till dummy deviceAddress
         var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale", "00:11:22:33:FF:EE")) }
-        var countdown by remember { mutableStateOf<Int?>(null) } // Hanterar nedräkningsstate i preview
+        var countdown by remember { mutableStateOf<Int?>(null) }
 
         val scope = rememberCoroutineScope()
 
-        // Logik för att simulera mätningar under inspelning/paus
         LaunchedEffect(isRec, isPaused) {
             while (isRec && !isPaused) {
-                delay(100) // Uppdatera tiden var 100ms
+                delay(100)
                 time += 100
             }
         }
 
-
         val currentWeight = remember(time, isRec, isPaused) {
+            // ... (samma logik som tidigare) ...
             if (!isRec && !isPaused) {
                 ScaleMeasurement(0f, 0f) // Visa noll om inte inspelning/paus
             } else {
@@ -602,36 +628,42 @@ fun LiveBrewScreenPreview() {
         }
         val weightAtPausePreview = remember(isPaused, currentWeight) { if (isPaused) currentWeight.weightGrams else null }
 
+        // Simulera knapptryckningar
+        val pauseAction = { isPaused = true; isPausedDc = false } // Manuell paus
+        val pauseDcAction = { isPaused = true; isPausedDc = true } // Simulera disconnect-paus
+        val resumeAction = { isPaused = false; isPausedDc = false }
+        val stopSaveAction = { isRec = false; isPaused = false; isPausedDc = false; countdown = null }
+        val resetAction = { isRec = false; isPaused = false; isPausedDc = false; time = 0L; countdown = null }
+
         LiveBrewScreen(
             samples = previewSamples.filter { it.timeMillis <= time },
             currentMeasurement = currentWeight,
             currentTimeMillis = time,
             isRecording = isRec,
             isPaused = isPaused,
+            isPausedDueToDisconnect = isPausedDc, // Skicka med nya state
             weightAtPause = weightAtPausePreview,
             connectionState = connectionState,
             countdown = countdown,
+            // FIX 2: Definiera lambda direkt i anropet för onStartClick
             onStartClick = {
-                // Simulera nedräkning i Preview
                 scope.launch {
-                    countdown = 3
-                    delay(1000)
-                    countdown = 2
-                    delay(1000)
-                    countdown = 1
-                    delay(1000)
+                    countdown = 3; delay(1000)
+                    countdown = 2; delay(1000)
+                    countdown = 1; delay(1000)
                     countdown = null
                     isRec = true
                     isPaused = false
-                    time = 0L // Nollställ tiden vid start
+                    isPausedDc = false
+                    time = 0L
                 }
             },
-            onPauseClick = { isPaused = true },
-            onResumeClick = { isPaused = false },
-            onStopAndSaveClick = { isRec = false; isPaused = false; countdown = null },
-            onTareClick = { time = 0L /* Simulera tare genom att nollställa tiden? Eller bara logga? */ },
-            onNavigateBack = { Log.d("Preview", "Navigate Back") }, // Ändrad loggtext
-            onResetRecording = { isRec = false; isPaused = false; time = 0L; countdown = null },
+            onPauseClick = pauseAction,
+            onResumeClick = resumeAction,
+            onStopAndSaveClick = stopSaveAction,
+            onTareClick = { time = 0L },
+            onNavigateBack = { Log.d("Preview", "Navigate Back") },
+            // onResetRecording = resetAction, // Tas bort från anropet
             navigateTo = { screen -> Log.d("Preview", "Navigate to $screen") }
         )
     }
