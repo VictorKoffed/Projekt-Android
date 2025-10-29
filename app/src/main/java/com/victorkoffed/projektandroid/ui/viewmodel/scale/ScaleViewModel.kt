@@ -1,5 +1,7 @@
+// app/src/main/java/com/victorkoffed/projektandroid/ui/viewmodel/scale/ScaleViewModel.kt
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
+// --- Kärnbibliotek ---
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
@@ -7,17 +9,27 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.SavedStateHandle // <-- NY IMPORT
 import androidx.lifecycle.viewModelScope
-import com.victorkoffed.projektandroid.data.db.Brew
-import com.victorkoffed.projektandroid.data.db.BrewSample
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import com.victorkoffed.projektandroid.data.repository.ScaleRepository
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState
-import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
-import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+
+// --- Databas & Repository ---
+import com.victorkoffed.projektandroid.data.db.Brew // <-- Saknades troligen
+import com.victorkoffed.projektandroid.data.db.BrewSample // <-- Saknades troligen
+import com.victorkoffed.projektandroid.data.repository.CoffeeRepository // <-- Saknades troligen
+import com.victorkoffed.projektandroid.data.repository.ScaleRepository // <-- Saknades troligen
+
+// --- Domänmodeller ---
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- Saknades troligen
+import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice // <-- Saknades troligen
+import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement // <-- Saknades troligen
+
+// --- Andra ViewModels (för dataklasser) ---
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // <-- Saknades troligen
+
+// --- Hilt ---
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+// --- Coroutines & Flow ---
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -25,6 +37,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
@@ -33,29 +46,31 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+// --- Övrigt ---
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject // <-- NY IMPORT
 import kotlin.time.Duration.Companion.seconds
+
 
 // Konstanter för SharedPreferences
 private const val PREFS_NAME = "ScalePrefs"
 private const val PREF_REMEMBERED_SCALE_ADDRESS = "remembered_scale_address"
 private const val PREF_REMEMBER_SCALE_ENABLED = "remember_scale_enabled"
 
-// NYTT: Dataklass för returvärdet från stopRecordingAndSave
+// Dataklass för returvärdet från stopRecordingAndSave
 data class SaveBrewResult(
     val brewId: Long?,
-    val beanIdReachedZero: Long? = null // Bean ID om vikten blev <= 0
+    val beanIdReachedZero: Long? = null
 )
 
-@HiltViewModel // <-- NY ANNOTERING
-class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
-    app: Application, // Hilt tillhandahåller Application
-    private val scaleRepo: ScaleRepository, // Injiceras av Hilt
-    private val coffeeRepo: CoffeeRepository, // Injiceras av Hilt
-    private val savedStateHandle: SavedStateHandle // Injiceras av Hilt (kan användas för att spara/återställa state)
-) : AndroidViewModel(app) { // Ärver fortfarande från AndroidViewModel pga Application
+@HiltViewModel
+class ScaleViewModel @Inject constructor(
+    app: Application,
+    private val scaleRepo: ScaleRepository,
+    private val coffeeRepo: CoffeeRepository
+) : AndroidViewModel(app) {
 
     private val sharedPreferences: SharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -78,9 +93,10 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
     val measurement: StateFlow<ScaleMeasurement> = combine(_rawMeasurement, _tareOffset) { raw, offset ->
         ScaleMeasurement(
             weightGrams = raw.weightGrams - offset,
-            flowRateGramsPerSecond = raw.flowRateGramsPerSecond
+            flowRateGramsPerSecond = raw.flowRateGramsPerSecond // <-- Korrigerat från weightGrams
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f, 0.0f))
+
 
     // --- Error State ---
     private val _error = MutableStateFlow<String?>(null)
@@ -100,14 +116,18 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown
 
+    // --- Remember Scale State ---
+    private val _rememberScaleEnabled = MutableStateFlow(
+        sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false)
+    )
+    val rememberScaleEnabled: StateFlow<Boolean> = _rememberScaleEnabled.asStateFlow()
+
     private var recordingStartTime: Long = 0L
     private var timePausedAt: Long = 0L
     private var measurementJob: Job? = null
     private var timerJob: Job? = null
-    // --- End Recording State ---
 
     init {
-        // Försök återansluta vid start
         attemptAutoConnect()
     }
 
@@ -125,7 +145,7 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
 
         scanJob = viewModelScope.launch {
             try {
-                withTimeoutOrNull(5.seconds) {
+                withTimeoutOrNull(10.seconds) {
                     scaleRepo.startScanDevices()
                         .catch { e ->
                             _error.value = e.message ?: "Okänt skanningsfel"
@@ -144,12 +164,17 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
         }
     }
 
+
     fun stopScan() {
         if (scanJob?.isActive == true) {
             scanJob?.cancel()
+        }
+        if (_isScanning.value) {
+            _isScanning.value = false
             Log.d("ScaleViewModel", "Skanning stoppades manuellt av användaren.")
         }
     }
+
 
     fun connect(device: DiscoveredDevice) {
         stopScan()
@@ -170,10 +195,12 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
     fun tareScale() {
         scaleRepo.tareScale()
         _tareOffset.value = _rawMeasurement.value.weightGrams
+        Log.d("ScaleViewModel", "Tare anropad. Ny offset: ${_tareOffset.value}g. Aktuell vikt: ${measurement.value.weightGrams}g")
         if (_isRecording.value && !_isPaused.value) {
             addSamplePoint(measurement.value)
         }
     }
+
 
     // ---------------------------------------------------------------------------------------------
     // --- Inspelningsfunktionalitet (Brew Recording) ---
@@ -185,6 +212,7 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
             try {
                 Log.d("ScaleViewModel", "Initierar inspelningssekvens...")
                 tareScale()
+                delay(200L)
                 _countdown.update { 3 }; delay(1000L)
                 _countdown.update { 2 }; delay(1000L)
                 _countdown.update { 1 }; delay(1000L)
@@ -195,19 +223,20 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
         }
     }
     private fun internalStartRecording() {
-        _recordedSamplesFlow.value = emptyList(); _recordingTimeMillis.value = 0L; _isPaused.value = false; _weightAtPause.value = null; recordingStartTime = SystemClock.elapsedRealtime(); _isRecording.value = true; addSamplePoint(measurement.value); startTimer()
+        _recordedSamplesFlow.value = emptyList(); _recordingTimeMillis.value = 0L; _isPaused.value = false; _weightAtPause.value = null; recordingStartTime = SystemClock.elapsedRealtime(); _isRecording.value = true
+        addSamplePoint(measurement.value)
+        startTimer()
     }
     fun pauseRecording() { if (!_isRecording.value || _isPaused.value) return; _isPaused.value = true; timePausedAt = SystemClock.elapsedRealtime(); _weightAtPause.value = measurement.value.weightGrams; timerJob?.cancel() }
     fun resumeRecording() { if (!_isRecording.value || !_isPaused.value) return; val pauseDuration = SystemClock.elapsedRealtime() - timePausedAt; recordingStartTime += pauseDuration; _isPaused.value = false; _weightAtPause.value = null; startTimer() }
 
-    // ÄNDRAD RETURTYP OCH LOGIK FÖR ATT RETURNERA SaveBrewResult
     suspend fun stopRecordingAndSave(setupState: BrewSetupState): SaveBrewResult {
-        if (_countdown.value != null) { stopRecording(); return SaveBrewResult(null) } // Avbröt under nedräkning
-        if (!_isRecording.value && !_isPaused.value) return SaveBrewResult(null) // Ingen inspelning pågick
+        if (_countdown.value != null) { stopRecording(); return SaveBrewResult(null) }
+        if (!_isRecording.value && !_isPaused.value) return SaveBrewResult(null)
 
         val finalTimeMillis = _recordingTimeMillis.value
         val finalSamples = _recordedSamplesFlow.value
-        stopRecording() // Stoppa timer och återställ states
+        stopRecording()
 
         if (finalSamples.isEmpty()) { _error.value = "Ingen data spelades in."; return SaveBrewResult(null) }
 
@@ -216,6 +245,10 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
         val doseGrams = setupState.doseGrams.toDoubleOrNull()
 
         if (beanId == null || doseGrams == null) { _error.value = "Saknar bönor eller dos för att spara."; return SaveBrewResult(null) }
+
+        val currentScaleState = connectionState.replayCache.lastOrNull()
+        val scaleInfo = if (currentScaleState is BleConnectionState.Connected) " via ${currentScaleState.deviceName}" else ""
+
 
         val newBrew = Brew(
             beanId = beanId,
@@ -226,13 +259,13 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
             grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(),
             brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
-            notes = "Inspelad från våg ${Date()}"
+            notes = "Recorded${scaleInfo} on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}"
         )
 
-        // Spara bryggning och hämta ID
+
+
         val savedBrewId: Long? = viewModelScope.async {
             try {
-                // Denna metod minskar även lagersaldot
                 val newId = coffeeRepo.addBrewWithSamples(newBrew, finalSamples)
                 _error.value = null
                 newId
@@ -243,24 +276,20 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
             }
         }.await()
 
+
         var beanIdReachedZero: Long? = null
         if (savedBrewId != null) {
-            // Kontrollera bönans kvarvarande vikt EFTER att bryggningen sparats
-            // (addBrewWithSamples minskar vikten i en transaktion)
             try {
                 val updatedBean = coffeeRepo.getBeanById(beanId)
                 if (updatedBean != null && updatedBean.remainingWeightGrams <= 0.0 && !updatedBean.isArchived) {
-                    // Om vikten är noll eller mindre OCH bönan inte redan är arkiverad
                     beanIdReachedZero = beanId
                     Log.d("ScaleViewModel", "Bean $beanId reached zero or less after saving brew $savedBrewId.")
                 }
             } catch (e: Exception) {
                 Log.e("ScaleViewModel", "Kunde inte hämta böna $beanId efter sparande för att kolla vikt.", e)
-                // Fortsätt utan att skicka beanIdReachedZero
             }
         }
 
-        // Returnera resultatet
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
@@ -268,65 +297,85 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
     fun stopRecording() { _countdown.value = null; _isRecording.value = false; _isPaused.value = false; _weightAtPause.value = null; timerJob?.cancel(); _recordedSamplesFlow.value = emptyList(); _recordingTimeMillis.value = 0L }
     private fun startTimer() { timerJob?.cancel(); timerJob = viewModelScope.launch { while (_isRecording.value && !_isPaused.value) { _recordingTimeMillis.value = SystemClock.elapsedRealtime() - recordingStartTime; delay(100) } } }
 
-    private fun addSamplePoint(measurement: ScaleMeasurement) { if (!_isRecording.value || _isPaused.value) return; val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime; val newSample = BrewSample(brewId = 0, timeMillis = elapsedTimeMs, massGrams = String.format(Locale.US, "%.1f", measurement.weightGrams).toDouble(), flowRateGramsPerSecond = String.format(Locale.US, "%.1f", measurement.flowRateGramsPerSecond).toDouble()); _recordedSamplesFlow.value = _recordedSamplesFlow.value + newSample }
+    private fun addSamplePoint(measurement: ScaleMeasurement) {
+        if (!_isRecording.value || _isPaused.value) return
+        val elapsedTimeMs = SystemClock.elapsedRealtime() - recordingStartTime
+        if (elapsedTimeMs < 0) return
+
+        val newSample = BrewSample(
+            brewId = 0,
+            timeMillis = elapsedTimeMs,
+            massGrams = String.format(Locale.US, "%.1f", measurement.weightGrams).toDouble(),
+            // --- KORRIGERING: Använd flowRateGramsPerSecond här ---
+            flowRateGramsPerSecond = String.format(Locale.US, "%.1f", measurement.flowRateGramsPerSecond).toDouble()
+        )
+        _recordedSamplesFlow.update { it + newSample }
+    }
+
+
 
     // ---------------------------------------------------------------------------------------------
     // --- Funktionalitet för 'Kom Ihåg Våg' Preferens ---
     // ---------------------------------------------------------------------------------------------
-    fun isRememberScaleEnabled(): Boolean {
-        return sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false)
-    }
 
     fun setRememberScaleEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
-        Log.d("ScaleViewModel", "Ställ in 'kom ihåg våg' till: $enabled")
+        _rememberScaleEnabled.value = enabled
+        Log.d("ScaleViewModel", "Set 'remember scale' to: $enabled")
+
         if (!enabled) {
-            saveRememberedScaleAddress(null) // Ta bort sparad adress om funktionen inaktiveras
+            saveRememberedScaleAddress(null)
         } else {
-            // Spara den nuvarande anslutna enhetens adress om funktionen aktiveras
             val currentState = connectionState.replayCache.lastOrNull()
             if (currentState is BleConnectionState.Connected) {
-                saveRememberedScaleAddress(currentState.deviceName) // Antag att deviceName är adressen
+                saveRememberedScaleAddress(currentState.deviceAddress)
+            } else {
+                Log.w("ScaleViewModel", "Tried to remember scale address, but not connected.")
             }
         }
     }
 
+
     private fun saveRememberedScaleAddress(address: String?) {
-        if (address != null && isRememberScaleEnabled()) {
+        if (address != null && _rememberScaleEnabled.value) {
             sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
-            Log.d("ScaleViewModel", "Sparade vågadress: $address")
+            Log.d("ScaleViewModel", "Saved scale address: $address")
         } else {
-            sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
-            Log.d("ScaleViewModel", "Rensade sparad vågadress.")
+            if (sharedPreferences.contains(PREF_REMEMBERED_SCALE_ADDRESS)) {
+                sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
+                Log.d("ScaleViewModel", "Cleared saved scale address.")
+            }
         }
     }
 
+
     private fun loadRememberedScaleAddress(): String? {
-        return if (isRememberScaleEnabled()) {
+        return if (_rememberScaleEnabled.value) {
             sharedPreferences.getString(PREF_REMEMBERED_SCALE_ADDRESS, null)
         } else {
             null
         }
     }
 
+
     private fun attemptAutoConnect() {
-        if (!isRememberScaleEnabled()) {
-            Log.d("ScaleViewModel", "'Kom ihåg våg' är inaktiverat, hoppar över auto-anslutning.")
+        if (!_rememberScaleEnabled.value) {
+            Log.d("ScaleViewModel", "'Remember scale' is disabled, skipping auto-connect.")
             return
         }
         val lastState = connectionState.replayCache.lastOrNull()
         if (lastState is BleConnectionState.Connected || lastState is BleConnectionState.Connecting) {
-            Log.d("ScaleViewModel", "Redan ansluten eller ansluter, hoppar över auto-anslutning.")
+            Log.d("ScaleViewModel", "Already connected or connecting, skipping auto-connect.")
             return
         }
 
         val rememberedAddress = loadRememberedScaleAddress()
         if (rememberedAddress != null) {
-            Log.d("ScaleViewModel", "Försöker auto-ansluta till: $rememberedAddress")
+            Log.i("ScaleViewModel", "Attempting auto-connect to saved address: $rememberedAddress")
             isManualDisconnect = false
             scaleRepo.connect(rememberedAddress)
         } else {
-            Log.d("ScaleViewModel", "Ingen sparad vågadress hittades för auto-anslutning.")
+            Log.d("ScaleViewModel", "No saved scale address found for auto-connect.")
         }
     }
 
@@ -336,71 +385,77 @@ class ScaleViewModel @Inject constructor( // <-- NYTT: @Inject constructor
     private fun handleConnectionStateChange(state: BleConnectionState) {
         when (state) {
             is BleConnectionState.Connected -> {
-                Log.d("ScaleViewModel", "Ansluten till ${state.deviceName}.")
-                // Spara adressen om "kom ihåg" är aktiverat
-                if (isRememberScaleEnabled()) {
-                    saveRememberedScaleAddress(state.deviceName) // Antag att deviceName är adressen
+                Log.i("ScaleViewModel", "Connected to ${state.deviceName} (${state.deviceAddress}).")
+                if (_rememberScaleEnabled.value) {
+                    saveRememberedScaleAddress(state.deviceAddress)
                 }
-                isManualDisconnect = false // Nollställ efter lyckad anslutning
+                isManualDisconnect = false
 
-                // Starta mätjobbet om det inte redan körs
                 if (measurementJob?.isActive != true) {
                     measurementJob = viewModelScope.launch {
                         scaleRepo.observeMeasurements().collect { rawData ->
                             _rawMeasurement.value = rawData
-                            // Lägg till sample point endast om inspelning pågår och inte är pausad
                             if (_isRecording.value && !_isPaused.value) { addSamplePoint(measurement.value) }
                         }
                     }
                 }
             }
             is BleConnectionState.Disconnected -> {
-                Log.d("ScaleViewModel", "Frånkopplad. Manuell frånkoppling-flagga: $isManualDisconnect")
+                Log.d("ScaleViewModel", "Disconnected. Manual disconnect flag: $isManualDisconnect")
                 measurementJob?.cancel(); measurementJob = null
 
-                // Stoppa inspelning/nedräkning vid oväntad frånkoppling
                 if(!isManualDisconnect && (_isRecording.value || _isPaused.value || _countdown.value != null)) {
-                    Log.w("ScaleViewModel", "Oväntad frånkoppling under inspelning/nedräkning. Stoppar.")
-                    stopRecording() // Detta återställer alla inspelningsstates
+                    Log.w("ScaleViewModel", "Unexpected disconnect during recording/countdown. Stopping.")
+                    stopRecording()
                 }
 
-                // Försök återansluta automatiskt om det inte var manuellt och "kom ihåg" är på
-                if (!isManualDisconnect && isRememberScaleEnabled()) {
+                if (!isManualDisconnect && _rememberScaleEnabled.value && connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting) {
                     viewModelScope.launch {
-                        Log.d("ScaleViewModel", "Oväntad frånkoppling. Väntar 2 sekunder före försök till auto-återanslutning...")
+                        Log.d("ScaleViewModel", "Unexpected disconnect. Waiting 2 seconds before attempting auto-reconnect...")
                         delay(2000L)
-                        // Dubbelkolla att vi fortfarande är frånkopplade (kan ha ändrats under delay)
-                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected) {
-                            Log.d("ScaleViewModel", "Fortfarande frånkopplad. Försöker auto-återanslutning.")
+                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected && _rememberScaleEnabled.value) {
+                            Log.i("ScaleViewModel", "Still disconnected. Attempting auto-reconnect.")
                             attemptAutoConnect()
                         } else {
-                            Log.d("ScaleViewModel", "Status ändrades under fördröjningen, hoppar över auto-återanslutning.")
+                            Log.d("ScaleViewModel", "State changed during delay, remember was disabled, or connection already in progress. Skipping auto-reconnect.")
                         }
                     }
                 }
-                // Återställ flaggan EFTER att återanslutningslogiken har körts (eller om den inte kördes)
-                isManualDisconnect = false
             }
-            is BleConnectionState.Error -> {
-                Log.e("ScaleViewModel", "Anslutningsfel: ${state.message}")
-                measurementJob?.cancel(); measurementJob = null
-                _error.value = "Anslutningsfel: ${state.message}"
 
-                // Stoppa inspelning/nedräkning vid fel
+            is BleConnectionState.Error -> {
+                Log.e("ScaleViewModel", "Connection error: ${state.message}")
+                measurementJob?.cancel(); measurementJob = null
+                _error.value = "Connection error: ${state.message}"
+
                 if(_isRecording.value || _isPaused.value || _countdown.value != null) {
-                    Log.w("ScaleViewModel", "Anslutningsfel under inspelning/nedräkning. Stoppar.")
+                    Log.w("ScaleViewModel", "Connection error during recording/countdown. Stopping.")
                     stopRecording()
                 }
-                isManualDisconnect = false // Nollställ flaggan även vid fel
+                isManualDisconnect = false
             }
             is BleConnectionState.Connecting -> {
-                Log.d("ScaleViewModel", "Ansluter...")
-                clearError() // Rensa eventuella gamla fel när vi försöker ansluta igen
+                Log.d("ScaleViewModel", "Connecting...")
+                clearError()
             }
         }
     }
 
+
     fun clearError() {
         _error.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        Log.d("ScaleViewModel", "onCleared called. Stopping scan and disconnecting.")
+        stopScan()
+        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) {
+            isManualDisconnect = true
+            disconnect()
+        }
+        measurementJob?.cancel()
+        timerJob?.cancel()
+        scanJob?.cancel()
     }
 }

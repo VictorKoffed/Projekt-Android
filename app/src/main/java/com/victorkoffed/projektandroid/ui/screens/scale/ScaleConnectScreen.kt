@@ -1,3 +1,4 @@
+// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/scale/ScaleConnectScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.scale
 
 import androidx.compose.animation.AnimatedContent
@@ -71,6 +72,9 @@ fun ScaleConnectScreen(
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
     // Hämta felmeddelanden från ViewModel
     val error by vm.error.collectAsState()
+    // --- NYTT: Hämta Remember Scale State ---
+    val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
+
 
     // --- Snackbar state för felmeddelanden ---
     val snackbarHostState = remember { SnackbarHostState() }
@@ -121,13 +125,15 @@ fun ScaleConnectScreen(
             when (state) {
                 is BleConnectionState.Connected -> {
                     val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f))
-                    val rememberScaleEnabled = vm.isRememberScaleEnabled()
+                    // TA BORT: val rememberScaleEnabled = vm.isRememberScaleEnabled()
 
                     ConnectedView(
                         deviceName = state.deviceName,
                         measurement = measurement,
+                        // NYTT: Skicka in det insamlade state-värdet
                         rememberScale = rememberScaleEnabled,
-                        onRememberScaleChange = { vm.setRememberScaleEnabled(it) },
+                        // NYTT: Skicka funktionsreferensen direkt
+                        onRememberScaleChange = vm::setRememberScaleEnabled,
                         onDisconnect = { vm.disconnect() },
                         onTare = { vm.tareScale() }
                     )
@@ -165,6 +171,7 @@ fun ScaleConnectScreen(
 private fun ConnectedView(
     deviceName: String,
     measurement: ScaleMeasurement,
+    // UPPDATERAD: Tar emot ett Boolean-värde direkt
     rememberScale: Boolean,
     onRememberScaleChange: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
@@ -184,9 +191,11 @@ private fun ConnectedView(
         // Kontroll för "Kom ihåg våg"
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            // UPPDATERAD: Använd rememberScale direkt här
             modifier = Modifier.clickable { onRememberScaleChange(!rememberScale) }
         ) {
             Checkbox(
+                // UPPDATERAD: Använd rememberScale direkt här
                 checked = rememberScale,
                 onCheckedChange = onRememberScaleChange
             )
@@ -215,6 +224,7 @@ private fun ConnectedView(
 }
 
 
+// --- ScanningView, ScanControls, DeviceList, DeviceCard förblir desamma ---
 // --- ScanningView ---
 @Composable
 private fun ScanningView(
@@ -287,15 +297,20 @@ private fun DeviceList(
     onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
     if (isScanning && devices.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
             Text("Scanning for devices...")
         }
-    } else if (!isScanning && devices.isEmpty() && connectionState !is BleConnectionState.Error) {
+    } else if (!isScanning && devices.isEmpty() && connectionState is BleConnectionState.Disconnected) { // Visa endast om Disconnected
         // Visa om scanningen avslutades utan resultat (och inget fel finns)
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No devices found.")
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
+            Text("No devices found. Tap 'Start scanning' to search again.") // Tydligare text
         }
-    } else {
+    } else if (connectionState is BleConnectionState.Error && devices.isEmpty()) { // Visa fel om inga enheter hittades OCH fel uppstod
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
+            Text("Error during scan: ${connectionState.message}")
+        }
+    }
+    else {
         // Lista över hittade enheter
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(items = devices, key = { it.address }) { device ->
@@ -305,6 +320,7 @@ private fun DeviceList(
     }
 }
 
+
 // --- DeviceCard ---
 @Composable
 private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
@@ -313,13 +329,13 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick), // Gör kortet klickbart för att initiera anslutning
         colors = CardDefaults.cardColors(
-            // ÄNDRA: Använd MaterialTheme.colorScheme.surface istället för Color.White
+            // Använd MaterialTheme.colorScheme.surface istället för Color.White
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = device.name ?: "(Nameless device)", // Fallback om enheten saknar namn
+                text = device.name ?: "(Unknown Device)", // Fallback om enheten saknar namn
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Address: ${device.address}", style = MaterialTheme.typography.bodySmall)

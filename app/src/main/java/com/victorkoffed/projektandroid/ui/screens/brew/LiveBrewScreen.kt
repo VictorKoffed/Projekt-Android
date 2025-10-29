@@ -1,3 +1,4 @@
+// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/brew/LiveBrewScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.brew
 
 import android.annotation.SuppressLint
@@ -207,20 +208,27 @@ fun LiveBrewScreen(
             AlertDialog(
                 onDismissRequest = {
                     showDisconnectedAlert = false
-                    navigateTo(Screen.ScaleConnect.route)
+                    // Navigera bara om vi faktiskt är frånkopplade (inte vid Error)
+                    if (connectionState is BleConnectionState.Disconnected) {
+                        navigateTo(Screen.ScaleConnect.route)
+                    }
                 },
-                title = { Text("Connection Broken") },
+                title = { Text(if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost") },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        navigateTo(Screen.ScaleConnect.route) // Navigera till anslutningsskärmen
+                        // Navigera bara om vi faktiskt är frånkopplade
+                        if (connectionState is BleConnectionState.Disconnected) {
+                            navigateTo(Screen.ScaleConnect.route) // Navigera till anslutningsskärmen
+                        }
                     }) {
                         Text("OK")
                     }
                 }
             )
         }
+
     }
 }
 
@@ -326,7 +334,7 @@ fun BrewGraph(
     val gridLineColor = Color.LightGray
 
     // Paint-objekt för textetiketter (används i nativeCanvas)
-    val textPaint = remember {
+    val textPaint = remember(textColor) { // Reagera på temabyte
         android.graphics.Paint().apply {
             color = textColor
             textAlign = android.graphics.Paint.Align.CENTER
@@ -334,7 +342,7 @@ fun BrewGraph(
         }
     }
     // Paint-objekt för axeltitlar
-    val axisLabelPaint = remember {
+    val axisLabelPaint = remember(textColor) { // Reagera på temabyte
         android.graphics.Paint().apply {
             color = textColor
             textAlign = android.graphics.Paint.Align.CENTER
@@ -410,17 +418,18 @@ fun BrewGraph(
             }
 
             // Rita axeltitlar
-            drawText("Time", yAxisX + graphWidth / 2, size.height + xLabelPadding / 1.5f, axisLabelPaint)
+            drawText("Time", yAxisX + graphWidth / 2, size.height + axisLabelPaint.textSize / 2, axisLabelPaint) // Justerad Y-pos
             withSave {
                 rotate(-90f)
                 drawText(
-                    "Weight",
-                    -size.height / 2,
-                    yLabelPadding / 2 - axisLabelPaint.descent(),
+                    "Weight (g)", // Lade till (g)
+                    -(axisPadding + graphHeight / 2), // Centrera vertikalt
+                    yLabelPadding / 2 - axisLabelPaint.descent(), // Positionera horisontellt
                     axisLabelPaint
                 )
             }
         }
+
 
         // Rita axellinjer (vänster Y och botten X)
         drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY))
@@ -513,8 +522,9 @@ fun BrewControls(
         // Tara-knapp (T)
         OutlinedButton(
             onClick = onTareClick,
-            // Endast aktiv när vågen är ansluten och ingen inspelning/paus/nedräkning pågår
-            enabled = isConnected && !isRecording && !isPaused && !isBusy,
+            // Endast aktiv när vågen är ansluten och inte under nedräkning
+            // TILLÅT TARA ÄVEN UNDER PAUS
+            enabled = isConnected && !isBusy && (!isRecording || isPaused) ,
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
             contentPadding = PaddingValues(0.dp)
@@ -552,23 +562,35 @@ fun LiveBrewScreenPreview() {
         var isRec by remember { mutableStateOf(false) }
         var isPaused by remember { mutableStateOf(false) }
         var time by remember { mutableLongStateOf(0L) }
-        var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale")) }
+        // UPPDATERAD: Lade till dummy deviceAddress
+        var connectionState by remember { mutableStateOf<BleConnectionState>(BleConnectionState.Connected("Preview Scale", "00:11:22:33:FF:EE")) }
         var countdown by remember { mutableStateOf<Int?>(null) } // Hanterar nedräkningsstate i preview
 
         val scope = rememberCoroutineScope()
 
         // Logik för att simulera mätningar under inspelning/paus
-        val nextSample = remember(isRec, isPaused, time) { previewSamples.find { it.timeMillis >= time } }
-        val lastSample = remember { previewSamples.last() }
+        LaunchedEffect(isRec, isPaused) {
+            while (isRec && !isPaused) {
+                delay(100) // Uppdatera tiden var 100ms
+                time += 100
+            }
+        }
 
-        val currentWeight = ScaleMeasurement(
-            weightGrams = if (isRec || isPaused)
-                ((nextSample?.massGrams ?: lastSample.massGrams).toFloat())
-            else 0f,
-            flowRateGramsPerSecond = if (isRec || isPaused)
-                ((nextSample?.flowRateGramsPerSecond ?: lastSample.flowRateGramsPerSecond ?: 0.0).toFloat())
-            else 0f
-        )
+
+        val currentWeight = remember(time, isRec, isPaused) {
+            if (!isRec && !isPaused) {
+                ScaleMeasurement(0f, 0f) // Visa noll om inte inspelning/paus
+            } else {
+                // Hitta närmaste sample baserat på simulerad tid
+                val currentSample = previewSamples.lastOrNull { it.timeMillis <= time }
+                    ?: previewSamples.first() // Fallback till första
+
+                ScaleMeasurement(
+                    weightGrams = currentSample.massGrams.toFloat(),
+                    flowRateGramsPerSecond = currentSample.flowRateGramsPerSecond?.toFloat() ?: 0f
+                )
+            }
+        }
         val weightAtPausePreview = remember(isPaused, currentWeight) { if (isPaused) currentWeight.weightGrams else null }
 
         LiveBrewScreen(
@@ -592,14 +614,14 @@ fun LiveBrewScreenPreview() {
                     countdown = null
                     isRec = true
                     isPaused = false
-                    time = 0L
+                    time = 0L // Nollställ tiden vid start
                 }
             },
             onPauseClick = { isPaused = true },
             onResumeClick = { isPaused = false },
             onStopAndSaveClick = { isRec = false; isPaused = false; countdown = null },
-            onTareClick = {},
-            onNavigateBack = { Log.d("Preview", "Navigate Back to Scale") },
+            onTareClick = { time = 0L /* Simulera tare genom att nollställa tiden? Eller bara logga? */ },
+            onNavigateBack = { Log.d("Preview", "Navigate Back") }, // Ändrad loggtext
             onResetRecording = { isRec = false; isPaused = false; time = 0L; countdown = null },
             navigateTo = { screen -> Log.d("Preview", "Navigate to $screen") }
         )
