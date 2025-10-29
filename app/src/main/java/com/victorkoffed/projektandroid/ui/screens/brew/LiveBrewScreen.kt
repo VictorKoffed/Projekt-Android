@@ -98,16 +98,24 @@ fun LiveBrewScreen(
     var showFlowInfo by remember { mutableStateOf(true) }
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
+    // UPPDATERAD: State för dialogens titel
+    var alertTitle by remember { mutableStateOf("Connection Lost") }
+
 
     // Övervakar anslutningsstatus och reagerar på avbrott/fel
     LaunchedEffect(connectionState) {
         if (connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) {
-            // Sätt specifikt felmeddelande
-            alertMessage = if (connectionState is BleConnectionState.Error) {
-                "Error connecting to the scale: ${connectionState.message}."
+
+            // UPPDATERAD: Sätt titel och meddelande baserat på state
+            if (connectionState is BleConnectionState.Error) {
+                alertTitle = "Connection Error"
+                // Meddelandet kommer nu färdigöversatt från ViewModel
+                alertMessage = connectionState.message
             } else {
-                "The connection to the scale was lost."
+                alertTitle = "Connection Lost"
+                alertMessage = "The connection to the scale was lost."
             }
+
             // Om vi spelade in, pausa/återställ inspelningen och informera användaren
             if (isRecording || isPaused || countdown != null) {
                 alertMessage += " Recording has been stopped."
@@ -213,7 +221,8 @@ fun LiveBrewScreen(
                         navigateTo(Screen.ScaleConnect.route)
                     }
                 },
-                title = { Text(if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost") },
+                // UPPDATERAD: Använd dynamisk titel
+                title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {

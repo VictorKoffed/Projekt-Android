@@ -12,18 +12,18 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 
 // --- Databas & Repository ---
-import com.victorkoffed.projektandroid.data.db.Brew // <-- Saknades troligen
-import com.victorkoffed.projektandroid.data.db.BrewSample // <-- Saknades troligen
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository // <-- Saknades troligen
-import com.victorkoffed.projektandroid.data.repository.ScaleRepository // <-- Saknades troligen
+import com.victorkoffed.projektandroid.data.db.Brew
+import com.victorkoffed.projektandroid.data.db.BrewSample
+import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 
 // --- Domänmodeller ---
-import com.victorkoffed.projektandroid.domain.model.BleConnectionState // <-- Saknades troligen
-import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice // <-- Saknades troligen
-import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement // <-- Saknades troligen
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
+import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 
 // --- Andra ViewModels (för dataklasser) ---
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // <-- Saknades troligen
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 
 // --- Hilt ---
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map // <-- Se till att denna import finns
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -65,6 +66,32 @@ data class SaveBrewResult(
     val beanIdReachedZero: Long? = null
 )
 
+/**
+ * Privat objekt för att översätta tekniska BLE-felmeddelanden
+ * till användarvänliga strängar.
+ */
+private object BleErrorTranslator {
+    fun translate(rawMessage: String?): String {
+        if (rawMessage == null) return "Ett okänt fel uppstod."
+
+        return when {
+            rawMessage.contains("GATT Error (133)") -> "Anslutningen misslyckades (GATT 133). Kontrollera att vågen är nära och påslagen."
+            rawMessage.contains("GATT Error (8)") -> "Anslutningen tappades oväntat (GATT 8). Vågen kan vara utom räckhåll."
+            rawMessage.contains("GATT Error (19)") -> "Anslutningen tappades (GATT 19). Vågen stängdes möjligen av."
+            rawMessage.contains("GATT Error") -> "Ett anslutningsfel uppstod. Försök ansluta igen."
+            rawMessage.contains("Could not find services") -> "Kunde inte hitta vågens tjänster. Prova att starta om vågen."
+            rawMessage.contains("Scale characteristic not found") -> "Ansluten enhet verkar inte vara en kompatibel våg."
+            rawMessage.contains("Could not enable notifications") -> "Kunde inte aktivera dataström från vågen."
+            rawMessage.contains("Okänt skanningsfel") -> "Ett fel uppstod vid sökning efter enheter."
+            rawMessage.contains("BLE scan failed") -> "Sökningen misslyckades. Kontrollera att Bluetooth är på."
+            rawMessage.contains("Bluetooth is not enabled") -> "Bluetooth är inte påslaget."
+            rawMessage.contains("Missing BLUETOOTH_SCAN permission") -> "Appen saknar behörighet att söka efter enheter."
+            else -> rawMessage // Fallback till det råa meddelandet om det är okänt
+        }
+    }
+}
+
+
 @HiltViewModel
 class ScaleViewModel @Inject constructor(
     app: Application,
@@ -84,7 +111,16 @@ class ScaleViewModel @Inject constructor(
     private var scanJob: Job? = null
 
     // --- Connection and Measurement State ---
+    // Mappar flödet för att översätta felmeddelanden direkt.
     val connectionState: SharedFlow<BleConnectionState> = scaleRepo.observeConnectionState()
+        .map { state ->
+            // Översätt felmeddelandet om state är Error
+            if (state is BleConnectionState.Error) {
+                BleConnectionState.Error(BleErrorTranslator.translate(state.message))
+            } else {
+                state
+            }
+        }
         .onEach { state -> handleConnectionStateChange(state) }
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
@@ -93,12 +129,12 @@ class ScaleViewModel @Inject constructor(
     val measurement: StateFlow<ScaleMeasurement> = combine(_rawMeasurement, _tareOffset) { raw, offset ->
         ScaleMeasurement(
             weightGrams = raw.weightGrams - offset,
-            flowRateGramsPerSecond = raw.flowRateGramsPerSecond // <-- Korrigerat från weightGrams
+            flowRateGramsPerSecond = raw.flowRateGramsPerSecond
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f, 0.0f))
 
 
-    // --- Error State ---
+    // --- Error State (Används nu främst för Skan/Spara-fel) ---
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
@@ -138,7 +174,7 @@ class ScaleViewModel @Inject constructor(
         if (_isScanning.value) return
 
         _devices.value = emptyList()
-        _error.value = null
+        clearError() // Rensa gamla fel vid ny skanning
         _isScanning.value = true
 
         scanJob?.cancel()
@@ -148,7 +184,8 @@ class ScaleViewModel @Inject constructor(
                 withTimeoutOrNull(10.seconds) {
                     scaleRepo.startScanDevices()
                         .catch { e ->
-                            _error.value = e.message ?: "Okänt skanningsfel"
+                            // Använd översättaren för skanningsfel
+                            _error.value = BleErrorTranslator.translate(e.message ?: "Okänt skanningsfel")
                             _isScanning.value = false
                         }
                         .collect { list ->
@@ -180,6 +217,7 @@ class ScaleViewModel @Inject constructor(
         stopScan()
         _tareOffset.value = 0.0f
         isManualDisconnect = false
+        clearError() // Rensa fel inför anslutningsförsök
         scaleRepo.connect(device.address)
     }
 
@@ -193,6 +231,7 @@ class ScaleViewModel @Inject constructor(
     }
 
     fun tareScale() {
+        // Redan användarvänliga meddelanden här, ingen ändring behövs.
         scaleRepo.tareScale()
         _tareOffset.value = _rawMeasurement.value.weightGrams
         Log.d("ScaleViewModel", "Tare anropad. Ny offset: ${_tareOffset.value}g. Aktuell vikt: ${measurement.value.weightGrams}g")
@@ -207,6 +246,7 @@ class ScaleViewModel @Inject constructor(
     // ---------------------------------------------------------------------------------------------
     fun startRecording() {
         if (_isRecording.value || _isPaused.value || _countdown.value != null) { Log.w("ScaleViewModel", "Start inspelning anropades men är redan upptagen."); return }
+        // Redan användarvänligt fel
         if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Connected) { _error.value = "Kan inte starta inspelning, vågen är inte ansluten."; return }
         viewModelScope.launch {
             try {
@@ -238,9 +278,14 @@ class ScaleViewModel @Inject constructor(
         val finalSamples = _recordedSamplesFlow.value
         stopRecording()
 
+        // Redan användarvänliga fel
         if (finalSamples.isEmpty()) { _error.value = "Ingen data spelades in."; return SaveBrewResult(null) }
 
-        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
+        // ***** KONTROLLERA DENNA DEL *****
+        // Felet du ser är troligen för att 'finalTimeMillis' inte är synlig här.
+        // Se till att 'val finalTimeMillis' är deklarerad *innan* denna rad.
+        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis // <-- DETTA ÄR RADEN SOM TROLIGEN VAR 294
+
         val beanId = setupState.selectedBean?.id
         val doseGrams = setupState.doseGrams.toDoubleOrNull()
 
@@ -253,7 +298,7 @@ class ScaleViewModel @Inject constructor(
         val newBrew = Brew(
             beanId = beanId,
             doseGrams = doseGrams,
-            startedAt = Date(actualStartTimeMillis),
+            startedAt = Date(actualStartTimeMillis), // <-- Här används variabeln
             grinderId = setupState.selectedGrinder?.id,
             methodId = setupState.selectedMethod?.id,
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
@@ -261,7 +306,7 @@ class ScaleViewModel @Inject constructor(
             brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
             notes = "Recorded${scaleInfo} on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}"
         )
-
+        // ***** SLUT PÅ KONTROLL *****
 
 
         val savedBrewId: Long? = viewModelScope.async {
@@ -306,7 +351,6 @@ class ScaleViewModel @Inject constructor(
             brewId = 0,
             timeMillis = elapsedTimeMs,
             massGrams = String.format(Locale.US, "%.1f", measurement.weightGrams).toDouble(),
-            // --- KORRIGERING: Använd flowRateGramsPerSecond här ---
             flowRateGramsPerSecond = String.format(Locale.US, "%.1f", measurement.flowRateGramsPerSecond).toDouble()
         )
         _recordedSamplesFlow.update { it + newSample }
@@ -373,6 +417,7 @@ class ScaleViewModel @Inject constructor(
         if (rememberedAddress != null) {
             Log.i("ScaleViewModel", "Attempting auto-connect to saved address: $rememberedAddress")
             isManualDisconnect = false
+            clearError() // Rensa gamla fel
             scaleRepo.connect(rememberedAddress)
         } else {
             Log.d("ScaleViewModel", "No saved scale address found for auto-connect.")
@@ -424,9 +469,9 @@ class ScaleViewModel @Inject constructor(
             }
 
             is BleConnectionState.Error -> {
-                Log.e("ScaleViewModel", "Connection error: ${state.message}")
+                // Loggar det översatta felet.
+                Log.e("ScaleViewModel", "Connection error (user message): ${state.message}")
                 measurementJob?.cancel(); measurementJob = null
-                _error.value = "Connection error: ${state.message}"
 
                 if(_isRecording.value || _isPaused.value || _countdown.value != null) {
                     Log.w("ScaleViewModel", "Connection error during recording/countdown. Stopping.")
@@ -436,7 +481,7 @@ class ScaleViewModel @Inject constructor(
             }
             is BleConnectionState.Connecting -> {
                 Log.d("ScaleViewModel", "Connecting...")
-                clearError()
+                clearError() // Rensa gamla scanningsfel
             }
         }
     }
@@ -447,6 +492,7 @@ class ScaleViewModel @Inject constructor(
      */
     fun retryConnection() {
         Log.i("ScaleViewModel", "Manual retry connection triggered.")
+        clearError() // Rensa eventuella gamla fel
         // Återanvänd samma logik som vid appstart
         attemptAutoConnect()
     }

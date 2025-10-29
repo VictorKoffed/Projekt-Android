@@ -87,8 +87,8 @@ com.victorkoffed.projektandroid/
 ##  Known issue (Bugfix)
 ---
 
-1. The auto connect BLE dont work.
-2. Fix so that the scale timer also starts in livebrewgraph.
+1. Fix the illegal reflective access
+1. Fix so that the scale timer also starts in livebrewgraph.
 2. Flow in detailbrew dont cap flow to 20g/s
 3. Tare and auto tare in livebrew must tare 2 times to zero
 4. Clean up warnings and refactor ∞

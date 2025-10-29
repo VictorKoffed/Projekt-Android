@@ -70,7 +70,7 @@ fun ScaleConnectScreen(
 ) {
     // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
-    // Hämta felmeddelanden från ViewModel
+    // Hämta felmeddelanden från ViewModel (för skanning/sparande)
     val error by vm.error.collectAsState()
     // --- NYTT: Hämta Remember Scale State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
@@ -80,7 +80,7 @@ fun ScaleConnectScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // Effekt för att visa felmeddelanden i en Snackbar
+    // Effekt för att visa (skanning/sparande) felmeddelanden i en Snackbar
     LaunchedEffect(error) {
         if (error != null) {
             scope.launch {
@@ -93,6 +93,20 @@ fun ScaleConnectScreen(
             vm.clearError()
         }
     }
+
+    // NY: Effekt för att visa anslutningsfel i en Snackbar
+    LaunchedEffect(connectionState) {
+        if (connectionState is BleConnectionState.Error) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = (connectionState as BleConnectionState.Error).message, // Det redan översatta meddelandet
+                    duration = SnackbarDuration.Long
+                )
+            }
+            // Vi behöver inte rensa felet, det är en del av connectionState
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -307,7 +321,8 @@ private fun DeviceList(
         }
     } else if (connectionState is BleConnectionState.Error && devices.isEmpty()) { // Visa fel om inga enheter hittades OCH fel uppstod
         Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
-            Text("Error during scan: ${connectionState.message}")
+            // Meddelandet här är nu det översatta från connectionState
+            Text(connectionState.message)
         }
     }
     else {
