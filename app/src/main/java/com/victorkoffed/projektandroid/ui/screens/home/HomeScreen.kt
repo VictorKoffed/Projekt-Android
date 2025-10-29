@@ -222,7 +222,8 @@ fun HomeScreen(
                     timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState,
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
-                    // onScaleCardClick tas bort som parameter
+                    // NYTT: Skicka med retryConnection-funktionen från scaleVm
+                    onRetryScaleConnect = { scaleVm.retryConnection() }
                 )
             }
             item {
@@ -283,8 +284,9 @@ fun InfoGrid(
     imageError: String?,
     timeSinceLastCoffee: String,
     scaleConnectionState: BleConnectionState,
-    onReloadImage: () -> Unit
-    // onScaleCardClick tas bort härifrån
+    onReloadImage: () -> Unit,
+    // NYTT: Ta emot onRetryScaleConnect callback
+    onRetryScaleConnect: () -> Unit
 ) {
     val firstRowHeight = 160.dp
     val otherRowHeight = 100.dp
@@ -319,10 +321,11 @@ fun InfoGrid(
                 }
             }
 
-            // Kort 2: Vågens status (inte längre klickbar för navigering)
+            // Kort 2: Vågens status (modifierad)
             ScaleStatusCard(
                 connectionState = scaleConnectionState,
-                onClick = {}, // ÄNDRAD: Gör ingenting vid klick
+                // NYTT: Skicka med onRetryConnect istället för onClick
+                onRetryConnect = onRetryScaleConnect,
                 modifier = Modifier.weight(1f).height(firstRowHeight)
             )
         }
@@ -345,12 +348,13 @@ fun InfoGrid(
 
 /**
  * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
- * onClick gör nu ingenting då navigeringen flyttats.
+ * ÄR NU KLICKBAR för att försöka ansluta igen vid fel eller frånkoppling.
  */
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
-    onClick: () -> Unit, // Behåll parametern men den används inte för navigering
+    // NYTT: Callback för att försöka ansluta igen
+    onRetryConnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val icon: @Composable () -> Unit
@@ -358,12 +362,14 @@ fun ScaleStatusCard(
     val subtitle: String
     val iconColor: Color
     val titleColor: Color
+    // NYTT: Flagga för att avgöra om kortet ska vara klickbart
+    val isClickableForRetry = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
 
     when (connectionState) {
         is BleConnectionState.Connected -> {
             icon = { Icon(Icons.Default.BluetoothConnected, contentDescription = "Connected") }
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
-            subtitle = "Scale Connected" // Ändrad undertitel
+            subtitle = "Scale Connected"
             iconColor = MaterialTheme.colorScheme.primary
             titleColor = MaterialTheme.colorScheme.primary
         }
@@ -377,21 +383,27 @@ fun ScaleStatusCard(
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
             title = "Connection Error"
-            subtitle = connectionState.message
+            // NYTT: Tydligare uppmaning i undertiteln
+            subtitle = "Tap to retry" // Eller behåll connectionState.message om du föredrar det
             iconColor = MaterialTheme.colorScheme.error
             titleColor = MaterialTheme.colorScheme.error
         }
         BleConnectionState.Disconnected -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
-            subtitle = "Use menu to connect" // Ändrad undertitel
+            // NYTT: Tydligare uppmaning i undertiteln
+            subtitle = "Tap to retry connect" // Eller "Use menu to connect" om du vill behålla den
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             titleColor = MaterialTheme.colorScheme.onSurface
         }
     }
 
     Card(
-        modifier = modifier, // Ingen clickable() här längre
+        // NYTT: Gör kortet klickbart endast om isClickableForRetry är sann
+        modifier = modifier.clickable(
+            enabled = isClickableForRetry,
+            onClick = onRetryConnect // Anropa retry-funktionen vid klick
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(

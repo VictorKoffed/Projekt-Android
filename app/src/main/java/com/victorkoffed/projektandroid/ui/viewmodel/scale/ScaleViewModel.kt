@@ -441,6 +441,16 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
+    /**
+     * NY FUNKTION: Initierar ett nytt försök att automatiskt ansluta till den sparade vågen.
+     * Används för manuell återanslutning från UI, t.ex. vid klick på statuskort.
+     */
+    fun retryConnection() {
+        Log.i("ScaleViewModel", "Manual retry connection triggered.")
+        // Återanvänd samma logik som vid appstart
+        attemptAutoConnect()
+    }
+
 
     fun clearError() {
         _error.value = null
