@@ -66,7 +66,7 @@ import com.victorkoffed.projektandroid.R
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
-import com.victorkoffed.projektandroid.ui.navigation.Screen
+import com.victorkoffed.projektandroid.ui.navigation.Screen // <- Se till att denna är importerad
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.RecentBrewItem
@@ -86,12 +86,12 @@ fun HomeScreen(
     coffeeImageVm: CoffeeImageViewModel,
     scaleVm: ScaleViewModel,
     snackbarHostState: SnackbarHostState, // State för Snackbar (för felhantering)
-    navigateToScreen: (String) -> Unit, // Generell navigations-callback
+    navigateToScreen: (String) -> Unit, // Generell navigations-callback (ANVÄNDS EJ LÄNGRE HÄR)
     onNavigateToBrewSetup: () -> Unit, // Callback för att starta ny bryggning
     onBrewClick: (Long) -> Unit, // Callback för att visa bryggdetaljer
     availableBeans: List<Bean>, // Data för att kontrollera förutsättningar
     availableMethods: List<Method>, // Data för att kontrollera förutsättningar
-    onMenuClick: () -> Unit // Callback för att öppna navigeringslådan
+    onMenuClick: () -> Unit // Callback för att öppna navigationslådan
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -222,8 +222,7 @@ fun HomeScreen(
                     timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState,
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
-                    // Navigering till våganslutningsskärmen
-                    onScaleCardClick = { navigateToScreen(Screen.ScaleConnect.route) }
+                    // onScaleCardClick tas bort som parameter
                 )
             }
             item {
@@ -276,7 +275,6 @@ fun HomeScreen(
  */
 @Composable
 fun InfoGrid(
-    // LÄGG TILLBAKA totalBrews
     totalBrews: Int,
     beansExplored: Int,
     availableWeight: Double,
@@ -285,8 +283,8 @@ fun InfoGrid(
     imageError: String?,
     timeSinceLastCoffee: String,
     scaleConnectionState: BleConnectionState,
-    onReloadImage: () -> Unit,
-    onScaleCardClick: () -> Unit
+    onReloadImage: () -> Unit
+    // onScaleCardClick tas bort härifrån
 ) {
     val firstRowHeight = 160.dp
     val otherRowHeight = 100.dp
@@ -321,10 +319,10 @@ fun InfoGrid(
                 }
             }
 
-            // Kort 2: Vågens status (klickbar)
+            // Kort 2: Vågens status (inte längre klickbar för navigering)
             ScaleStatusCard(
                 connectionState = scaleConnectionState,
-                onClick = onScaleCardClick,
+                onClick = {}, // ÄNDRAD: Gör ingenting vid klick
                 modifier = Modifier.weight(1f).height(firstRowHeight)
             )
         }
@@ -347,11 +345,12 @@ fun InfoGrid(
 
 /**
  * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
+ * onClick gör nu ingenting då navigeringen flyttats.
  */
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
-    onClick: () -> Unit,
+    onClick: () -> Unit, // Behåll parametern men den används inte för navigering
     modifier: Modifier = Modifier
 ) {
     val icon: @Composable () -> Unit
@@ -364,7 +363,7 @@ fun ScaleStatusCard(
         is BleConnectionState.Connected -> {
             icon = { Icon(Icons.Default.BluetoothConnected, contentDescription = "Connected") }
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
-            subtitle = "Tap to disconnect"
+            subtitle = "Scale Connected" // Ändrad undertitel
             iconColor = MaterialTheme.colorScheme.primary
             titleColor = MaterialTheme.colorScheme.primary
         }
@@ -385,14 +384,14 @@ fun ScaleStatusCard(
         BleConnectionState.Disconnected -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
-            subtitle = "Tap to connect"
+            subtitle = "Use menu to connect" // Ändrad undertitel
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             titleColor = MaterialTheme.colorScheme.onSurface
         }
     }
 
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier, // Ingen clickable() här längre
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(

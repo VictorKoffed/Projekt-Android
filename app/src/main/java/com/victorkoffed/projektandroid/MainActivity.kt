@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth // <- LÄGG TILL BLUETOOTH-IKON
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Science
@@ -190,6 +191,32 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
+
+                            // *** HÄR ÄR DEN TILLAGDA RADEN FÖR VÅGANSLUTNING ***
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        // Stäng menyn först
+                                        scope.launch { drawerState.close() }
+                                        // Navigera sedan till vågskärmen
+                                        navController.navigate(Screen.ScaleConnect.route)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Valfri ikon
+                                Icon(
+                                    Icons.Default.Bluetooth, // Använd Bluetooth-ikon
+                                    contentDescription = "Connect Scale Icon",
+                                    modifier = Modifier.padding(end = 16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant // Färg för ikonen
+                                )
+                                Text("Connect to Scale")
+                            }
+                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
+                            // *** SLUT PÅ TILLAGT BLOCK ***
+
                             // Lägg till fler inställningar här vid behov
                         }
                     }
@@ -249,7 +276,8 @@ class MainActivity : ComponentActivity() {
                                     coffeeImageVm = coffeeImageVm,
                                     scaleVm = scaleVm,
                                     snackbarHostState = snackbarHostState,
-                                    navigateToScreen = { screenName -> navController.navigate(screenName) },
+                                    // navigateToScreen behövs inte längre här
+                                    navigateToScreen = { /* No-op */ },
                                     onNavigateToBrewSetup = {
                                         brewVm.clearBrewResults()
                                         navController.navigate(Screen.BrewSetup.route)
@@ -375,14 +403,6 @@ class MainActivity : ComponentActivity() {
                                                     // Rensa LiveBrew och BrewSetup från stacken
                                                     popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                                     launchSingleTop = true // Undvik flera instanser av detaljvyn
-
-                                                    // --- BORTTAGET: Hanteras nu via navArgument ---
-                                                    // saveResult.beanIdReachedZero?.let { beanId ->
-                                                    //     navController.currentBackStackEntry
-                                                    //         ?.savedStateHandle
-                                                    //         ?.set("beanIdToArchivePrompt", beanId)
-                                                    //     Log.d("MainActivity", "Setting beanIdToArchivePrompt: $beanId")
-                                                    // }
                                                 }
                                             } else {
                                                 // Hantera fel vid sparande
