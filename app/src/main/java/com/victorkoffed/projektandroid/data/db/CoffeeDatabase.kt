@@ -46,7 +46,7 @@ abstract class CoffeeDatabase : RoomDatabase() {
                     .addCallback(DatabaseCallback)
                     // Tillåter destruktiv migrering. Detta raderar befintlig data vid versionsökning,
                     // vilket är vanligt i utveckling men bör bytas ut mot riktiga migrationsstrategier i produktion.
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance
                 instance

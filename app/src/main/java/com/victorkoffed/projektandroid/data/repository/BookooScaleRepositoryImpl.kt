@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.scan
  */
 @Singleton
 class BookooScaleRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext @field:ApplicationContext private val context: Context
 ) : ScaleRepository {
 
     private val client: BookooBleClient by lazy { BookooBleClient(context) }
