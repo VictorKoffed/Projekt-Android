@@ -105,6 +105,8 @@ class ScaleViewModel @Inject constructor(
     private val sharedPreferences: SharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private var isManualDisconnect = false
+    // NY FLAGGA: För att spåra om ett återanslutningsförsök har gjorts
+    private var reconnectAttempted = false
 
     // --- Scanning State ---
     private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
@@ -191,6 +193,8 @@ class ScaleViewModel @Inject constructor(
         _devices.value = emptyList()
         clearError() // Rensa gamla fel vid ny skanning
         _isScanning.value = true
+        // NYTT: Återställ reconnect-flaggan vid ny skanning
+        reconnectAttempted = false
 
         scanJob?.cancel()
 
@@ -232,6 +236,8 @@ class ScaleViewModel @Inject constructor(
         stopScan()
         _tareOffset.value = 0.0f
         isManualDisconnect = false
+        // NYTT: Återställ reconnect-flaggan när en anslutning initieras manuellt
+        reconnectAttempted = false
         clearError() // Rensa fel inför anslutningsförsök
         scaleRepo.connect(device.address)
     }
@@ -239,6 +245,8 @@ class ScaleViewModel @Inject constructor(
     fun disconnect() {
         Log.d("ScaleViewModel", "Manuell frånkoppling initierad.")
         isManualDisconnect = true
+        // NYTT: Återställ reconnect-flaggan vid manuell disconnect
+        reconnectAttempted = false
         stopRecording()
         measurementJob?.cancel(); measurementJob = null
         scaleRepo.disconnect()
@@ -451,6 +459,8 @@ class ScaleViewModel @Inject constructor(
         val lastState = connectionState.replayCache.lastOrNull()
         if (lastState is BleConnectionState.Connected || lastState is BleConnectionState.Connecting) {
             Log.d("ScaleViewModel", "Already connected or connecting, skipping auto-connect.")
+            // NYTT: Återställ reconnect-flaggan även här
+            reconnectAttempted = false
             return
         }
 
@@ -458,6 +468,7 @@ class ScaleViewModel @Inject constructor(
         if (rememberedAddress != null) {
             Log.i("ScaleViewModel", "Attempting auto-connect to saved address: $rememberedAddress")
             isManualDisconnect = false
+            // NYTT: Återställ INTE reconnectAttempted här, det görs i handleConnectionStateChange vid Connected
             clearError() // Rensa gamla fel
             scaleRepo.connect(rememberedAddress)
         } else {
@@ -472,6 +483,8 @@ class ScaleViewModel @Inject constructor(
         when (state) {
             is BleConnectionState.Connected -> {
                 Log.i("ScaleViewModel", "Connected to ${state.deviceName} (${state.deviceAddress}).")
+                // NYTT: Återställ reconnect-flaggan när anslutningen lyckas
+                reconnectAttempted = false
                 // Spara adressen om "remember" är på (behöver inte kolla auto-connect här)
                 if (_rememberScaleEnabled.value) {
                     saveRememberedScaleAddress(state.deviceAddress)
@@ -496,20 +509,44 @@ class ScaleViewModel @Inject constructor(
                     stopRecording()
                 }
 
-                // Försök auto-reconnect endast om INTE manuell disconnect OCH auto-connect är på
-                if (!isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting) {
+                // *** NY LOGIK FÖR ÅTERANSLUTNINGSFÖRSÖK ***
+                // Försök auto-reconnect endast om:
+                // 1. INTE manuell disconnect
+                // 2. Auto-connect är på
+                // 3. Vi inte redan håller på att ansluta
+                // 4. Vi inte redan har försökt återansluta sedan senaste lyckade anslutningen
+                if (!isManualDisconnect &&
+                    _rememberScaleEnabled.value &&
+                    _autoConnectEnabled.value &&
+                    connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting &&
+                    !reconnectAttempted)
+                {
                     viewModelScope.launch {
-                        Log.d("ScaleViewModel", "Unexpected disconnect with auto-connect enabled. Waiting 2 seconds before attempting auto-reconnect...")
-                        delay(2000L)
-                        // Dubbelkolla att vi fortfarande ska återansluta
-                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected && _rememberScaleEnabled.value && _autoConnectEnabled.value) {
-                            Log.i("ScaleViewModel", "Still disconnected. Attempting auto-reconnect.")
-                            attemptAutoConnect()
+                        Log.d("ScaleViewModel", "Unexpected disconnect with auto-connect enabled. Waiting 2 seconds before attempting ONE reconnect...")
+                        delay(2000L) // Kort fördröjning
+                        // Dubbelkolla att vi fortfarande ska återansluta och inte redan försökt
+                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected &&
+                            _rememberScaleEnabled.value &&
+                            _autoConnectEnabled.value &&
+                            !reconnectAttempted)
+                        {
+                            Log.i("ScaleViewModel", "Still disconnected. Attempting single auto-reconnect.")
+                            reconnectAttempted = true // Markera att vi har försökt
+                            attemptAutoConnect() // Anropa auto-connect-logiken
                         } else {
-                            Log.d("ScaleViewModel", "State changed, remember/auto-connect disabled, or connection already in progress. Skipping auto-reconnect.")
+                            Log.d("ScaleViewModel", "State changed, remember/auto-connect disabled, connection in progress, or reconnect already attempted. Skipping auto-reconnect attempt.")
                         }
                     }
+                } else {
+                    // Logga varför vi INTE försöker återansluta
+                    Log.d("ScaleViewModel", "Skipping auto-reconnect attempt. Reason: " +
+                            "ManualDisconnect=$isManualDisconnect, " +
+                            "RememberEnabled=${_rememberScaleEnabled.value}, " +
+                            "AutoConnectEnabled=${_autoConnectEnabled.value}, " +
+                            "IsConnecting=${connectionState.replayCache.lastOrNull() is BleConnectionState.Connecting}, " +
+                            "ReconnectAttempted=$reconnectAttempted")
                 }
+                // *** SLUT NY LOGIK ***
             }
 
             is BleConnectionState.Error -> {
@@ -521,10 +558,44 @@ class ScaleViewModel @Inject constructor(
                     Log.w("ScaleViewModel", "Connection error during recording/countdown. Stopping.")
                     stopRecording()
                 }
-                isManualDisconnect = false
+                // NYTT: Försök återansluta även vid vissa fel, OM auto-connect är på och vi inte redan försökt
+                if (!isManualDisconnect &&
+                    _rememberScaleEnabled.value &&
+                    _autoConnectEnabled.value &&
+                    connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting &&
+                    !reconnectAttempted)
+                {
+                    viewModelScope.launch {
+                        Log.d("ScaleViewModel", "Connection Error with auto-connect enabled. Waiting 2 seconds before attempting ONE reconnect...")
+                        delay(2000L)
+                        // Dubbelkolla igen
+                        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Connected && // Se till att vi inte lyckades ansluta under tiden
+                            connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting &&
+                            _rememberScaleEnabled.value &&
+                            _autoConnectEnabled.value &&
+                            !reconnectAttempted)
+                        {
+                            Log.i("ScaleViewModel", "Still not connected after error. Attempting single auto-reconnect.")
+                            reconnectAttempted = true
+                            attemptAutoConnect()
+                        } else {
+                            Log.d("ScaleViewModel", "State changed, remember/auto-connect disabled, connection in progress/successful, or reconnect already attempted. Skipping auto-reconnect attempt after error.")
+                        }
+                    }
+                } else {
+                    Log.d("ScaleViewModel", "Skipping auto-reconnect attempt after error. Reason: " +
+                            "ManualDisconnect=$isManualDisconnect, " +
+                            "RememberEnabled=${_rememberScaleEnabled.value}, " +
+                            "AutoConnectEnabled=${_autoConnectEnabled.value}, " +
+                            "IsConnecting=${connectionState.replayCache.lastOrNull() is BleConnectionState.Connecting}, " +
+                            "ReconnectAttempted=$reconnectAttempted")
+                }
+
+                isManualDisconnect = false // Ett fel är inte en manuell disconnect
             }
             is BleConnectionState.Connecting -> {
                 Log.d("ScaleViewModel", "Connecting...")
+                // NYTT: Återställ INTE reconnectAttempted här, det görs när anslutningen lyckas (Connected)
                 clearError() // Rensa gamla scanningsfel
             }
         }
@@ -537,6 +608,8 @@ class ScaleViewModel @Inject constructor(
     fun retryConnection() {
         Log.i("ScaleViewModel", "Manual retry connection triggered.")
         clearError() // Rensa eventuella gamla fel
+        // NYTT: Återställ reconnect-flaggan vid manuellt försök
+        reconnectAttempted = false
 
         // Kolla om vi har en adress att ansluta till
         val rememberedAddress = loadRememberedScaleAddress()
