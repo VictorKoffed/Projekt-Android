@@ -41,7 +41,8 @@ class BookooBleClient(private val context: Context) {
     val measurements = MutableSharedFlow<ScaleMeasurement>()
     private val btManager by lazy { context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager }
     private val btAdapter by lazy { btManager.adapter }
-    private val scanner by lazy { btAdapter.bluetoothLeScanner }
+    private val scanner by lazy { btAdapter?.bluetoothLeScanner } // Ändrad för säker åtkomst
+
     private var gatt: BluetoothGatt? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     // Använder Dispatchers.IO för att undvika blockering av Main Thread
@@ -99,11 +100,38 @@ class BookooBleClient(private val context: Context) {
     fun startScan(): Flow<ScanResult> = callbackFlow {
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) { trySend(result).isSuccess }
-            override fun onScanFailed(errorCode: Int) { Log.e(TAG, "BLE scan failed: $errorCode"); close(IllegalStateException("Bluetooth off.")) }
+            // Engelsk felmeddelande
+            override fun onScanFailed(errorCode: Int) { Log.e(TAG, "BLE scan failed: $errorCode"); close(IllegalStateException("BLE scan failed with error code: $errorCode.")) }
         }
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-        if (btAdapter?.isEnabled == true) { scanner.startScan(null, settings, callback) } else { close(IllegalStateException("Bluetooth off.")) }
-        awaitClose { if (btAdapter?.isEnabled == true) try { scanner.stopScan(callback) } catch (e: Exception) { Log.w(TAG, "Error stopping scan: ${e.message}") } }
+        val adapter = btAdapter
+        val currentScanner = scanner
+
+        if (adapter == null) {
+            close(IllegalStateException("Bluetooth hardware not available."))
+        } else if (!adapter.isEnabled) {
+            close(IllegalStateException("Bluetooth is turned off."))
+        } else if (currentScanner == null) {
+            close(IllegalStateException("Bluetooth scanner unavailable."))
+        } else {
+            try {
+                currentScanner.startScan(null, settings, callback)
+            } catch (e: Exception) {
+                // Catch unexpected exceptions like SecurityException or a transient issue
+                Log.e(TAG, "BLE startScan failed unexpectedly", e)
+                close(IllegalStateException("BLE scan failed unexpectedly: ${e.message}"))
+            }
+        }
+
+        awaitClose {
+            if (adapter?.isEnabled == true && currentScanner != null) {
+                try {
+                    currentScanner.stopScan(callback)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error stopping scan: ${e.message}")
+                }
+            }
+        }
     }
 
     /** Initierar anslutning till en enhet med den givna BLE-adressen. */
@@ -115,7 +143,14 @@ class BookooBleClient(private val context: Context) {
 
         scope.launch {
             try {
-                val device = btAdapter.getRemoteDevice(address); delay(500L)
+                // FIX: Check if btAdapter is still available before proceeding
+                val adapter = btAdapter
+                if (adapter == null) {
+                    mainHandler.post { connectionState.value = BleConnectionState.Error("Bluetooth hardware not available.") }
+                    return@launch
+                }
+
+                val device = adapter.getRemoteDevice(address); delay(500L)
                 val newGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 
                 mainHandler.post {

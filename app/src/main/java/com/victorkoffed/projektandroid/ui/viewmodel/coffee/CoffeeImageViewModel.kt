@@ -32,18 +32,19 @@ class CoffeeImageViewModel @Inject constructor(
         if (loading.value) return
 
         loading.value = true
-        error.value = null
+        error.value = null // Rensas vid varje nytt försök
 
         viewModelScope.launch {
             try {
                 val url = imageRepository.fetchRandomCoffeeImageUrl()
                 imageUrl.value = url
                 if (url == null) {
-                    error.value = "Kunde inte hitta bild-URL i API-svar."
+                    // Engelsk feltext vid API-svar utan bild
+                    error.value = "Could not find image URL in API response."
                 }
             } catch (e: Exception) {
-                // Fånga eventuella fel (t.ex. I/O-fel) från repositoryt
-                error.value = "Nätverksfel: ${e.message ?: "Okänt fel"}"
+                // Engelsk feltext vid nätverksfel (t.ex. ingen internetuppkoppling)
+                error.value = "Network error: ${e.message ?: "Unknown error"}"
             } finally {
                 loading.value = false
             }

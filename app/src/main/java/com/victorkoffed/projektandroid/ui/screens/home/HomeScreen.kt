@@ -137,7 +137,6 @@ fun HomeScreen(
                     message = "Image Error: $imageError"
                 )
             }
-            coffeeImageVm.clearError()
         }
     }
 

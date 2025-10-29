@@ -55,8 +55,11 @@ private object BleErrorTranslator {
             rawMessage.contains("GATT Error") -> "Connection error ($rawMessage)."
             rawMessage.contains("permission", ignoreCase = true) -> "Bluetooth permission missing."
             rawMessage.contains("address", ignoreCase = true) -> "Invalid address."
-            rawMessage.contains("BLE scan failed") -> "Scan failed."
-            rawMessage.contains("Bluetooth off") -> "Bluetooth turned off."
+            // Uppdaterade översättningar för de nya felen från BookooBleClient
+            rawMessage.contains("BLE scan failed") -> "BLE scan failed."
+            rawMessage.contains("Bluetooth is turned off.") -> "Bluetooth is turned off."
+            rawMessage.contains("Bluetooth hardware not available.") -> "Bluetooth hardware not available."
+            rawMessage.contains("Bluetooth scanner unavailable.") -> "Bluetooth scanner unavailable."
             else -> rawMessage
         }
     }
@@ -178,7 +181,7 @@ class ScaleViewModel @Inject constructor(
         }
         // Tidsbegränsa scanningen
         scanTimeoutJob = viewModelScope.launch {
-            delay(SCAN_TIMEOUT)
+            delay(SCAN_TIMEOUT.inWholeMilliseconds)
             if (_isScanning.value) stopScan()
         }
     }
@@ -527,7 +530,6 @@ class ScaleViewModel @Inject constructor(
         val shouldAttempt = !isManualDisconnect && rememberScaleEnabled.value && autoConnectEnabled.value && !reconnectAttempted
         if (!shouldAttempt) return
 
-        // FIX: Sätt flaggan OMEDELBART för att blockera nya försök under de 2 sekunderna.
         reconnectAttempted = true
 
         viewModelScope.launch {
