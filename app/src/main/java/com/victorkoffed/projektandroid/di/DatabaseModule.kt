@@ -9,6 +9,7 @@ import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepository
 import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepositoryImpl
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepositoryImpl
+import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager // <-- NY IMPORT
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import dagger.Module
 import dagger.Provides
@@ -37,7 +38,12 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideScaleRepository(impl: BookooScaleRepositoryImpl): ScaleRepository = impl
 
-    // --- NYTT: Coffee Image Repository ---
+    // --- NYTT: Scale Preference Manager ---
+    @Provides @Singleton
+    fun provideScalePreferenceManager(@ApplicationContext context: Context): ScalePreferenceManager =
+        ScalePreferenceManager(context)
+
+    // --- Coffee Image Repository ---
     @Provides @Singleton
     fun provideCoffeeImageRepository(impl: CoffeeImageRepositoryImpl): CoffeeImageRepository = impl
 }

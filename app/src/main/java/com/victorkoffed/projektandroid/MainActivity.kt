@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // Importera allt från layout
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Coffee
@@ -15,8 +15,8 @@ import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.* // Importera allt från material3
-import androidx.compose.runtime.* // Importera allt från runtime
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,7 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
-import com.victorkoffed.projektandroid.ui.navigation.AppNavigationGraph // <-- NY IMPORT
+import com.victorkoffed.projektandroid.ui.navigation.AppNavigationGraph
 import com.victorkoffed.projektandroid.ui.navigation.Screen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
@@ -46,18 +46,6 @@ data class NavItem(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 )
-
-// ThemedSnackbar flyttas ut för bättre organisation (eller till en egen fil)
-@Composable
-fun ThemedSnackbar(data: SnackbarData) {
-    Snackbar(
-        snackbarData = data,
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        actionColor = MaterialTheme.colorScheme.onPrimary
-    )
-}
-
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -166,7 +154,7 @@ class MainActivity : ComponentActivity() {
                         snackbarHost = {
                             SnackbarHost(
                                 snackbarHostState,
-                                snackbar = { snackbarData -> ThemedSnackbar(snackbarData) }
+                                snackbar = { snackbarData -> ThemedSnackbar(snackbarData) } // <-- Använder den lokala funktionen
                             )
                         }
                     ) { innerPadding ->

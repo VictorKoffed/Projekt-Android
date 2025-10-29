@@ -1,15 +1,13 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
 import android.app.Application
-import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager // <-- NY IMPORT
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
@@ -30,10 +28,7 @@ import kotlin.time.Duration.Companion.seconds
 
 // --- Konstanter ---
 private const val TAG = "ScaleViewModel"
-private const val PREFS_NAME = "ScalePrefs"
-private const val PREF_REMEMBERED_SCALE_ADDRESS = "remembered_scale_address"
-private const val PREF_REMEMBER_SCALE_ENABLED = "remember_scale_enabled"
-private const val PREF_AUTO_CONNECT_ENABLED = "auto_connect_enabled"
+// REMOVED preference constants
 private val SCAN_TIMEOUT = 10.seconds
 
 /** Data class som returneras efter att en bryggning har sparats. */
@@ -65,10 +60,11 @@ private object BleErrorTranslator {
 class ScaleViewModel @Inject constructor(
     app: Application,
     private val scaleRepo: ScaleRepository,
-    private val coffeeRepo: CoffeeRepository
+    private val coffeeRepo: CoffeeRepository,
+    private val prefsManager: ScalePreferenceManager // <-- NY INJEKTION
 ) : AndroidViewModel(app) {
 
-    private val sharedPreferences: SharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    // REMOVED sharedPreferences
     private var isManualDisconnect = false
     private var reconnectAttempted = false // FIX: Denna flagga fungerar som ett lås för tryAutoReconnect
 
@@ -103,15 +99,11 @@ class ScaleViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown.asStateFlow()
 
-    // FIX: Använder nu privata MutableStateFlows för att hantera inställningar säkert
-    private val _rememberScaleEnabled = MutableStateFlow(sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false))
-    val rememberScaleEnabled: StateFlow<Boolean> = _rememberScaleEnabled.asStateFlow()
-
-    private val _autoConnectEnabled = MutableStateFlow(sharedPreferences.getBoolean(PREF_AUTO_CONNECT_ENABLED, _rememberScaleEnabled.value))
-    val autoConnectEnabled: StateFlow<Boolean> = _autoConnectEnabled.asStateFlow()
-
-    private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
-    val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
+    // Hämta inställningar från Preference Manager
+    val rememberScaleEnabled: StateFlow<Boolean> = prefsManager.rememberScaleEnabled
+    val autoConnectEnabled: StateFlow<Boolean> = prefsManager.autoConnectEnabled
+    val rememberedScaleAddress: StateFlow<String?> = prefsManager.rememberedScaleAddress
+    // REMOVED old preference flows
 
     // --- Private Job Management ---
     private var scanJob: Job? = null
@@ -474,7 +466,8 @@ class ScaleViewModel @Inject constructor(
     private fun handleConnectedState(state: BleConnectionState.Connected) {
         Log.i(TAG, "Connected to ${state.deviceName}.")
         reconnectAttempted = false // Sätt till false vid lyckad anslutning
-        if (rememberScaleEnabled.value) saveRememberedScaleAddress(state.deviceAddress)
+        // ANVÄND MANAGER: Uppdatera sparad adress om 'remember' är aktivt
+        if (rememberScaleEnabled.value) prefsManager.setRememberedScaleAddress(state.deviceAddress)
         isManualDisconnect = false
         clearError()
         observeScaleMeasurements() // Säkerställ att mätningar observeras
@@ -554,74 +547,41 @@ class ScaleViewModel @Inject constructor(
     // --- Inställningar (Persistence) ---
 
     fun setRememberScaleEnabled(enabled: Boolean) {
-        sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
+        prefsManager.setRememberScaleEnabled(enabled) // <-- ANVÄND MANAGER
 
         // KRITISK FIX: Nollställ låset för auto-återanslutning vid manuell inställningsändring
         reconnectAttempted = false
 
-        // FIX: Uppdatera privat StateFlow
-        _rememberScaleEnabled.value = enabled
-
-        if (!enabled) {
-            setAutoConnectEnabled(false)
-            saveRememberedScaleAddress(null)
-        } else {
+        // Måste även hantera sparande av adress här om vi har en anslutning (för att hantera omedelbart aktivering)
+        if (enabled) {
             val cs = connectionState.replayCache.lastOrNull()
             if (cs is BleConnectionState.Connected) {
-                saveRememberedScaleAddress(cs.deviceAddress)
-                setAutoConnectEnabled(true)
-            } else {
-                // Sätts till false om ingen anslutning finns
-                setAutoConnectEnabled(false)
+                prefsManager.setRememberedScaleAddress(cs.deviceAddress)
+                prefsManager.setAutoConnectEnabled(true)
             }
         }
     }
 
     fun setAutoConnectEnabled(enabled: Boolean) {
-        val newValue = enabled && rememberScaleEnabled.value
-        if (_autoConnectEnabled.value != newValue) { // Jämför med privat värde
-            sharedPreferences.edit { putBoolean(PREF_AUTO_CONNECT_ENABLED, newValue) }
-            // FIX: Uppdatera privat StateFlow
-            _autoConnectEnabled.value = newValue
-        }
-    }
-
-    private fun saveRememberedScaleAddress(address: String?) {
-        val current = _rememberedScaleAddress.value
-        if (address != null && rememberScaleEnabled.value) {
-            if (current != address) {
-                sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
-            }
-        } else {
-            if (current != null) {
-                sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
-                setAutoConnectEnabled(false)
-            }
-        }
-        // FIX: Uppdatera privat StateFlow från persistence
-        _rememberedScaleAddress.value = loadRememberedScaleAddress()
-    }
-
-    private fun loadRememberedScaleAddress(): String? {
-        return if (sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false)) {
-            sharedPreferences.getString(PREF_REMEMBERED_SCALE_ADDRESS, null)
-        } else {
-            null
-        }
+        prefsManager.setAutoConnectEnabled(enabled) // <-- ANVÄND MANAGER
     }
 
     fun forgetRememberedScale() {
-        setRememberScaleEnabled(false)
+        prefsManager.forgetScale() // <-- ANVÄND MANAGER
+        // Nollställ lås
+        reconnectAttempted = false
     }
 
     private fun attemptAutoConnect() {
+        // Använder Manager för att läsa tillstånd
         if (!rememberScaleEnabled.value || !autoConnectEnabled.value) return
         val state = connectionState.replayCache.lastOrNull()
         if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) {
             reconnectAttempted = false; return
         }
 
-        val addr = loadRememberedScaleAddress()
+        // Använder Manager för att hämta adressen
+        val addr = prefsManager.loadRememberedScaleAddress()
         if (addr != null) {
             isManualDisconnect = false
             clearError()
@@ -632,7 +592,7 @@ class ScaleViewModel @Inject constructor(
     fun retryConnection() {
         clearError()
         reconnectAttempted = false
-        val addr = loadRememberedScaleAddress()
+        val addr = prefsManager.loadRememberedScaleAddress() // <-- Använd Manager
         if (addr != null) {
             val state = connectionState.replayCache.lastOrNull()
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return
