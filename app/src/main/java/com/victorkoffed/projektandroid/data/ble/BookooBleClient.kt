@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/data/ble/BookooBleClient.kt
 package com.victorkoffed.projektandroid.data.ble
 
 import android.annotation.SuppressLint
@@ -160,7 +159,18 @@ class BookooBleClient(private val context: Context) {
         Log.i(TAG, "Successfully connected to ${gatt.device.address}")
         connectionState.value = BleConnectionState.Connecting
         // Service discovery MÅSTE starta på main thread
-        mainHandler.post { gatt.discoverServices() }
+        mainHandler.post {
+            // FIX: Lägg till try-catch runt discoverServices()
+            try {
+                if (!gatt.discoverServices()) {
+                    Log.e(TAG, "discoverServices returned false/failed to initiate")
+                    handleGattError(gatt, GATT_UNKNOWN_ERROR_COMPAT, "discoverServices", "Failed to start service discovery")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception during discoverServices call", e)
+                handleGattError(gatt, GATT_UNKNOWN_ERROR_COMPAT, "discoverServices", "Unexpected error during service discovery: ${e.message}")
+            }
+        }
     }
 
     private fun handleConnectionDisconnected(gatt: BluetoothGatt) {
@@ -169,14 +179,20 @@ class BookooBleClient(private val context: Context) {
     }
 
     private fun handleServiceDiscoverySuccess(gatt: BluetoothGatt) {
-        val service = gatt.getService(BOOKOO_SERVICE_UUID)
-        val weightChar = service?.getCharacteristic(WEIGHT_CHARACTERISTIC_UUID)
-        if (weightChar != null) {
-            enableNotifications(gatt, weightChar)
-        } else {
-            Log.e(TAG, "Weight characteristic not found for ${gatt.device.address}")
-            connectionState.value = BleConnectionState.Error("Scale characteristic not found")
-            handleGattCleanup(gatt)
+        // FIX: Lägg till try-catch runt all logik för att hantera fel på Binder-tråden
+        try {
+            val service = gatt.getService(BOOKOO_SERVICE_UUID)
+            val weightChar = service?.getCharacteristic(WEIGHT_CHARACTERISTIC_UUID)
+            if (weightChar != null) {
+                enableNotifications(gatt, weightChar)
+            } else {
+                Log.e(TAG, "Weight characteristic not found for ${gatt.device.address}")
+                connectionState.value = BleConnectionState.Error("Scale characteristic not found")
+                handleGattCleanup(gatt)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in handleServiceDiscoverySuccess", e)
+            handleGattError(gatt, GATT_UNKNOWN_ERROR_COMPAT, "handleServiceDiscoverySuccess", "Failed to find characteristic: ${e.message}")
         }
     }
 
@@ -233,7 +249,7 @@ class BookooBleClient(private val context: Context) {
             // Kontrollera att gatt inte har nollställts under tiden
             val currentGatt = this.gatt
             if (currentGatt != gatt) return@post
-            try {
+            try { // FIX: Lägg till try-catch runt skrivoperationen
                 if (!currentGatt.setCharacteristicNotification(characteristic, true)) {
                     Log.e(TAG, "setCharacteristicNotification failed")
                     if (connectionState.value !is BleConnectionState.Error) {
@@ -264,8 +280,14 @@ class BookooBleClient(private val context: Context) {
                     }
                     handleGattCleanup(currentGatt)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception enabling notifications", e)
+            } catch (e: SecurityException) {
+                // Explicit hantering för SecurityException vid skrivning
+                Log.e(TAG, "SecurityException during notification setup", e)
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Permission missing for notification setup") }
+                handleGattCleanup(currentGatt)
+            }
+            catch (e: Exception) {
+                Log.e(TAG, "General Exception enabling notifications", e)
                 mainHandler.post { connectionState.value = BleConnectionState.Error("Notify exception: ${e.message}") }
                 handleGattCleanup(currentGatt)
             }
@@ -291,7 +313,13 @@ class BookooBleClient(private val context: Context) {
                 val currentState = connectionState.value
                 if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
                     if (currentState.batteryPercent != measurement.batteryPercent) {
-                        connectionState.value = currentState.copy(batteryPercent = measurement.batteryPercent)
+                        // FIX: Flytta state-uppdatering till mainHandler.post för trådsäkerhet
+                        mainHandler.post {
+                            val checkState = connectionState.value
+                            if (checkState is BleConnectionState.Connected) {
+                                connectionState.value = checkState.copy(batteryPercent = measurement.batteryPercent)
+                            }
+                        }
                     }
                 }
             }

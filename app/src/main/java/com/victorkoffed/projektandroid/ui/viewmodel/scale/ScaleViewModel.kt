@@ -71,7 +71,7 @@ class ScaleViewModel @Inject constructor(
 
     private val sharedPreferences: SharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private var isManualDisconnect = false
-    private var reconnectAttempted = false
+    private var reconnectAttempted = false // FIX: Denna flagga fungerar som ett lås för tryAutoReconnect
 
     // --- StateFlows (Exposed to UI) ---
     private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
@@ -186,14 +186,14 @@ class ScaleViewModel @Inject constructor(
         stopScan()
         _tareOffset.value = 0.0f
         isManualDisconnect = false
-        reconnectAttempted = false
+        reconnectAttempted = false // Nollställ här vid manuell anslutning
         clearError()
         scaleRepo.connect(device.address)
     }
 
     fun disconnect() {
         isManualDisconnect = true // Markera som manuell (förhindrar auto-reconnect)
-        reconnectAttempted = false
+        reconnectAttempted = false // Nollställ här vid manuell frånkoppling
         stopRecording() // Stoppa inspelningen
         // Avbryt mätjobbet och nollställ anslutning/offset
         measurementJob?.cancel(); measurementJob = null
@@ -468,7 +468,7 @@ class ScaleViewModel @Inject constructor(
 
     private fun handleConnectedState(state: BleConnectionState.Connected) {
         Log.i(TAG, "Connected to ${state.deviceName}.")
-        reconnectAttempted = false
+        reconnectAttempted = false // Sätt till false vid lyckad anslutning
         if (rememberScaleEnabled.value) saveRememberedScaleAddress(state.deviceAddress)
         isManualDisconnect = false
         clearError()
@@ -520,19 +520,28 @@ class ScaleViewModel @Inject constructor(
         val shouldAttempt = !isManualDisconnect && rememberScaleEnabled.value && autoConnectEnabled.value && !reconnectAttempted
         if (!shouldAttempt) return
 
+        // FIX: Sätt flaggan OMEDELBART för att blockera nya försök under de 2 sekunderna.
+        reconnectAttempted = true
+
         viewModelScope.launch {
             delay(2000L) // Vänta lite innan återförsök
             val currentState = connectionState.replayCache.lastOrNull()
-            // Kontrollera om återanslutning fortfarande behövs (och att vi inte har lyckats ansluta under tiden)
+
+            // Kontrollera om återanslutning fortfarande behövs
             val stillNeedsReconnect = currentState !is BleConnectionState.Connected &&
                     currentState !is BleConnectionState.Connecting &&
-                    rememberScaleEnabled.value && autoConnectEnabled.value &&
-                    !reconnectAttempted
+                    rememberScaleEnabled.value && autoConnectEnabled.value
 
             if (stillNeedsReconnect) {
                 Log.d(TAG, "Attempting auto-reconnect...")
-                reconnectAttempted = true
+                // Återanslutningsförsök startas. Flaggan är redan satt som lås.
                 attemptAutoConnect()
+            } else {
+                // FIX: Om anslutningen INTE startades här och vi inte lyckades ansluta, nollställ låset.
+                // (Om anslutningen lyckades rensas flaggan i handleConnectedState).
+                if (currentState !is BleConnectionState.Connected) {
+                    reconnectAttempted = false
+                }
             }
         }
     }
@@ -541,10 +550,9 @@ class ScaleViewModel @Inject constructor(
 
     fun setRememberScaleEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
-        // Uppdatera StateFlows (även om de är ReadOnly, kan de uppdateras internt)
-        // Då StateFlows är deklarerade som ReadOnly ovan, uppdaterar vi via SharedPreferences.
-        // Ett bättre sätt vore att skapa en dedikerad SettingsManager med MutableStateFlows.
-        // För nu triggas uppdateringen via SharedPreferences och ReplayCache.
+        // Manuell uppdatering av StateFlow här för att säkerställa snabb UI-respons
+        (rememberScaleEnabled as MutableStateFlow<Boolean>).value = enabled
+
         if (!enabled) { setAutoConnectEnabled(false); saveRememberedScaleAddress(null) }
         else {
             val cs = connectionState.replayCache.lastOrNull()
@@ -562,7 +570,8 @@ class ScaleViewModel @Inject constructor(
         val newValue = enabled && rememberScaleEnabled.value
         if (autoConnectEnabled.value != newValue) {
             sharedPreferences.edit { putBoolean(PREF_AUTO_CONNECT_ENABLED, newValue) }
-            // StateFlow uppdateras via SharedPreferences-lyssnare om den fanns.
+            // Manuell uppdatering av StateFlow här
+            (autoConnectEnabled as MutableStateFlow<Boolean>).value = newValue
         }
     }
 
@@ -579,8 +588,6 @@ class ScaleViewModel @Inject constructor(
             }
         }
         // Manuell uppdatering av StateFlow här för att säkerställa snabb UI-respons
-        // (Ett robustare mönster skulle vara att läsa från en flow-wrapper runt SharedPreferences)
-        // Vi simulerar uppdateringen genom att ladda om:
         (rememberedScaleAddress as MutableStateFlow<String?>).value = loadRememberedScaleAddress()
     }
 
