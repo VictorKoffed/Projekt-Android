@@ -32,18 +32,19 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.Snackbar // Importera Snackbar
+import androidx.compose.material3.SnackbarData // Importera SnackbarData
+import androidx.compose.material3.SnackbarDuration // NY IMPORT
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LaunchedEffect // NY IMPORT
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.remember // NY IMPORT
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,11 +103,13 @@ data class NavItem(
 fun ThemedSnackbar(data: SnackbarData) {
     Snackbar(
         snackbarData = data,
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        actionColor = MaterialTheme.colorScheme.onPrimary
+        containerColor = MaterialTheme.colorScheme.primary, // Använd primärfärg eller errorContainer vid behov
+        contentColor = MaterialTheme.colorScheme.onPrimary, // Eller onErrorContainer
+        actionColor = MaterialTheme.colorScheme.onPrimary // Eller onErrorContainer
+        // Du kan lägga till logik här för att ändra färg baserat på data.message om du vill
     )
 }
+
 
 /**
  * Huvudaktiviteten i applikationen.
@@ -157,10 +160,43 @@ class MainActivity : ComponentActivity() {
                 val scaleConnectionState by scaleVm.connectionState.collectAsState(
                     initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
                 )
+                // NYTT: Hämta scaleVm.error för icke-anslutningsrelaterade fel
+                val scaleError by scaleVm.error.collectAsState()
 
-                // State och scope för att visa SnackBar med meddelanden.
+
+                // FLYTTAD HIT: State och scope för Snackbar, nu globalt.
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
+
+                // NYTT: LaunchedEffect för att visa ScaleViewModel-fel globalt
+                LaunchedEffect(scaleConnectionState, scaleError) {
+                    val errorMessage: String? = when {
+                        // Prioritera anslutningsfel
+                        scaleConnectionState is BleConnectionState.Error -> {
+                            (scaleConnectionState as BleConnectionState.Error).message
+                        }
+                        // Visa sedan andra fel (skanning, sparande etc.)
+                        scaleError != null -> {
+                            scaleError
+                        }
+                        else -> null
+                    }
+
+                    if (errorMessage != null) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = errorMessage,
+                                duration = SnackbarDuration.Long
+                            )
+                        }
+                        // Rensa scaleError i ViewModel om det var den som visades
+                        if (scaleError != null && errorMessage == scaleError) {
+                            scaleVm.clearError()
+                        }
+                        // Anslutningsfel behöver inte rensas manuellt, de är en del av connectionState
+                    }
+                }
+
 
                 // Drawer State
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -254,11 +290,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         },
+                        // ANVÄND DEN CENTRALA SNACKBARHOSTEN HÄR
                         snackbarHost = {
                             SnackbarHost(
                                 snackbarHostState,
                                 snackbar = { snackbarData ->
-                                    ThemedSnackbar(snackbarData)
+                                    ThemedSnackbar(snackbarData) // Använder vår anpassade Snackbar
                                 }
                             )
                         }
@@ -275,15 +312,14 @@ class MainActivity : ComponentActivity() {
                                     homeVm = homeVm,
                                     coffeeImageVm = coffeeImageVm,
                                     scaleVm = scaleVm,
+                                    // Skicka med den centrala snackbarHostState
                                     snackbarHostState = snackbarHostState,
-                                    // navigateToScreen behövs inte längre här
                                     navigateToScreen = { /* No-op */ },
                                     onNavigateToBrewSetup = {
                                         brewVm.clearBrewResults()
                                         navController.navigate(Screen.BrewSetup.route)
                                     },
                                     onBrewClick = { brewId ->
-                                        // Använd createRoute UTAN beanIdToArchivePrompt här
                                         navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                     },
                                     availableBeans = availableBeans,
@@ -325,6 +361,7 @@ class MainActivity : ComponentActivity() {
 
                             // --- Våg ---
                             composable(Screen.ScaleConnect.route) {
+                                // ScaleConnectScreen behöver inte längre hantera Snackbar
                                 ScaleConnectScreen(
                                     vm = scaleVm,
                                     onNavigateBack = { navController.popBackStack() }
@@ -335,7 +372,7 @@ class MainActivity : ComponentActivity() {
                             composable(Screen.BrewSetup.route) {
                                 BrewScreen(
                                     vm = brewVm,
-                                    completedBrewId = null, // Vi hanterar inte 'completed' här längre
+                                    completedBrewId = null,
                                     scaleConnectionState = scaleConnectionState,
                                     onStartBrewClick = {
                                         brewVm.clearBrewResults()
@@ -346,7 +383,6 @@ class MainActivity : ComponentActivity() {
                                             brewVm.getCurrentSetup()
                                             val newBrewId = brewVm.saveBrewWithoutSamples()
                                             if (newBrewId != null) {
-                                                // Använd createRoute UTAN beanIdToArchivePrompt här
                                                 navController.navigate(Screen.BrewDetail.createRoute(newBrewId)) {
                                                     popUpTo(Screen.BrewSetup.route) { inclusive = true }
                                                 }
@@ -389,31 +425,20 @@ class MainActivity : ComponentActivity() {
                                     onStopAndSaveClick = {
                                         lifecycleScope.launch {
                                             val currentSetup = brewVm.getCurrentSetup()
-                                            // Hämta resultatobjektet
                                             val saveResult = scaleVm.stopRecordingAndSave(currentSetup)
 
                                             if (saveResult.brewId != null) {
-                                                // Navigera till detaljvyn och skicka med eventuellt bön-ID för arkivering
                                                 val route = Screen.BrewDetail.createRoute(
                                                     brewId = saveResult.brewId,
-                                                    beanIdToArchivePrompt = saveResult.beanIdReachedZero // Skicka med detta!
+                                                    beanIdToArchivePrompt = saveResult.beanIdReachedZero
                                                 )
-
                                                 navController.navigate(route) {
-                                                    // Rensa LiveBrew och BrewSetup från stacken
                                                     popUpTo(Screen.BrewSetup.route) { inclusive = true }
-                                                    launchSingleTop = true // Undvik flera instanser av detaljvyn
+                                                    launchSingleTop = true
                                                 }
                                             } else {
-                                                // Hantera fel vid sparande
                                                 Log.w("MainActivity", "Save cancelled or failed, returning to setup.")
-                                                val errorMsg = scaleVm.error.value
-                                                if (errorMsg != null) {
-                                                    scope.launch {
-                                                        snackbarHostState.showSnackbar(errorMsg)
-                                                        scaleVm.clearError()
-                                                    }
-                                                }
+                                                // Felmeddelande visas nu globalt via LaunchedEffect ovan
                                                 navController.popBackStack() // Gå tillbaka till BrewSetup
                                             }
                                         }
@@ -428,17 +453,12 @@ class MainActivity : ComponentActivity() {
 
                             // --- Detalj-skärmar (med argument) ---
                             composable(
-                                // ANVÄND Screen.BrewDetail.route HÄR
                                 route = Screen.BrewDetail.route,
-                                // ANVÄND Screen.BrewDetail.arguments HÄR
                                 arguments = Screen.BrewDetail.arguments
                             ) { backStackEntry ->
-                                // Hämta ViewModel med Hilt. SavedStateHandle injiceras automatiskt.
-                                // Nyckel för unika instanser vid snabb navigering
                                 val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(key = "brewDetail_${backStackEntry.arguments?.getLong("brewId")}")
 
-                                // Skicka med backStackEntry så BrewDetailScreen kan läsa SavedStateHandle.
-                                // Argumentet beanIdToArchivePrompt kommer att finnas i backStackEntry.arguments
+                                // Skicka med den centrala snackbarHostState till detaljskärmarna också
                                 BrewDetailScreen(
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
@@ -447,7 +467,8 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
                                     },
                                     viewModel = brewDetailViewModel,
-                                    navBackStackEntry = backStackEntry // Skicka med denna!
+                                    navBackStackEntry = backStackEntry
+                                    //snackbarHostState = snackbarHostState // Skicka med om den behövs här
                                 )
                             }
 
@@ -458,13 +479,13 @@ class MainActivity : ComponentActivity() {
                             ) { backStackEntry ->
                                 val beanIdArg = backStackEntry.arguments?.getLong("beanId")
                                 if (beanIdArg != null && beanIdArg > 0) {
-                                    // BeanDetailScreen hämtar sin ViewModel internt
+                                    // Skicka med den centrala snackbarHostState
                                     BeanDetailScreen(
                                         onNavigateBack = { navController.popBackStack() },
                                         onBrewClick = { brewId ->
-                                            // Använd createRoute UTAN beanIdToArchivePrompt här
                                             navController.navigate(Screen.BrewDetail.createRoute(brewId))
                                         }
+                                        //snackbarHostState = snackbarHostState // Skicka med om den behövs här
                                     )
                                 } else {
                                     Log.e("MainActivity", "Bean ID saknas eller är ogiltigt vid navigering till BeanDetail.")
@@ -476,7 +497,7 @@ class MainActivity : ComponentActivity() {
                             composable(Screen.Camera.route) {
                                 CameraScreen(
                                     onNavigateBack = { navController.popBackStack() },
-                                    navController = navController // Skicka in NavController för ViewModel
+                                    navController = navController
                                 )
                             }
 
