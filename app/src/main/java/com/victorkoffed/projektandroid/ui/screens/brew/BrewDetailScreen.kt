@@ -104,6 +104,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewDetailScreen(
@@ -260,7 +261,7 @@ fun BrewDetailScreen(
                                         .height(250.dp)
                                         // Gå till helskärm om vi inte redigerar
                                         .clickable {
-                                            if (!isEditing) {
+                                            if (!isEditing && currentBrew.imageUri != null) { // Added null check for safety
                                                 onNavigateToImageFullscreen(currentBrew.imageUri)
                                             }
                                         }
@@ -393,7 +394,8 @@ fun BrewDetailScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    // ... (resten av färgerna)
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                 )
                             )
                         } else {
@@ -413,7 +415,8 @@ fun BrewDetailScreen(
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedContainerColor = MaterialTheme.colorScheme.surface,
                                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                        // ... (resten av färgerna)
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                     )
                                 )
                                 IconButton(
@@ -560,7 +563,8 @@ fun BrewEditCard(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    // ... (resten av färgerna)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
             OutlinedTextField(
@@ -572,7 +576,8 @@ fun BrewEditCard(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    // ... (resten av färgerna)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
             // Dropdown för att välja bryggmetod
@@ -592,7 +597,8 @@ fun BrewEditCard(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    // ... (resten av färgerna)
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
         }
@@ -600,6 +606,7 @@ fun BrewEditCard(
 }
 
 // ---------- Reusable UI ----------
+@SuppressLint("DefaultLocale")
 @Composable
 fun BrewMetricsCard(metrics: BrewMetrics) {
     // Visar de beräknade nyckeltalen för bryggningen (förhållande, vatten, dos)
@@ -637,7 +644,8 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
     }
 }
 
-// --- Graf ---
+// --- Graf (UPDATED with Flow Capping) ---
+@SuppressLint("DefaultLocale")
 @Composable
 fun BrewSamplesGraph(
     samples: List<BrewSample>,
@@ -699,7 +707,8 @@ fun BrewSamplesGraph(
     Canvas(modifier = modifier.padding(start = 32.dp, end = 32.dp, top = 16.dp, bottom = 32.dp)) {
         val xLabelPadding = 32.dp.toPx()
         val yLabelPaddingLeft = 32.dp.toPx()
-        val yLabelPaddingRight = if (hasFlowData) 32.dp.toPx() else 0.dp.toPx() // Ingen höger-padding om ingen flödesaxel
+        // Adjust right padding based on whether flow axis is needed and shown
+        val yLabelPaddingRight = if (hasFlowData && showFlowLine) 32.dp.toPx() else 0.dp.toPx()
 
         // Grafens rityta
         val graphStartX = yLabelPaddingLeft
@@ -717,9 +726,22 @@ fun BrewSamplesGraph(
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
 
-        val maxFlowRaw = samples.maxOfOrNull { it.flowRateGramsPerSecond?.toFloat() ?: 0f } ?: 1f
-        val roundedMaxFlow = max(5f, ceil(maxFlowRaw / 5f) * 5f)
-        val maxFlow = roundedMaxFlow * 1.1f
+        // --- MODIFIED maxFlow Calculation ---
+        val visualMaxFlowCap = 25f // Set your desired visual cap (e.g., 25 g/s)
+        val actualMaxFlow = samples.maxOfOrNull { it.flowRateGramsPerSecond?.toFloat() ?: 0f } ?: 1f
+        // Use the cap if the actual max flow exceeds it, otherwise use a rounded-up actual max flow
+        val maxFlowForScaling = max(5f, // Ensure a minimum scale even for low flows
+            if (actualMaxFlow > visualMaxFlowCap) {
+                visualMaxFlowCap
+            } else {
+                ceil(actualMaxFlow / 5f) * 5f // Round up to nearest 5 if below cap
+            }
+        ) * 1.1f // Add a little margin
+        // --- END MODIFIED maxFlow Calculation ---
+
+        // Variable to track the highest flow value *within* the visual cap for drawing grid lines
+        val maxFlowForGridLines = minOf(actualMaxFlow, visualMaxFlowCap) * 1.1f
+
 
         drawContext.canvas.nativeCanvas.apply {
             // Rita ut de horisontella rutnätslinjerna (Mass-axeln) och dess etiketter
@@ -733,17 +755,21 @@ fun BrewSamplesGraph(
                 currentMassGrid += massGridInterval
             }
 
-            // Rita etiketter för Flow-axeln (om data finns)
-            if (hasFlowData && showFlowLine) { // Visa endast om linjen är aktiv
-                val flowGridInterval = max(1f, ceil(roundedMaxFlow / 3f)) // Intervall baserat på max
+            // Rita etiketter för Flow-axeln (om data finns and line is shown)
+            // Use maxFlowForGridLines for calculating grid intervals
+            if (hasFlowData && showFlowLine) {
+                // Calculate interval based on the capped max value for grid lines
+                val flowGridInterval = max(1f, ceil(maxFlowForGridLines / 1.1f / 3f)) // Interval based on capped max (e.g., 3 lines)
                 var currentFlowGrid = flowGridInterval
-                while (currentFlowGrid < maxFlow / 1.1f) {
-                    val y = graphBottomY - (currentFlowGrid / maxFlow) * graphHeight
+                while (currentFlowGrid < maxFlowForGridLines / 1.1f) { // Compare against capped max for grid lines
+                    // Use maxFlowForScaling for calculating Y position
+                    val y = graphBottomY - (currentFlowGrid / maxFlowForScaling) * graphHeight
                     // Rita flödes-etikett på höger sida
                     drawText(String.format("%.1f g/s", currentFlowGrid), size.width - yLabelPaddingRight / 2, y + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
                     currentFlowGrid += flowGridInterval
                 }
             }
+
 
             // Rita de vertikala rutnätslinjerna (Tid-axeln) och dess etiketter
             val timeGridInterval = 30000f // 30 sekunder
@@ -786,8 +812,15 @@ fun BrewSamplesGraph(
 
                 // Bygg flödeskurvan
                 if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null) {
-                    val yFlow = graphBottomY - (s.flowRateGramsPerSecond.toFloat() / maxFlow) * graphHeight
+                    // --- Use maxFlowForScaling ---
+                    // Calculate y based on the scaling factor, but clamp the *value* if it exceeds the cap
+                    val flowValue = s.flowRateGramsPerSecond.toFloat()
+                    // Calculate Y position using the potentially large scaling factor
+                    val yFlow = graphBottomY - (flowValue / maxFlowForScaling) * graphHeight
+                    // Clamp the Y coordinate to the top of the graph if the value was above the visual cap
                     val cyFlow = yFlow.coerceIn(graphTopY, graphBottomY)
+                    // --- END Use maxFlowForScaling ---
+
 
                     if (!flowPathStarted) {
                         flowPath.moveTo(cx, cyFlow)
@@ -805,9 +838,11 @@ fun BrewSamplesGraph(
                 drawPath(path = massPath, color = massColor, style = Stroke(width = 2.dp.toPx()))
             }
             if (showFlowLine && hasFlowData) {
+                // Use maxFlowForScaling for drawing
                 drawPath(path = flowPath, color = flowColor, style = Stroke(width = 2.dp.toPx()))
             }
         }
+
 
         // Rita axeltitlarna
         drawContext.canvas.nativeCanvas.apply {
@@ -822,10 +857,12 @@ fun BrewSamplesGraph(
                     yLabelPaddingLeft / 2 - axisTitlePaint.descent(), // Positionera horisontellt (blir vertikalt)
                     axisTitlePaint
                 )
-                // Flöde-axelns titel (höger, endast om relevant)
+                // Flöde-axelns titel (höger, endast om relevant och visas)
                 if (hasFlowData && showFlowLine) {
+                    // Title text now reflects the visual cap potentially
+                    val flowAxisTitle = "Flow (g/s)" // Keep title generic
                     drawText(
-                        "Flow (g/s)",
+                        flowAxisTitle,
                         -(graphTopY + graphHeight / 2), // Centrera vertikalt
                         size.width - yLabelPaddingRight / 2 - axisTitlePaintFlow.descent(), // Positionera på höger sida
                         axisTitlePaintFlow
@@ -865,7 +902,8 @@ fun <T> EditDropdownSelector(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                // ... (resten av färgerna)
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
             )
         )
         ExposedDropdownMenu(
