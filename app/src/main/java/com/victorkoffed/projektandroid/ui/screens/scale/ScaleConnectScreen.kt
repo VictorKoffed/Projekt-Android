@@ -44,7 +44,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -56,7 +55,6 @@ import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermissionLauncher
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
-import kotlinx.coroutines.launch
 
 /**
  * Huvudskärm för att hantera anslutning till Bluetooth-vågen.
@@ -74,37 +72,34 @@ fun ScaleConnectScreen(
     val error by vm.error.collectAsState()
     // --- Hämta Remember & Auto-Connect State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
-    val autoConnectEnabled by vm.autoConnectEnabled.collectAsState() //
+    val autoConnectEnabled by vm.autoConnectEnabled.collectAsState()
     val rememberedAddress by vm.rememberedScaleAddress.collectAsState()
 
 
     // --- Snackbar state för felmeddelanden ---
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    // OBS: Ingen 'rememberCoroutineScope()' behövs längre då LaunchedEffect är suspenderande.
 
     // Effekt för att visa (skanning/sparande) felmeddelanden i en Snackbar
     LaunchedEffect(error) {
-        if (error != null) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = error!!,
-                    duration = SnackbarDuration.Long
-                )
-            }
-            // Nollställ felet i ViewModel så det inte visas igen
-            vm.clearError()
-        }
+        // Skapa ett lokalt, stabilt värde. Returnera om null (förhindrar krasch).
+        val msg = error ?: return@LaunchedEffect
+
+        snackbarHostState.showSnackbar(
+            message = msg,
+            duration = SnackbarDuration.Long
+        )
+        // Nollställ felet i ViewModel så det inte visas igen
+        vm.clearError()
     }
 
     // Effekt för att visa anslutningsfel i en Snackbar
     LaunchedEffect(connectionState) {
-        if (connectionState is BleConnectionState.Error) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = (connectionState as BleConnectionState.Error).message,
-                    duration = SnackbarDuration.Long
-                )
-            }
+        (connectionState as? BleConnectionState.Error)?.let {
+            snackbarHostState.showSnackbar(
+                message = it.message,
+                duration = SnackbarDuration.Long
+            )
         }
     }
 
@@ -165,7 +160,7 @@ fun ScaleConnectScreen(
                         devices = devices,
                         isScanning = isScanning,
                         connectionState = state,
-                        rememberedAddress = rememberedAddress, // <-- Skicka med nya state
+                        rememberedAddress = rememberedAddress,
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
                         onDeviceClick = { device ->
                             // Tillåt anslutning endast om vågen är frånkopplad eller i fel-läge
@@ -173,7 +168,7 @@ fun ScaleConnectScreen(
                                 vm.connect(device)
                             }
                         },
-                        onForgetScaleClick = { vm.forgetRememberedScale() } // <-- Skicka med ny callback
+                        onForgetScaleClick = { vm.forgetRememberedScale() }
                     )
                 }
             }
