@@ -136,9 +136,9 @@ Kör tester:
 
 ## 🖼️ Skärmbilder
 📱 Mockup (Designidé)
-<p align="center"> <img src="docs/images/mockup_home.png" alt="Mockup Home" width="300"/> </p>
+<p > <img src="docs/images/mockup_home.png" alt="Mockup Home" width="372"/> </p>
 📲 Faktisk app (Körande version)
-<p align="center"> <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="300"/> </p>
+<p > <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="396"/> </p>
 ## 📚 Katalog över viktiga filer
 
 ---
