@@ -88,6 +88,7 @@ com.victorkoffed.projektandroid/
 ---
 
 1. Clean up warnings and refactor ∞
+2. Fix Start live brew button always at the bottom for easy access.
 
 ---
 
