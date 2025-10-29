@@ -87,8 +87,7 @@ com.victorkoffed.projektandroid/
 ##  Known issue (Bugfix)
 ---
 
-1. Flow in detailbrew dont cap flow to 20g/s
-2. Clean up warnings and refactor ∞
+1. Clean up warnings and refactor ∞
 
 ---
 
