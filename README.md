@@ -27,10 +27,10 @@ Ett modernt kaffejournal byggt i **Kotlin** med **Jetpack Compose**. Appen är d
 
 Projektet är organiserat enligt moderna Android-standarder (Clean/MVVM-inspirerat) med fokus på Separation of Concerns:
 
-| Projektstruktur  | Namn                | Beskrivning                                             |
-|------------------|---------------------|---------------------------------------------------------|
-| `ProjektAndroid` | Gradle Root         | Huvudapplikationen.                                     |
-| `app`            | Android Application | Innehåller UI, ViewModels, Repositories och Datakällor. |
+| Projektstruktur | Namn | Beskrivning |
+| :--- | :--- | :--- |
+| `ProjektAndroid` | Gradle Root | Huvudapplikationen. |
+| `app` | Android Application | Innehåller UI, ViewModels, Repositories och Datakällor. |
 
 ---
 
@@ -64,31 +64,27 @@ com.victorkoffed.projektandroid/
 - Fysisk Android-enhet eller Emulator (krävs för BLE/CameraX)
 
 ### Steg
-1. Klona repot.  
-2. Öppna i Android Studio.  
-3. Synkronisera Gradle (Gradle 8.13).  
+1. Klona repot.
+2. Öppna i Android Studio.
+3. Synkronisera Gradle (Gradle 8.13).
 4. Välj målenhet och tryck **Run (Ctrl+F5)**.
 
 ---
 
 ## ⚙️ Funktioner
 
-| Funktion              | Beskrivning                                                                                        |
-|-----------------------|----------------------------------------------------------------------------------------------------|
-| **Live Brew & BLE**   | Ansluter till Bookoo smart scale via Bluetooth och strömmar realtidsdata (vikt & flödeshastighet). |
-| **Visualisering**     | Visar vikt och flödesdata i en interaktiv graf (BrewSamplesGraph).                                 |
-| **Datalagring**       | Room (SQLite) för Bean, Brew, Grinder, Method, BrewSample & BrewMetrics.                           |
-| **Realtidsstatistik** | Visar översikt: totala bryggningar, bönvikt, tid sedan senaste kaffe.                              |
-| **Fotohantering**     | CameraX används för att spara URI till bryggningsbild.                                             |
-| **Inställningar**     | Växling mellan ljust/mörkt tema med SharedPreferences.                                             |
-
----
-
-##  Known issue (Bugfix)
----
-
-1. Clean up warnings and refactor ∞
-2. Fix Start live brew button always at the bottom for easy access.
+| Funktion | Beskrivning |
+| :--- | :--- |
+| **Live Brew & BLE** | Ansluter till Bookoo smart scale via Bluetooth och strömmar realtidsdata (vikt & flödeshastighet). |
+| **Visualisering** | Visar vikt och flödesdata i en interaktiv graf (BrewSamplesGraph). |
+| **Datalagring** | Robust lagring av alla data (Bönor, Bryggningar, Utrustning, Mätdata) i Room (SQLite). |
+| **Realtidsstatistik** | Visar översikt: totala bryggningar, tillgänglig bönvikt och tid sedan senaste kaffe (inkl. arkiverade). |
+| **Bönarkivering** | Möjlighet att arkivera bönor när lagersaldot når noll. |
+| **Redigera Bryggdetaljer** | Möjlighet att redigera sparade brygginställningar och anteckningar. |
+| **Vågminne & Auto-connect** | Stöder "Kom ihåg våg" och automatisk återanslutning. |
+| **Mörkt Läge** | Manuell växling för Ljust/Mörkt tema. |
+| **Fotohantering** | CameraX används för att spara URI till bryggningsbild med stöd för fullskärmsvisning. |
+| **Robust Live Brew** | Förbättrad hantering av frånkoppling under pågående inspelning. |
 
 ---
 
@@ -107,28 +103,28 @@ graph TD
   DI --- Data
 ```
 
-- **MVVM/MVI-inspirerad**: Compose Views observerar reaktiva `StateFlow` från ViewModels.  
-- **Repository Pattern**: Abstraherar datakällor genom `CoffeeRepository` och `ScaleRepository`.  
-- **Hilt/DI**: Automatisk beroendeinjektion av ViewModels, Repositories, Databas och BLE-klienter.
+- **MVVM/MVI-inspirerad:** Compose Views observerar reaktiva `StateFlow` från ViewModels.
+- **Repository Pattern:** Abstraherar datakällor genom `CoffeeRepository` och `ScaleRepository`.
+- **Hilt/DI:** Automatisk beroendeinjektion av ViewModels, Repositories, Databas och BLE-klienter.
 
 ---
 
 ## 🧩 Avancerade Kotlin/Android-koncept som används
 
-| Område                | Exempel i koden                                       | Förklaring                                                                                             |
-|-----------------------|-------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| Kotlin Flows          | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI.                                                              |
-| BLE-kommunikation     | `callbackFlow`, `BluetoothGatt`                       | Coroutines & Flows för asynkrona BLE-händelser.                                                        |
-| Room Data             | `@DatabaseView`, `ForeignKey.CASCADE`                 | Avancerad databasmodellering med vyer och constraints.                                                 |
-| Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                                                                 |
-| CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                                                          |
-| Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion, vilket ersätter volley-biblioteket. |
+| Område | Exempel i koden | Förklaring |
+| :--- | :--- | :--- |
+| Kotlin Flows | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI. |
+| BLE-kommunikation | `callbackFlow`, `BluetoothGatt` | Coroutines & Flows för asynkrona BLE-händelser. |
+| Room Data | `@DatabaseView`, `ForeignKey.CASCADE` | Avancerad databasmodellering med vyer och constraints. |
+| Coroutines | `viewModelScope`, `withTimeoutOrNull` | Hanterar asynkrona operationer säkert. |
+| CameraX | `ImageCapture`, `ProcessCameraProvider` | Enkel integration av foto i bryggningsflödet. |
+| Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()` | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion. |
 
 ---
 
-## 🧪 Testning (Inga test än..)
+## 🧪 Testning
 
-- **Enhetstester:** `app/src/test` – platshållare (ExampleUnitTest.kt)  
+- **Enhetstester:** `app/src/test` – platshållare (ExampleUnitTest.kt)
 - **Instrumenterade tester:** `app/src/androidTest` – platshållare (ExampleInstrumentedTest.kt)
 
 Kör tester:
@@ -140,30 +136,27 @@ Kör tester:
 
 ## 📚 Katalog över viktiga filer
 
-<details>
-<summary><strong>Gradle/Konfiguration</strong></summary>
+<details><summary><strong>Gradle/Konfiguration</strong></summary>
 
-- `gradle/libs.versions.toml` – Central hantering av beroenden  
-- `app/build.gradle.kts` – Konfigurerar Android/Compose/Hilt/KSP  
+- `gradle/libs.versions.toml` – Central hantering av beroenden
+- `app/build.gradle.kts` – Konfigurerar Android/Compose/Hilt/KSP
 - `AndroidManifest.xml` – BLE- och kameratillstånd
 
 </details>
 
-<details>
-<summary><strong>Data & Arkitektur</strong></summary>
+<details><summary><strong>Data & Arkitektur</strong></summary>
 
-- `data/repository/CoffeeRepository.kt` – Huvudkontrakt för databasåtkomst  
-- `data/db/DatabaseEntities.kt` – Room-entiteter & BrewMetrics (View)  
-- `data/ble/BookooBleClient.kt` – BLE-hantering  
+- `data/repository/CoffeeRepository.kt` – Huvudkontrakt för databasåtkomst
+- `data/db/DatabaseEntities.kt` – Room-entiteter & BrewMetrics (View)
+- `data/ble/BookooBleClient.kt` – BLE-hantering
 - `di/DatabaseModule.kt` – Hilt-modul för databas & repository
 
 </details>
 
-<details>
-<summary><strong>UI & Navigation</strong></summary>
+<details><summary><strong>UI & Navigation</strong></summary>
 
-- `MainActivity.kt` – NavHost, Drawer, Hilt ViewModel-hämtning  
-- `ui/viewmodel/scale/ScaleViewModel.kt` – Hanterar BLE-logik & state  
+- `MainActivity.kt` – NavHost, Drawer, Hilt ViewModel-hämtning
+- `ui/viewmodel/scale/ScaleViewModel.kt` – Hanterar BLE-logik & state
 - `ui/screens/brew/LiveBrewScreen.kt` – Compose-skärm för realtidsbryggning
 
 </details>
@@ -174,7 +167,7 @@ Kör tester:
 
 MIT License
 
-Copyright (c) 2024 BooKoo
+Copyright (c) 2025 BooKoo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
