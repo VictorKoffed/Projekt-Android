@@ -33,6 +33,7 @@ import java.util.UUID
 
 private const val GATT_SUCCESS_COMPAT = 0
 private const val GATT_UNKNOWN_ERROR_COMPAT = -1
+private const val TAG = "BookooBleClient"
 
 @SuppressLint("MissingPermission")
 class BookooBleClient(private val context: Context) {
@@ -44,46 +45,26 @@ class BookooBleClient(private val context: Context) {
     private val scanner by lazy { btAdapter.bluetoothLeScanner }
     private var gatt: BluetoothGatt? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    // Använder Dispatchers.IO för att undvika blockering av Main Thread
     private val scope = CoroutineScope(Dispatchers.IO + Job())
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            val deviceAddress = gatt.device.address
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 when (newState) {
-                    BluetoothProfile.STATE_CONNECTED -> {
-                        Log.i("BookooBleClient", "Successfully connected to $deviceAddress")
-                        connectionState.value = BleConnectionState.Connecting
-                        mainHandler.post { gatt.discoverServices() }
-                    }
-                    BluetoothProfile.STATE_DISCONNECTED -> {
-                        Log.i("BookooBleClient", "Successfully disconnected from $deviceAddress")
-                        handleDisconnect(gatt)
-                    }
+                    BluetoothProfile.STATE_CONNECTED -> handleConnectionSuccess(gatt)
+                    BluetoothProfile.STATE_DISCONNECTED -> handleConnectionDisconnected(gatt)
                 }
             } else {
-                Log.e("BookooBleClient", "GATT Error on connection state change for $deviceAddress. Status: $status, New state: $newState")
-                connectionState.value = BleConnectionState.Error("GATT Error ($status)")
-                handleDisconnect(gatt)
+                handleGattError(gatt, status, "onConnectionStateChange", "GATT Error ($status)")
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                val service = gatt.getService(BOOKOO_SERVICE_UUID)
-                val weightChar = service?.getCharacteristic(WEIGHT_CHARACTERISTIC_UUID)
-                if (weightChar != null) {
-                    enableNotifications(gatt, weightChar)
-                    // State change moved to onDescriptorWrite for confirmation
-                } else {
-                    Log.e("BookooBleClient", "Weight characteristic not found for ${gatt.device.address}")
-                    connectionState.value = BleConnectionState.Error("Scale characteristic not found")
-                    handleDisconnect(gatt)
-                }
+                handleServiceDiscoverySuccess(gatt)
             } else {
-                Log.e("BookooBleClient", "Service discovery failed for ${gatt.device.address} with status: $status")
-                connectionState.value = BleConnectionState.Error("Could not find services ($status)")
-                handleDisconnect(gatt)
+                handleGattError(gatt, status, "onServicesDiscovered", "Could not find services ($status)")
             }
         }
 
@@ -98,93 +79,224 @@ class BookooBleClient(private val context: Context) {
 
         override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BookooBleClient", "Command sent successfully via onCharacteristicWrite! Characteristic: ${characteristic.uuid}")
+                Log.d(TAG, "Command sent successfully: ${characteristic.uuid}")
             } else {
-                Log.e("BookooBleClient", "Failed to send command via onCharacteristicWrite, status: $status, Characteristic: ${characteristic.uuid}")
+                Log.e(TAG, "Failed to send command, status: $status, Char: ${characteristic.uuid}")
             }
         }
 
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             if (descriptor.uuid == CCCD_UUID) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    Log.i("BookooBleClient", "CCCD descriptor write successful for ${descriptor.characteristic.uuid}")
-                    // Confirm connection state after notification setup
-                    if (connectionState.value is BleConnectionState.Connecting) {
-                        // *** ÄNDRING 1: Sätt batteryPercent = null vid anslutning ***
-                        connectionState.value = BleConnectionState.Connected(
-                            deviceName = gatt.device.name ?: gatt.device.address,
-                            deviceAddress = gatt.device.address,
-                            batteryPercent = null // <-- INITIERA SOM NULL
-                        )
-                        Log.i("BookooBleClient", "State set to Connected after CCCD write confirmation.")
-                    }
+                    handleCccdWriteSuccess(gatt)
                 } else {
-                    Log.e("BookooBleClient", "Failed to write CCCD descriptor for ${descriptor.characteristic.uuid}. Status: $status")
-                    if (connectionState.value !is BleConnectionState.Error) {
-                        connectionState.value = BleConnectionState.Error("Could not enable notifications (CCCD write fail: $status)")
-                    }
-                    handleDisconnect(gatt)
+                    handleGattError(gatt, status, "onDescriptorWrite", "Could not enable notifications (CCCD write fail: $status)")
                 }
-            } else {
-                Log.w("BookooBleClient", "onDescriptorWrite called for unexpected descriptor: ${descriptor.uuid}")
             }
         }
     }
 
+    /** Startar BLE-skanning och skickar ScanResult via Flow. */
     fun startScan(): Flow<ScanResult> = callbackFlow {
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) { trySend(result).isSuccess }
-            override fun onScanFailed(errorCode: Int) { Log.e("BookooBleClient", "BLE scan failed: $errorCode"); close(IllegalStateException("BLE scan failed: $errorCode")) }
+            override fun onScanFailed(errorCode: Int) { Log.e(TAG, "BLE scan failed: $errorCode"); close(IllegalStateException("Bluetooth off.")) }
         }
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         if (btAdapter?.isEnabled == true) { scanner.startScan(null, settings, callback) } else { close(IllegalStateException("Bluetooth off.")) }
-        awaitClose { if (btAdapter?.isEnabled == true) try { scanner?.stopScan(callback) } catch (e: Exception) { Log.w("BookooBleClient", "Error stopping scan: ${e.message}") } }
+        awaitClose { if (btAdapter?.isEnabled == true) try { scanner?.stopScan(callback) } catch (e: Exception) { Log.w(TAG, "Error stopping scan: ${e.message}") } }
     }
 
+    /** Initierar anslutning till en enhet med den givna BLE-adressen. */
     fun connect(address: String) {
         val currentState = connectionState.value
         if (currentState is BleConnectionState.Connected && currentState.deviceAddress == address || currentState is BleConnectionState.Connecting) return
-        handleDisconnect(gatt) // Ensure clean state before connecting
+        handleGattCleanup(gatt) // Säkerställ en ren stat före anslutning
         mainHandler.post { if (connectionState.value !is BleConnectionState.Connecting) connectionState.value = BleConnectionState.Connecting }
+
         scope.launch {
             try {
-                val device = btAdapter.getRemoteDevice(address); delay(500L) // Allow time for potential cleanup
+                val device = btAdapter.getRemoteDevice(address); delay(500L)
                 val newGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+
                 mainHandler.post {
                     if (connectionState.value is BleConnectionState.Connecting) {
                         gatt = newGatt
                         if (newGatt == null) {
-                            Log.e("BookooBleClient", "connectGatt returned null.")
+                            Log.e(TAG, "connectGatt returned null.")
                             connectionState.value = BleConnectionState.Error("Connect failed (gatt null)")
                         } else {
-                            Log.d("BookooBleClient", "connectGatt successful, waiting for callbacks...")
+                            Log.d(TAG, "connectGatt successful, waiting for callbacks...")
                         }
                     } else {
-                        Log.w("BookooBleClient", "State changed during connect, closing new gatt.")
-                        handleDisconnect(newGatt) // Cleanup unused gatt instance
+                        Log.w(TAG, "State changed during connect, closing new gatt.")
+                        handleGattCleanup(newGatt) // Städa upp oanvänd gatt-instans
                     }
                 }
             } catch (e: SecurityException) {
-                Log.e("BookooBleClient", "Permission error during connect", e)
+                Log.e(TAG, "Permission error during connect", e)
                 mainHandler.post { connectionState.value = BleConnectionState.Error("Permission missing for connect") }
-                handleDisconnect(gatt) // Cleanup potential existing gatt
+                handleGattCleanup(gatt)
             } catch (e: IllegalArgumentException) {
-                Log.e("BookooBleClient", "Invalid address: $address", e)
+                Log.e(TAG, "Invalid address: $address", e)
                 mainHandler.post { connectionState.value = BleConnectionState.Error("Invalid address") }
-                handleDisconnect(gatt)
+                handleGattCleanup(gatt)
             }
             catch (e: Exception) {
-                Log.e("BookooBleClient", "Connect exception", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Connection error: ${e.message}") }; handleDisconnect(gatt)
+                Log.e(TAG, "Connect exception", e)
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Connection error: ${e.message}") }; handleGattCleanup(gatt)
             }
         }
     }
 
+    /** Stänger den nuvarande BLE-anslutningen. */
     fun disconnect() {
-        val currentGatt = gatt
-        if (currentGatt == null) { if (connectionState.value !is BleConnectionState.Disconnected) mainHandler.post { connectionState.value = BleConnectionState.Disconnected }; return }
-        handleDisconnect(currentGatt)
+        handleGattCleanup(gatt)
     }
+
+    // --- Hjälpfunktioner för GATT Callback-logik (Utbruten logik) ---
+
+    private fun handleConnectionSuccess(gatt: BluetoothGatt) {
+        Log.i(TAG, "Successfully connected to ${gatt.device.address}")
+        connectionState.value = BleConnectionState.Connecting
+        // Service discovery MÅSTE starta på main thread
+        mainHandler.post { gatt.discoverServices() }
+    }
+
+    private fun handleConnectionDisconnected(gatt: BluetoothGatt) {
+        Log.i(TAG, "Successfully disconnected from ${gatt.device.address}")
+        handleGattCleanup(gatt)
+    }
+
+    private fun handleServiceDiscoverySuccess(gatt: BluetoothGatt) {
+        val service = gatt.getService(BOOKOO_SERVICE_UUID)
+        val weightChar = service?.getCharacteristic(WEIGHT_CHARACTERISTIC_UUID)
+        if (weightChar != null) {
+            enableNotifications(gatt, weightChar)
+        } else {
+            Log.e(TAG, "Weight characteristic not found for ${gatt.device.address}")
+            connectionState.value = BleConnectionState.Error("Scale characteristic not found")
+            handleGattCleanup(gatt)
+        }
+    }
+
+    private fun handleCccdWriteSuccess(gatt: BluetoothGatt) {
+        Log.i(TAG, "CCCD descriptor write successful for ${gatt.device.address}")
+        // Bekräfta anslutningsstatus efter att notifikationer är aktiverade
+        if (connectionState.value is BleConnectionState.Connecting) {
+            connectionState.value = BleConnectionState.Connected(
+                deviceName = gatt.device.name ?: gatt.device.address,
+                deviceAddress = gatt.device.address,
+                batteryPercent = null // Batteriet uppdateras i handleCharacteristicChanged
+            )
+            Log.i(TAG, "State set to Connected after CCCD write confirmation.")
+        }
+    }
+
+    private fun handleGattError(gatt: BluetoothGatt, status: Int, source: String, userMessage: String) {
+        Log.e(TAG, "GATT Error ($status) in $source for ${gatt.device.address}. Message: $userMessage")
+        // Uppdatera endast om vi inte redan är i ett fel-tillstånd
+        if (connectionState.value !is BleConnectionState.Error) {
+            connectionState.value = BleConnectionState.Error(userMessage)
+        }
+        handleGattCleanup(gatt)
+    }
+
+    /** Städar upp GATT-resurser och sätter disonnected state. */
+    private fun handleGattCleanup(gattInstance: BluetoothGatt?) {
+        if (gattInstance == null) return
+        val address = gattInstance.device.address
+        Log.d(TAG, "Handling disconnect/cleanup for $address")
+        try { gattInstance.disconnect(); gattInstance.close() }
+        catch (e: Exception) { Log.e(TAG, "Exception during GATT cleanup for $address", e) }
+        finally {
+            mainHandler.post {
+                if (this.gatt == gattInstance) this.gatt = null
+                val cs = connectionState.value
+                // Endast sätt Disconnected om vi inte är i ett ohanterat Error state
+                if (cs !is BleConnectionState.Disconnected && cs !is BleConnectionState.Error) {
+                    connectionState.value = BleConnectionState.Disconnected
+                }
+            }
+        }
+    }
+
+    private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: run {
+            Log.e(TAG, "CCCD descriptor missing for ${characteristic.uuid}")
+            mainHandler.post { connectionState.value = BleConnectionState.Error("CCCD missing") }
+            handleGattCleanup(gatt)
+            return
+        }
+
+        mainHandler.post {
+            // Kontrollera att gatt inte har nollställts under tiden
+            val currentGatt = this.gatt
+            if (currentGatt != gatt || currentGatt == null) return@post
+            try {
+                if (!currentGatt.setCharacteristicNotification(characteristic, true)) {
+                    Log.e(TAG, "setCharacteristicNotification failed")
+                    if (connectionState.value !is BleConnectionState.Error) {
+                        connectionState.value = BleConnectionState.Error("Notify fail (local)")
+                    }
+                    handleGattCleanup(currentGatt)
+                    return@post
+                }
+
+                val writePayload = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                val writeResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Använder ny metod för API 33+
+                    currentGatt.writeDescriptor(descriptor, writePayload)
+                    GATT_SUCCESS_COMPAT
+                } else {
+                    // Använder gammal metod för äldre API
+                    @Suppress("DEPRECATION") descriptor.value = writePayload
+                    @Suppress("DEPRECATION")
+                    // FIX: Tog bort uttryckets omgivande parenteser för att lösa syntaxfelet
+                    if (currentGatt.writeDescriptor(descriptor)) GATT_SUCCESS_COMPAT else GATT_UNKNOWN_ERROR_COMPAT
+                }
+
+                if (writeResult != GATT_SUCCESS_COMPAT) {
+                    Log.e(TAG, "Failed CCCD write initiation: $writeResult")
+                    if (connectionState.value !is BleConnectionState.Error) {
+                        connectionState.value = BleConnectionState.Error("Notify fail (write CCCD $writeResult)")
+                    }
+                    handleGattCleanup(currentGatt)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception enabling notifications", e)
+                mainHandler.post { connectionState.value = BleConnectionState.Error("Notify exception: ${e.message}") }
+                handleGattCleanup(currentGatt)
+            }
+        }
+    }
+
+    /** Hanterar inkommande data från vågen via notifikationer. */
+    private fun handleCharacteristicChanged(characteristic: BluetoothGattCharacteristic, value: ByteArray? = null) {
+        val data: ByteArray? = value ?: characteristic.value
+
+        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID && data != null) {
+            // Använd den utbrutna parsaren
+            BookooDataParser.parseMeasurement(data)?.let { measurement ->
+
+                // Emit measurement (för LiveBrewScreen)
+                scope.launch { measurements.emit(measurement) }
+
+                // Uppdatera connectionState med batterinivå
+                val currentState = connectionState.value
+                if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
+                    // Uppdatera endast om batterinivån faktiskt har ändrats
+                    if (currentState.batteryPercent != measurement.batteryPercent) {
+                        connectionState.value = currentState.copy(batteryPercent = measurement.batteryPercent)
+                    }
+                }
+            }
+        } else if (data == null) {
+            Log.w(TAG, "Characteristic ${characteristic.uuid} changed but data was null.")
+        }
+    }
+
+    // --- Funktioner för att skicka kommandon ---
 
     /** Skickar Tare-kommandot (0x01). */
     fun sendTareCommand() {
@@ -218,105 +330,47 @@ class BookooBleClient(private val context: Context) {
 
     /** Gemensam funktion för att skicka kommandon till COMMAND_CHARACTERISTIC_UUID. */
     private fun sendCommand(commandBytes: ByteArray, commandName: String) {
-        val currentGatt = gatt ?: run { Log.e("BookooBleClient", "Cannot send $commandName: gatt null."); return }
+        val currentGatt = gatt ?: run { Log.e(TAG, "Cannot send $commandName: gatt null."); return }
         val commandChar = currentGatt.getService(BOOKOO_SERVICE_UUID)?.getCharacteristic(COMMAND_CHARACTERISTIC_UUID)
-        if (commandChar == null) { Log.e("BookooBleClient", "Cannot send $commandName: characteristic null."); return }
-        if (commandChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0) { Log.e("BookooBleClient", "$commandName characteristic not writable."); return }
+        if (commandChar == null) { Log.e(TAG, "Cannot send $commandName: characteristic null."); return }
+        if (commandChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0) { Log.e(TAG, "$commandName characteristic not writable."); return }
 
         mainHandler.post {
-            if (gatt != currentGatt || gatt == null) { Log.e("BookooBleClient", "Cannot send $commandName: gatt changed or became null before write."); return@post }
+            // Kontrollera igen att gatt-objektet fortfarande är giltigt
+            val gattInstance = gatt
+            if (gattInstance != currentGatt || gattInstance == null) {
+                Log.e(TAG, "Cannot send $commandName: gatt changed or became null before write.");
+                return@post
+            }
+
             val writeResult = try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // Log.d("BookooBleClient", "Using writeCharacteristic (API 33+) for $commandName")
-                    currentGatt.writeCharacteristic(commandChar, commandBytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+                    // Använder ny metod för API 33+
+                    gattInstance.writeCharacteristic(commandChar, commandBytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+                    GATT_SUCCESS_COMPAT
                 } else {
-                    // Log.d("BookooBleClient", "Using legacy writeCharacteristic for $commandName")
+                    // Använder gammal metod för äldre API
                     @Suppress("DEPRECATION") commandChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
                     @Suppress("DEPRECATION") commandChar.value = commandBytes
-                    @Suppress("DEPRECATION") if (currentGatt.writeCharacteristic(commandChar)) GATT_SUCCESS_COMPAT else GATT_UNKNOWN_ERROR_COMPAT
+                    // FIX: Tog bort uttryckets omgivande parenteser för att lösa syntaxfelet
+                    @Suppress("DEPRECATION")
+                    if (gattInstance.writeCharacteristic(commandChar)) GATT_SUCCESS_COMPAT else GATT_UNKNOWN_ERROR_COMPAT
                 }
-            } catch (e: SecurityException) { Log.e("BookooBleClient", "Permission error writing $commandName", e); connectionState.value = BleConnectionState.Error("Permission missing for write"); GATT_UNKNOWN_ERROR_COMPAT }
-            catch (e: Exception) { Log.e("BookooBleClient", "Unexpected error writing $commandName", e); connectionState.value = BleConnectionState.Error("Error sending command"); GATT_UNKNOWN_ERROR_COMPAT }
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Permission error writing $commandName", e);
+                connectionState.value = BleConnectionState.Error("Permission missing for write"); GATT_UNKNOWN_ERROR_COMPAT
+            }
+            catch (e: Exception) {
+                Log.e(TAG, "Unexpected error writing $commandName", e);
+                connectionState.value = BleConnectionState.Error("Error sending command"); GATT_UNKNOWN_ERROR_COMPAT
+            }
 
-            if (writeResult == GATT_SUCCESS_COMPAT) {
-                Log.d("BookooBleClient", "$commandName command write initiated successfully.")
-            } else {
-                Log.e("BookooBleClient", "Failed to initiate $commandName command write. Error: $writeResult (Characteristic: ${commandChar.uuid})")
+            if (writeResult != GATT_SUCCESS_COMPAT) {
+                Log.e(TAG, "Failed to initiate $commandName command write. Error: $writeResult (Char: ${commandChar.uuid})")
                 if (connectionState.value !is BleConnectionState.Error) { connectionState.value = BleConnectionState.Error("Failed to send $commandName ($writeResult)") }
             }
         }
     }
-
-    // *** ÄNDRING 3: Uppdatera handleCharacteristicChanged ***
-    private fun handleCharacteristicChanged(characteristic: BluetoothGattCharacteristic, value: ByteArray? = null) {
-        val data: ByteArray? = value ?: characteristic.value
-        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID && data != null) {
-
-            // Parse measurement (som nu inkluderar batteri)
-            parseMeasurement(data)?.let { measurement ->
-
-                // Emit measurement (för LiveBrewScreen)
-                scope.launch { measurements.emit(measurement) }
-
-                // NYTT: Uppdatera connectionState med batterinivå
-                val currentState = connectionState.value
-                if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
-                    // Uppdatera bara om värdet faktiskt har ändrats
-                    if (currentState.batteryPercent != measurement.batteryPercent) {
-                        connectionState.value = currentState.copy(batteryPercent = measurement.batteryPercent)
-                    }
-                }
-            }
-
-        } else if (data == null) { Log.w("BookooBleClient", "Characteristic ${characteristic.uuid} changed but data was null.") }
-    }
-
-    private fun handleDisconnect(gattInstance: BluetoothGatt?) {
-        if (gattInstance == null) return
-        val address = gattInstance.device.address
-        Log.d("BookooBleClient", "Handling disconnect/cleanup for $address")
-        try { gattInstance.disconnect(); gattInstance.close() }
-        catch (e: Exception) { Log.e("BookooBleClient", "Exception during GATT cleanup for $address", e) }
-        finally { mainHandler.post { if (this.gatt == gattInstance) this.gatt = null; val cs = connectionState.value; if (cs !is BleConnectionState.Disconnected && cs !is BleConnectionState.Error) connectionState.value = BleConnectionState.Disconnected } }
-    }
-
-    private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: run { Log.e("BookooBleClient", "CCCD descriptor missing"); mainHandler.post { connectionState.value = BleConnectionState.Error("CCCD missing") }; handleDisconnect(gatt); return }
-        mainHandler.post {
-            if (this.gatt != gatt || gatt == null) return@post
-            try {
-                if (!gatt.setCharacteristicNotification(characteristic, true)) { Log.e("BookooBleClient", "setCharacteristicNotification failed"); if (connectionState.value !is BleConnectionState.Error) connectionState.value = BleConnectionState.Error("Notify fail (local)"); handleDisconnect(gatt); return@post }
-                val writePayload = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                val writeResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) gatt.writeDescriptor(descriptor, writePayload) else { @Suppress("DEPRECATION") descriptor.value = writePayload; @Suppress("DEPRECATION") if (gatt.writeDescriptor(descriptor)) GATT_SUCCESS_COMPAT else GATT_UNKNOWN_ERROR_COMPAT }
-                if (writeResult != GATT_SUCCESS_COMPAT) { Log.e("BookooBleClient", "Failed CCCD write: $writeResult"); if (connectionState.value !is BleConnectionState.Error) connectionState.value = BleConnectionState.Error("Notify fail (write CCCD $writeResult)"); handleDisconnect(gatt) }
-                else Log.i("BookooBleClient", "CCCD write initiated for ${characteristic.uuid}")
-            } catch (e: Exception) { Log.e("BookooBleClient", "Exception enabling notifications", e); mainHandler.post { connectionState.value = BleConnectionState.Error("Notify exception: ${e.message}") }; handleDisconnect(gatt) }
-        }
-    }
-
-
-    // *** ÄNDRING 2: Uppdatera parseMeasurement ***
-    /** Parsar vågdata (inkl. tid). */
-    private fun parseMeasurement(data: ByteArray): ScaleMeasurement? {
-        if (data.size < 10 || data.getOrNull(0) != 0x03.toByte() || data.getOrNull(1) != 0x0B.toByte()) { /*Log.w("BookooBleClient", "Invalid pkg: ${data.toHexString()}");*/ return null } // Reduce log spam
-        try {
-            val msH=data[2].toInt() and 0xFF; val msM=data[3].toInt() and 0xFF; val msL=data[4].toInt() and 0xFF; val scaleTimeMillis=((msH shl 16) or (msM shl 8) or msL).toLong()
-            val sign=data[6].toInt() and 0xFF; val neg=sign==0x2D; val wH=data[7].toInt() and 0xFF; val wM=data[8].toInt() and 0xFF; val wL=data[9].toInt() and 0xFF; var rawW=(wH shl 16) or (wM shl 8) or wL; if(neg && rawW!=0) rawW=-rawW; val grams=rawW.toFloat()/100.0f
-            var flow=0.0f; if(data.size>=13){ val fSign=data[10].toInt() and 0xFF; val fNeg=fSign==0x2D; val fH=data[11].toInt() and 0xFF; val fL=data[12].toInt() and 0xFF; var rawF=(fH shl 8) or fL; if(fNeg && rawF!=0) rawF=-rawF; flow=rawF.toFloat()/100.0f }
-
-            // NYTT: Läs batterinivå (Byte 14, Index 13)
-            val battery: Int? = if(data.size >= 14) {
-                data[13].toInt() and 0xFF // data[13] är BYTE 14
-            } else {
-                null
-            }
-
-            return ScaleMeasurement(grams, flow, scaleTimeMillis, battery) // <-- UPPDATERA RETURVÄRDE
-
-        } catch (e: Exception) { Log.e("BookooBleClient", "Parse error: ${data.toHexString()}", e); return null }
-    }
-
-    private fun ByteArray.toHexString(): String = joinToString(separator = " ") { "%02x".format(it) }
 
     companion object {
         val BOOKOO_SERVICE_UUID: UUID = UUID.fromString("00000FFE-0000-1000-8000-00805f9B34FB")

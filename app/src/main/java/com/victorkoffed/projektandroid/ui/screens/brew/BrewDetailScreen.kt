@@ -1,153 +1,77 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/brew/BrewDetailScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.brew
 
-import android.annotation.SuppressLint
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.* // Importerar allt från layout
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.* // Importerar alla filled ikoner
+import androidx.compose.material3.* // Importerar allt från material3
+import androidx.compose.runtime.* // Importerar allt från runtime
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.graphics.withSave
 import androidx.navigation.NavBackStackEntry
 import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.ThemedSnackbar
-import com.victorkoffed.projektandroid.data.db.BrewMetrics
-import com.victorkoffed.projektandroid.data.db.BrewSample
-import com.victorkoffed.projektandroid.data.db.Grinder
-import com.victorkoffed.projektandroid.data.db.Method
-import com.victorkoffed.projektandroid.ui.screens.bean.ArchiveConfirmationDialog // Importera arkiveringsdialogen
-import com.victorkoffed.projektandroid.ui.theme.PlaceholderDarkGray
-import com.victorkoffed.projektandroid.ui.theme.PlaceholderGray
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailState
+import com.victorkoffed.projektandroid.ui.screens.bean.ArchiveConfirmationDialog
+// Importerar alla komponenter från composable-paketet
+import com.victorkoffed.projektandroid.ui.screens.brew.composable.*
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlin.math.ceil
-import kotlin.math.max
 
-
-
+/**
+ * Huvudskärmen för att visa detaljer om en specifik bryggning.
+ * Orkestrerar layouten genom att använda mindre, återanvändbara komponenter.
+ * Hanterar även redigeringsläge, dialogrutor och navigering.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToImageFullscreen: (String) -> Unit,
-    // ViewModel och NavBackStackEntry hanteras här för att fånga returvärden från kameran.
     viewModel: BrewDetailViewModel,
     navBackStackEntry: NavBackStackEntry // Används för bild-URI och arkiveringsprompt
 ) {
-    // State från ViewModel
+    // --- States ---
     val state by viewModel.brewDetailState.collectAsState()
-    // Deducerat state för att hantera UI-beteenden
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
-    val showArchivePromptOnEntry by viewModel.showArchivePromptOnEntry.collectAsState() // Nytt state för prompt vid start
+    val showArchivePromptOnEntry by viewModel.showArchivePromptOnEntry.collectAsState()
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-
-    // Endast nödvändigt i redigeringsläge
+    // States som endast behövs i redigeringsläge (skickas till BrewEditCard)
     val availableGrinders by viewModel.availableGrinders.collectAsState()
     val availableMethods by viewModel.availableMethods.collectAsState()
-
-    // Lokalt UI-state för grafens synlighet
+    // Lokala UI-states för grafen
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
-
-    // Snackbar state och scope för att visa meddelanden (t.ex. vid fel)
+    // State för Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    // Hantera returvärde (bild-URI) från CameraScreen via SavedStateHandle.
+    // State för bild från kameran
     val savedImageUri by navBackStackEntry.savedStateHandle
         .getLiveData<String>("captured_image_uri")
         .observeAsState()
+    // State för arkiveringsdialog
+    val beanForPrompt = state.bean
+    // Beräkna om snabbspara-knappen för anteckningar ska vara aktiv.
+    val savedNotes = state.brew?.notes ?: ""
+    val hasUnsavedQuickNotes = viewModel.quickEditNotes.trim() != savedNotes.trim()
+    // --- Slut States ---
 
+    // --- LaunchedEffects ---
+    // Hantera returvärde (bild-URI) från CameraScreen
     LaunchedEffect(savedImageUri) {
         if (savedImageUri != null) {
             viewModel.updateBrewImageUri(savedImageUri)
-            // Rensa värdet direkt så att det inte återanvänds om skärmen återskapas
+            // Rensa värdet så det inte återanvänds
             navBackStackEntry.savedStateHandle.remove<String>("captured_image_uri")
         }
     }
-
-    // Visa felmeddelanden från ViewModel i en Snackbar
+    // Visa felmeddelanden från ViewModel i Snackbar
     LaunchedEffect(state.error) {
         if (state.error != null) {
             scope.launch {
@@ -156,18 +80,10 @@ fun BrewDetailScreen(
                     duration = SnackbarDuration.Long
                 )
             }
-            // Nollställ felet i ViewModel efter visning
-            viewModel.clearError()
+            viewModel.clearError() // Nollställ felet
         }
     }
-
-    // NYTT: Hämta bönan för prompten (behövs för namnet i dialogen)
-    val beanForPrompt = state.bean
-
-    // Beräkna om snabbspara-knappen för anteckningar ska vara aktiv.
-    val savedNotes = state.brew?.notes ?: ""
-    val hasUnsavedNotes = viewModel.quickEditNotes.trim() != savedNotes.trim()
-
+    // --- Slut LaunchedEffects ---
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -175,143 +91,80 @@ fun BrewDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        // Visa antingen "Edit Brew" eller information om bryggningen
+                        // Visa titel baserat på läge (redigering/visning)
                         if (isEditing) "Edit Brew"
-                        else state.brew?.let { "Brew: ${state.bean?.name ?: "Unknown Bean"}" } ?: "Loading..."
+                        else state.brew?.let { "Brew: ${state.bean?.name ?: "Unknown"}" } ?: "Loading..."
                     )
                 },
                 navigationIcon = {
-                    // Avbryt-knapp i redigeringsläge, annars tillbaka-knapp
+                    // Tillbaka- eller Avbryt-knapp
                     IconButton(onClick = { if (isEditing) viewModel.cancelEditing() else onNavigateBack() }) {
                         Icon(
                             if (isEditing) Icons.Default.Cancel else Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isEditing) "Cancel editing" else "Back"
+                            contentDescription = if (isEditing) "Cancel" else "Back"
                         )
                     }
                 },
                 actions = {
+                    // Knappar för Spara, Redigera, Ta bort
                     if (isEditing) {
-                        // Spara-knapp i redigeringsläge
                         IconButton(
                             onClick = { viewModel.saveChanges() },
-                            enabled = state.brew != null // Aktivera när data har laddats
+                            enabled = state.brew != null // Aktivera när data laddats
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
                         }
                     } else {
-                        // Redigera- och ta bort-knappar i visningsläge
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            Icon(Icons.Default.Edit, "Edit")
                         }
                         IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Brew", tint = MaterialTheme.colorScheme.error) // Använd Error-färg
+                            Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface // Matcha ytfärgen
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        // Använder en anpassad Snackbar-komponent för tematisk design
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { snackbarData ->
-                    ThemedSnackbar(snackbarData)
-                }
-            )
+            // Använder den anpassade ThemedSnackbar
+            SnackbarHost(snackbarHostState) { snackbarData ->
+                ThemedSnackbar(snackbarData)
+            }
         }
     ) { paddingValues ->
         when {
+            // Visa laddningsindikator vid initial laddning (ej i redigeringsläge)
             state.isLoading && !isEditing -> {
-                // Visa laddningsindikator när data hämtas
                 Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
+            // Visa huvudinnehåll
             else -> {
                 val currentBrew = state.brew
                 if (currentBrew != null) {
+                    // Scrollbar kolumn för innehållet
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 16.dp) // Använd horisontell padding här
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(paddingValues) // Padding från Scaffold
+                            .padding(horizontal = 16.dp) // Horisontell padding för innehållet
+                            .verticalScroll(rememberScrollState()), // Gör kolumnen scrollbar
+                        verticalArrangement = Arrangement.spacedBy(16.dp), // Avstånd mellan elementen
                     ) {
-                        // Lägg till padding överst i kolumnen
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(0.dp)) // Första elementet får padding via Column
 
-                        // --- Bild/placeholder ---
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                        ) {
-                            if (currentBrew.imageUri != null) {
-                                // Visa bilden med Coil
-                                AsyncImage(
-                                    model = currentBrew.imageUri,
-                                    contentDescription = "Brew photo",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(250.dp)
-                                        // Gå till helskärm om vi inte redigerar
-                                        .clickable {
-                                            if (!isEditing && currentBrew.imageUri != null) { // Added null check for safety
-                                                onNavigateToImageFullscreen(currentBrew.imageUri)
-                                            }
-                                        }
-                                )
+                        // Anropa bildsektionen
+                        BrewImageSection(
+                            imageUri = currentBrew.imageUri,
+                            isEditing = isEditing,
+                            onNavigateToCamera = onNavigateToCamera,
+                            onNavigateToImageFullscreen = onNavigateToImageFullscreen,
+                            onDeleteImage = { viewModel.updateBrewImageUri(null) }
+                        )
 
-                                // Ta bort-knapp när vi redigerar
-                                if (isEditing) {
-                                    IconButton(
-                                        onClick = { viewModel.updateBrewImageUri(null) },
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(8.dp)
-                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
-                                    ) {
-                                        Icon(Icons.Default.DeleteForever, contentDescription = "Delete Picture")
-                                    }
-                                }
-                            } else {
-                                // Visa en klickbar "Add Picture"-placeholder
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(150.dp)
-                                        .clickable { onNavigateToCamera() }, // Navigera till kameran vid klick
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), // Mjukare färg
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(
-                                                Icons.Default.PhotoCamera,
-                                                contentDescription = "Add Picture",
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            Text("Add Picture")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // --- Slut bild/placeholder ---
-
-                        // Växla mellan sammanfattning och redigeringskort
+                        // Visa antingen sammanfattning eller redigeringsfält
                         if (isEditing) {
                             BrewEditCard(
                                 viewModel = viewModel,
@@ -322,10 +175,10 @@ fun BrewDetailScreen(
                             BrewSummaryCard(state = state)
                         }
 
-                        // Visa metrik-kortet om data finns
+                        // Visa metrik-kortet (om data finns)
                         state.metrics?.let { metrics ->
                             BrewMetricsCard(metrics = metrics)
-                        } ?: Card(
+                        } ?: Card( // Placeholder om metrik saknas
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
@@ -334,44 +187,34 @@ fun BrewDetailScreen(
 
                         Text("Brew Progress", style = MaterialTheme.typography.titleMedium)
 
-                        // Filterchips för att styra vilka linjer som visas i grafen
+                        // Filterchips för att styra grafens linjer
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = showWeightLine,
                                 onClick = { showWeightLine = !showWeightLine },
                                 label = { Text("Weight") },
-                                leadingIcon = { if (showWeightLine) Icon(Icons.Default.Check, "Visible") else Icon(Icons.Default.Close, "Hidden") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary,
-                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onTertiary
-                                )
+                                leadingIcon = { Icon(if (showWeightLine) Icons.Filled.Check else Icons.Filled.Close, if (showWeightLine) "Visible" else "Hidden") },
+                                colors = FilterChipDefaults.filterChipColors( /* ... färger ... */ )
                             )
                             FilterChip(
                                 selected = showFlowLine,
                                 onClick = { showFlowLine = !showFlowLine },
                                 label = { Text("Flow") },
-                                leadingIcon = { if (showFlowLine) Icon(Icons.Default.Check, "Visible") else Icon(Icons.Default.Close, "Hidden") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.secondary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
-                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondary
-                                )
+                                leadingIcon = { Icon(if (showFlowLine) Icons.Filled.Check else Icons.Filled.Close, if (showFlowLine) "Visible" else "Hidden") },
+                                colors = FilterChipDefaults.filterChipColors( /* ... färger ... */ )
                             )
                         }
 
-                        // Visa grafen om det finns samples
+                        // Visa grafen (om data finns)
                         if (state.samples.isNotEmpty()) {
                             BrewSamplesGraph(
                                 samples = state.samples,
                                 showWeightLine = showWeightLine,
                                 showFlowLine = showFlowLine,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
+                                modifier = Modifier.fillMaxWidth().height(300.dp)
                             )
                         } else {
-                            Card(
+                            Card( // Placeholder om grafdata saknas
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
@@ -379,88 +222,44 @@ fun BrewDetailScreen(
                             }
                         }
 
-                        Text("Notes", style = MaterialTheme.typography.titleMedium)
+                        // Anropa anteckningssektionen
+                        BrewNotesSection(
+                            isEditing = isEditing,
+                            quickEditNotesValue = viewModel.quickEditNotes,
+                            fullEditNotesValue = viewModel.editNotes, // Använd editNotes för full edit
+                            hasUnsavedQuickNotes = hasUnsavedQuickNotes,
+                            onQuickEditNotesChanged = viewModel::onQuickEditNotesChanged, // Skicka referens
+                            onFullEditNotesChanged = viewModel::onEditNotesChanged,     // Skicka referens
+                            onSaveQuickEditNotes = viewModel::saveQuickEditNotes        // Skicka referens
+                        )
 
-                        // Hantering av anteckningar
-                        if (isEditing) {
-                            // Fullständig redigering i edit mode
-                            OutlinedTextField(
-                                value = viewModel.editNotes,
-                                onValueChange = { viewModel.onEditNotesChanged(it) },
-                                label = { Text("Notes (Full Edit Mode)") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 100.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                )
-                            )
-                        } else {
-                            // Snabbredigering i visningsläge
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = viewModel.quickEditNotes,
-                                    onValueChange = { viewModel.onQuickEditNotesChanged(it) },
-                                    label = { Text("Notes") },
-                                    enabled = true,
-                                    readOnly = false,
-                                    modifier = Modifier.weight(1f).heightIn(min = 100.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                                    )
-                                )
-                                IconButton(
-                                    onClick = { viewModel.saveQuickEditNotes() },
-                                    enabled = hasUnsavedNotes, // Aktiv endast vid ändring
-                                    modifier = Modifier.align(Alignment.Top).offset(y = 8.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Save,
-                                        contentDescription = "Save notes",
-                                        tint = if (hasUnsavedNotes) MaterialTheme.colorScheme.primary else Color.Gray
-                                    )
-                                }
-                            }
-                        }
-                        // Lägg till padding i botten
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp)) // Extra utrymme i botten
 
                     } // Slut Column
 
-                    // Dialogruta för att bekräfta radering
+                    // --- Dialogrutor ---
+                    // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
                             onDismissRequest = { showDeleteConfirmDialog = false },
                             title = { Text("Delete brew?") },
-                            text = {
-                                Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.")
-                            },
+                            text = { Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.") },
                             confirmButton = {
                                 Button(
                                     onClick = {
                                         viewModel.deleteCurrentBrew {
                                             showDeleteConfirmDialog = false
-                                            onNavigateBack() // Gå tillbaka efter radering
+                                            onNavigateBack() // Gå tillbaka efter lyckad radering
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) // Error-färg för destruktiv handling
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
                             },
                             dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
                         )
                     }
 
-                    // NYTT: Dialogruta för att bekräfta arkivering vid skärmstart
+                    // Bekräfta arkivering (visas vid navigering från LiveBrew)
                     if (showArchivePromptOnEntry != null && beanForPrompt != null && showArchivePromptOnEntry == beanForPrompt.id) {
                         ArchiveConfirmationDialog(
                             beanName = beanForPrompt.name,
@@ -468,9 +267,10 @@ fun BrewDetailScreen(
                             onDismiss = { viewModel.dismissArchivePromptOnEntry() }
                         )
                     }
+                    // --- Slut Dialogrutor ---
 
                 } else {
-                    // Visas om bryggningen inte kunde laddas eller raderades
+                    // Fallback om brew blir null (t.ex. raderad medan vyn är öppen)
                     Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                         Text(state.error ?: "Brew data unavailable.")
                     }
@@ -480,467 +280,17 @@ fun BrewDetailScreen(
     } // Slut Scaffold
 }
 
-
-// --- DetailRow ---
-@Composable
-fun DetailRow(label: String, value: String) {
-    // Enkel återanvändbar rad för att visa en etikett och ett värde
-    Row(verticalAlignment = Alignment.Top) {
-        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(100.dp))
-        Text(value)
-    }
-}
-
-// ---------- Summary & rows ----------
-@SuppressLint("DefaultLocale")
-@Composable
-fun BrewSummaryCard(state: BrewDetailState) {
-    // Visa en sammanfattning av bryggningsdetaljerna
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-    val totalTimeMillis = state.samples.lastOrNull()?.timeMillis ?: 0L
-    val minutes = (totalTimeMillis / 1000 / 60).toInt()
-    val seconds = (totalTimeMillis / 1000 % 60).toInt()
-    val timeString = remember(minutes, seconds) {
-        String.format("%02d:%02d", minutes, seconds)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Details", style = MaterialTheme.typography.titleLarge)
-            DetailRow("Bean:", state.bean?.name ?: "-")
-            DetailRow("Roaster:", state.bean?.roaster ?: "-")
-            // NYTT: Visa arkivstatus för bönan
-            if (state.bean?.isArchived == true) {
-                DetailRow("Bean Status:", "Archived")
-            }
-            DetailRow("Date:", state.brew?.startedAt?.let { dateFormat.format(it) } ?: "-")
-            DetailRow("Total time:", if (totalTimeMillis > 0) timeString else "-")
-            DetailRow("Dose:", state.brew?.doseGrams?.let { "%.1f g".format(it) } ?: "-")
-            DetailRow("Method:", state.method?.name ?: "-")
-            DetailRow("Grinder:", state.grinder?.name ?: "-")
-            DetailRow("Grind set:", state.brew?.grindSetting ?: "-")
-            DetailRow("Grind speed:", state.brew?.grindSpeedRpm?.let { "%.0f RPM".format(it) } ?: "-")
-            DetailRow("Temp:", state.brew?.brewTempCelsius?.let { "%.1f °C".format(it) } ?: "-")
-        }
-    }
-}
-
-// ---------- Edit card ----------
-@Composable
-fun BrewEditCard(
-    viewModel: BrewDetailViewModel,
-    availableGrinders: List<Grinder>,
-    availableMethods: List<Method>
-) {
-    // Redigeringskort för bryggningsdetaljer. Använder separata `edit*` state-variabler i ViewModel.
-    val grinder = viewModel.editSelectedGrinder
-    val method = viewModel.editSelectedMethod
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Edit Details", style = MaterialTheme.typography.titleLarge)
-
-            // Dropdown för att välja kvarn
-            EditDropdownSelector(
-                label = "Grinder",
-                options = availableGrinders,
-                selectedOption = grinder,
-                onOptionSelected = { viewModel.onEditGrinderSelected(it) },
-                optionToString = { it?.name ?: "Select grinder..." }
-            )
-            // Textfält för inställningar
-            OutlinedTextField(
-                value = viewModel.editGrindSetting,
-                onValueChange = { viewModel.onEditGrindSettingChanged(it) },
-                label = { Text("Grind Setting") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-            OutlinedTextField(
-                value = viewModel.editGrindSpeedRpm,
-                onValueChange = { viewModel.onEditGrindSpeedRpmChanged(it) },
-                label = { Text("Grind Speed (RPM)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-            // Dropdown för att välja bryggmetod
-            EditDropdownSelector(
-                label = "Method",
-                options = availableMethods,
-                selectedOption = method,
-                onOptionSelected = { viewModel.onEditMethodSelected(it) },
-                optionToString = { it?.name ?: "Select method..." }
-            )
-            OutlinedTextField(
-                value = viewModel.editBrewTempCelsius,
-                onValueChange = { viewModel.onEditBrewTempChanged(it) },
-                label = { Text("Water Temperature (°C)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-        }
-    }
-}
-
-// ---------- Reusable UI ----------
-@SuppressLint("DefaultLocale")
-@Composable
-fun BrewMetricsCard(metrics: BrewMetrics) {
-    // Visar de beräknade nyckeltalen för bryggningen (förhållande, vatten, dos)
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Ratio", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    text = metrics.ratio?.let { "1:%.1f".format(it) } ?: "-",
-                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Water", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    text = "%.1f g".format(metrics.waterUsedGrams),
-                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Dose", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    text = "%.1f g".format(metrics.doseGrams),
-                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-// --- Graf (UPDATED with Flow Capping) ---
-@SuppressLint("DefaultLocale")
-@Composable
-fun BrewSamplesGraph(
-    samples: List<BrewSample>,
-    showWeightLine: Boolean,
-    showFlowLine: Boolean,
-    modifier: Modifier = Modifier
-) {
-    // Komponent för att rita ut grafen baserat på BrewSample-data
-    val density = LocalDensity.current
-
-    val massColor = MaterialTheme.colorScheme.tertiary
-    val flowColor = MaterialTheme.colorScheme.secondary
-    val gridLineColor = Color.LightGray
-    val textColor = MaterialTheme.colorScheme.onSurface.toArgb() // Använd tema-färg
-    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant // Färg för axellinjer
-
-    // PathEffect för att rita prickade rutnätslinjer
-    val gridLinePaint = remember {
-        Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
-    }
-    // Paint-objekt för att rita numeriska etiketter på axlarna
-    val numericLabelPaint = remember(textColor) { // Uppdatera om textColor ändras (tema)
-        android.graphics.Paint().apply {
-            color = textColor
-            textAlign = android.graphics.Paint.Align.CENTER
-            textSize = 10.sp.value * density.density
-        }
-    }
-    val numericLabelPaintRight = remember(flowColor) { // Uppdatera om flowColor ändras
-        android.graphics.Paint().apply {
-            color = flowColor.toArgb() // Använd tema-färg
-            textAlign = android.graphics.Paint.Align.LEFT
-            textSize = 10.sp.value * density.density
-        }
-    }
-    // Paint-objekt för axeltitlar
-    val axisTitlePaint = remember(textColor) { // Uppdatera om textColor ändras
-        android.graphics.Paint().apply {
-            color = textColor
-            textAlign = android.graphics.Paint.Align.CENTER
-            textSize = 14.sp.value * density.density
-            isFakeBoldText = true
-        }
-    }
-    val axisTitlePaintFlow = remember(flowColor) { // Uppdatera om flowColor ändras
-        android.graphics.Paint().apply {
-            color = flowColor.toArgb()
-            textAlign = android.graphics.Paint.Align.CENTER
-            textSize = 14.sp.value * density.density
-            isFakeBoldText = true
-        }
-    }
-
-    // Kontrollera om det finns Flow-data att visa
-    val hasFlowData = remember(samples) {
-        samples.any { it.flowRateGramsPerSecond != null && it.flowRateGramsPerSecond > 0 }
-    }
-
-    Canvas(modifier = modifier.padding(start = 32.dp, end = 32.dp, top = 16.dp, bottom = 32.dp)) {
-        val xLabelPadding = 32.dp.toPx()
-        val yLabelPaddingLeft = 32.dp.toPx()
-        // Adjust right padding based on whether flow axis is needed and shown
-        val yLabelPaddingRight = if (hasFlowData && showFlowLine) 32.dp.toPx() else 0.dp.toPx()
-
-        // Grafens rityta
-        val graphStartX = yLabelPaddingLeft
-        val graphEndX = size.width - yLabelPaddingRight
-        val graphWidth = graphEndX - graphStartX
-        val graphTopY = 0f
-        val graphBottomY = size.height - xLabelPadding
-        val graphHeight = graphBottomY - graphTopY
-
-
-        if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
-
-        // Bestämma maximala värden för skalning (med lite marginal)
-        val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
-        val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
-        val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
-
-        // --- MODIFIED maxFlow Calculation ---
-        val visualMaxFlowCap = 25f // Set your desired visual cap (e.g., 25 g/s)
-        val actualMaxFlow = samples.maxOfOrNull { it.flowRateGramsPerSecond?.toFloat() ?: 0f } ?: 1f
-        // Use the cap if the actual max flow exceeds it, otherwise use a rounded-up actual max flow
-        val maxFlowForScaling = max(5f, // Ensure a minimum scale even for low flows
-            if (actualMaxFlow > visualMaxFlowCap) {
-                visualMaxFlowCap
-            } else {
-                ceil(actualMaxFlow / 5f) * 5f // Round up to nearest 5 if below cap
-            }
-        ) * 1.1f // Add a little margin
-        // --- END MODIFIED maxFlow Calculation ---
-
-        // Variable to track the highest flow value *within* the visual cap for drawing grid lines
-        val maxFlowForGridLines = minOf(actualMaxFlow, visualMaxFlowCap) * 1.1f
-
-
-        drawContext.canvas.nativeCanvas.apply {
-            // Rita ut de horisontella rutnätslinjerna (Mass-axeln) och dess etiketter
-            val massGridInterval = 50f
-            var currentMassGrid = massGridInterval
-            while (currentMassGrid < maxMass / 1.1f) {
-                val y = graphBottomY - (currentMassGrid / maxMass) * graphHeight
-                drawLine(gridLineColor, Offset(graphStartX, y), Offset(graphEndX, y),
-                    strokeWidth = gridLinePaint.width, pathEffect = gridLinePaint.pathEffect)
-                drawText("${currentMassGrid.toInt()}g", yLabelPaddingLeft / 2, y + numericLabelPaint.textSize / 3, numericLabelPaint)
-                currentMassGrid += massGridInterval
-            }
-
-            // Rita etiketter för Flow-axeln (om data finns and line is shown)
-            // Use maxFlowForGridLines for calculating grid intervals
-            if (hasFlowData && showFlowLine) {
-                // Calculate interval based on the capped max value for grid lines
-                val flowGridInterval = max(1f, ceil(maxFlowForGridLines / 1.1f / 3f)) // Interval based on capped max (e.g., 3 lines)
-                var currentFlowGrid = flowGridInterval
-                while (currentFlowGrid < maxFlowForGridLines / 1.1f) { // Compare against capped max for grid lines
-                    // Use maxFlowForScaling for calculating Y position
-                    val y = graphBottomY - (currentFlowGrid / maxFlowForScaling) * graphHeight
-                    // Rita flödes-etikett på höger sida
-                    drawText(String.format("%.1f g/s", currentFlowGrid), size.width - yLabelPaddingRight / 2, y + numericLabelPaintRight.textSize / 3, numericLabelPaintRight)
-                    currentFlowGrid += flowGridInterval
-                }
-            }
-
-
-            // Rita de vertikala rutnätslinjerna (Tid-axeln) och dess etiketter
-            val timeGridInterval = 30000f // 30 sekunder
-            var currentTimeGrid = timeGridInterval
-            while (currentTimeGrid < maxTime / 1.05f) {
-                val x = graphStartX + (currentTimeGrid / maxTime) * graphWidth
-                drawLine(gridLineColor, Offset(x, graphTopY), Offset(x, graphBottomY),
-                    strokeWidth = gridLinePaint.width, pathEffect = gridLinePaint.pathEffect)
-                val timeSec = (currentTimeGrid / 1000).toInt()
-                // Rita tids-etikett under rutnätslinjen
-                drawText("${timeSec}s", x, size.height, numericLabelPaint) // Rita på botten av Canvas
-                currentTimeGrid += timeGridInterval
-            }
-        }
-
-        // Rita axellinjer
-        drawLine(axisColor, Offset(graphStartX, graphTopY), Offset(graphStartX, graphBottomY)) // Mass/Vikt-axel (Vänster Y)
-        drawLine(axisColor, Offset(graphStartX, graphBottomY), Offset(graphEndX, graphBottomY)) // Tid-axel (Botten X)
-        if (hasFlowData && showFlowLine) { // Rita höger Y-axel endast om flödeslinjen visas
-            drawLine(axisColor, Offset(graphEndX, graphTopY), Offset(graphEndX, graphBottomY)) // Flöde-axel (Höger Y)
-        }
-
-        // Rita kurvorna för Mass och Flow
-        if (samples.size > 1) {
-            val massPath = Path()
-            val flowPath = Path()
-            var flowPathStarted = false // För att hantera luckor i flödesdata
-
-            samples.forEachIndexed { index, s ->
-                val x = graphStartX + (s.timeMillis.toFloat() / maxTime) * graphWidth
-                val yMass = graphBottomY - (s.massGrams.toFloat() / maxMass) * graphHeight
-                // Clamp-värden för att hålla linjerna inom grafområdet
-                val cx = x.coerceIn(graphStartX, graphEndX)
-                val cyMass = yMass.coerceIn(graphTopY, graphBottomY)
-
-                // Bygg viktkurvan
-                if (showWeightLine) {
-                    if (index == 0) massPath.moveTo(cx, cyMass) else massPath.lineTo(cx, cyMass)
-                }
-
-                // Bygg flödeskurvan
-                if (showFlowLine && hasFlowData && s.flowRateGramsPerSecond != null) {
-                    // --- Use maxFlowForScaling ---
-                    // Calculate y based on the scaling factor, but clamp the *value* if it exceeds the cap
-                    val flowValue = s.flowRateGramsPerSecond.toFloat()
-                    // Calculate Y position using the potentially large scaling factor
-                    val yFlow = graphBottomY - (flowValue / maxFlowForScaling) * graphHeight
-                    // Clamp the Y coordinate to the top of the graph if the value was above the visual cap
-                    val cyFlow = yFlow.coerceIn(graphTopY, graphBottomY)
-                    // --- END Use maxFlowForScaling ---
-
-
-                    if (!flowPathStarted) {
-                        flowPath.moveTo(cx, cyFlow)
-                        flowPathStarted = true
-                    } else {
-                        flowPath.lineTo(cx, cyFlow)
-                    }
-                } else {
-                    // Återställ om punkten är null eller utanför, skapar en lucka i linjen
-                    flowPathStarted = false
-                }
-            }
-            // Rita de byggda kurvorna
-            if (showWeightLine) {
-                drawPath(path = massPath, color = massColor, style = Stroke(width = 2.dp.toPx()))
-            }
-            if (showFlowLine && hasFlowData) {
-                // Use maxFlowForScaling for drawing
-                drawPath(path = flowPath, color = flowColor, style = Stroke(width = 2.dp.toPx()))
-            }
-        }
-
-
-        // Rita axeltitlarna
-        drawContext.canvas.nativeCanvas.apply {
-            // Tid-axelns titel (centrerad nedtill)
-            drawText("Time", graphStartX + graphWidth / 2, size.height - xLabelPadding / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
-            withSave { // Spara canvas state för rotation
-                rotate(-90f) // Rotera -90 grader för Y-axlarnas titlar
-                // Vikt-axelns titel (vänster)
-                drawText(
-                    "Weight (g)",
-                    -(graphTopY + graphHeight / 2), // Centrera vertikalt efter rotation
-                    yLabelPaddingLeft / 2 - axisTitlePaint.descent(), // Positionera horisontellt (blir vertikalt)
-                    axisTitlePaint
-                )
-                // Flöde-axelns titel (höger, endast om relevant och visas)
-                if (hasFlowData && showFlowLine) {
-                    // Title text now reflects the visual cap potentially
-                    val flowAxisTitle = "Flow (g/s)" // Keep title generic
-                    drawText(
-                        flowAxisTitle,
-                        -(graphTopY + graphHeight / 2), // Centrera vertikalt
-                        size.width - yLabelPaddingRight / 2 - axisTitlePaintFlow.descent(), // Positionera på höger sida
-                        axisTitlePaintFlow
-                    )
-                }
-            } // Restore canvas state
-        }
-    }
-}
-
-
-// --- Dropdown ---
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun <T> EditDropdownSelector(
-    label: String,
-    options: List<T>,
-    selectedOption: T?,
-    onOptionSelected: (T?) -> Unit,
-    optionToString: (T?) -> String
-) {
-    // Återanvändbar dropdown-komponent för att välja objekt (kvarnar/metoder)
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = optionToString(selectedOption),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            // Alternativ för att inte välja något
-            DropdownMenuItem(
-                text = { Text("No selection") },
-                onClick = {
-                    onOptionSelected(null)
-                    expanded = false
-                }
-            )
-            // Alternativ för de tillgängliga objekten
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(optionToString(option)) },
-                    onClick = {
-                        onOptionSelected(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
 // --- Helskärmsbild ---
+/**
+ * Skärm för att visa bryggningsbilden i helskärm.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullscreenImageScreen(
     uri: String,
     onNavigateBack: () -> Unit
 ) {
-    // Skärm för att visa bryggningsbilden i helskärm
-    val containerColor = Color.Black // Använd svart bakgrund
+    val containerColor = Color.Black // Svart bakgrund
     val contentColor = Color.White // Vit färg för text/ikoner
 
     Scaffold(
@@ -966,7 +316,7 @@ fun FullscreenImageScreen(
             AsyncImage(
                 model = uri,
                 contentDescription = "Fullscreen brew photo",
-                contentScale = ContentScale.Fit, // Använder Fit för att säkerställa att hela bilden syns
+                contentScale = ContentScale.Fit, // Använd Fit för att se hela bilden
                 modifier = Modifier.fillMaxSize()
             )
         }
