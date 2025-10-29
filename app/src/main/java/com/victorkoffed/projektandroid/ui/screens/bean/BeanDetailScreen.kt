@@ -475,7 +475,7 @@ fun DeleteConfirmationDialog(
                 val brewText = if (brewCount == 1) "1 related brew" else "$brewCount related brews"
                 Text("Are you sure you want to permanently delete the ARCHIVED bean '$beanName'? This will also permanently delete $brewText. This cannot be undone.")
             } else {
-                Text("Bönan '$beanName' är fortfarande aktiv. Du måste först tömma bönan (sätta Remaining Weight till 0.0 g) och sedan arkivera den innan den kan raderas permanent. Arkivering döljer bönan från den huvudsakliga bönlistan.")
+                Text("The bean '$beanName' is still active. You must first empty the bean (set Remaining Weight to 0.0 g) and then archive it before it can be permanently deleted. Archiving hides the bean from the main bean list.")
             }
         },
         confirmButton = {

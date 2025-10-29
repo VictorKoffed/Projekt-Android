@@ -49,14 +49,14 @@ data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null
  */
 private object BleErrorTranslator {
     fun translate(rawMessage: String?): String {
-        if (rawMessage == null) return "Ett okänt fel uppstod."
+        if (rawMessage == null) return "An unknown error occurred."
         return when {
-            rawMessage.contains("GATT Error (133)") -> "Anslutningen misslyckades (133)."
-            rawMessage.contains("GATT Error") -> "Anslutningsfel ($rawMessage)."
-            rawMessage.contains("permission", ignoreCase = true) -> "Bluetooth-behörighet saknas."
-            rawMessage.contains("address", ignoreCase = true) -> "Ogiltig adress."
-            rawMessage.contains("BLE scan failed") -> "Sökning misslyckades."
-            rawMessage.contains("Bluetooth off") -> "Bluetooth avstängt."
+            rawMessage.contains("GATT Error (133)") -> "Connection failed (133)."
+            rawMessage.contains("GATT Error") -> "Connection error ($rawMessage)."
+            rawMessage.contains("permission", ignoreCase = true) -> "Bluetooth permission missing."
+            rawMessage.contains("address", ignoreCase = true) -> "Invalid address."
+            rawMessage.contains("BLE scan failed") -> "Scan failed."
+            rawMessage.contains("Bluetooth off") -> "Bluetooth turned off."
             else -> rawMessage
         }
     }
