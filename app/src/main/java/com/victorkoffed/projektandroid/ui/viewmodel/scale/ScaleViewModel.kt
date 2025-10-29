@@ -22,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive // Importera isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
@@ -101,6 +102,7 @@ class ScaleViewModel @Inject constructor(
     private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
     val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
     private var measurementJob: Job? = null
+    private var manualTimerJob: Job? = null // *** Variabel för manuell timer ***
 
     init {
         observeScaleMeasurements()
@@ -114,21 +116,31 @@ class ScaleViewModel @Inject constructor(
                 .catch { Log.e("ScaleViewModel", "Error observing measurements", it) }
                 .collect { rawData ->
                     _rawMeasurement.value = rawData
-                    // Update timer display based on scale data if recording/paused
-                    if ((_isRecording.value || _isPaused.value) && rawData.timeMillis != null) {
+
+                    // *** MODIFIERAD TIDSHANTERING ***
+                    if (_isRecording.value && !_isPaused.value && manualTimerJob == null && rawData.timeMillis != null) {
+                        // Uppdatera bara om den manuella timern inte körs (dvs. före första pausen/återupptagningen)
+                        // och om tiden faktiskt ändrats från vågen
                         if (_recordingTimeMillis.value != rawData.timeMillis) {
                             _recordingTimeMillis.value = rawData.timeMillis
                         }
                     } else if (!_isRecording.value && !_isPaused.value && _recordingTimeMillis.value != 0L) {
-                        _recordingTimeMillis.value = 0L // Reset display time if stopped
+                        // Återställ om inspelning stoppats helt och manuell timer inte körs
+                        if (manualTimerJob == null) {
+                            _recordingTimeMillis.value = 0L
+                        }
                     }
+                    // *** SLUT MODIFIERAD TIDSHANTERING ***
+
                     // Add sample point if recording and not paused
+                    // Använder nu _recordingTimeMillis för BrewSample timestamp via addSamplePoint
                     if (_isRecording.value && !_isPaused.value) {
-                        addSamplePoint(measurement.value)
+                        addSamplePoint(measurement.value) // measurement.value innehåller vikt/flöde från vågen
                     }
                 }
         }
     }
+
 
     // --- Skanning & Anslutning ---
     fun startScan() {
@@ -172,14 +184,23 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
+    // *** MODIFIERAD internalStartRecording ***
     private fun internalStartRecording() {
-        _recordedSamplesFlow.value = emptyList(); _recordingTimeMillis.value = 0L; _isPaused.value = false; _weightAtPause.value = null; _isRecording.value = true;
-        addSamplePoint(measurement.value.copy(timeMillis = 0L)) // Add initial point
+        manualTimerJob?.cancel() // Säkerställ att den är avbruten
+        manualTimerJob = null    // Sätt till null
+        _recordedSamplesFlow.value = emptyList()
+        _recordingTimeMillis.value = 0L // *** Nollställ tiden här vid start ***
+        _isPaused.value = false
+        _weightAtPause.value = null
+        _isRecording.value = true
+        // Första mätvärdet sätter starttiden via observeScaleMeasurements
         Log.d("ScaleViewModel", "Internal recording state started.")
     }
 
+    // *** MODIFIERAD pauseRecording ***
     fun pauseRecording() {
         if (!_isRecording.value || _isPaused.value) return
+        manualTimerJob?.cancel() // Avbryt manuell timer
         _isPaused.value = true
         _weightAtPause.value = measurement.value.weightGrams
         // Send Stop Timer command
@@ -189,6 +210,7 @@ class ScaleViewModel @Inject constructor(
         Log.d("ScaleViewModel", "Paused. Sent Stop Timer.")
     }
 
+    // *** MODIFIERAD resumeRecording ***
     fun resumeRecording() {
         if (!_isRecording.value || !_isPaused.value) return
         _isPaused.value = false
@@ -198,7 +220,20 @@ class ScaleViewModel @Inject constructor(
             scaleRepo.startTimer()
         }
         Log.d("ScaleViewModel", "Resumed. Sent Start Timer.")
+
+        // Starta manuell timer för display
+        manualTimerJob?.cancel() // Avbryt eventuell gammal
+        manualTimerJob = viewModelScope.launch {
+            while (isActive && _isRecording.value && !_isPaused.value) { // Använd isActive här
+                delay(100L) // Uppdateringsintervall
+                // Kontrollera igen innan uppdatering
+                if (isActive && _isRecording.value && !_isPaused.value) {
+                    _recordingTimeMillis.update { it + 100L } // Räkna upp
+                }
+            }
+        }
     }
+
 
     suspend fun stopRecordingAndSave(setupState: BrewSetupState): SaveBrewResult {
         if (_countdown.value != null || (!_isRecording.value && !_isPaused.value)) { stopRecording(); return SaveBrewResult(null) }
@@ -217,17 +252,20 @@ class ScaleViewModel @Inject constructor(
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
+    // *** MODIFIERAD stopRecording ***
     fun stopRecording() { // Also used for Reset button
         if (!_isRecording.value && !_isPaused.value && _countdown.value == null) return
 
         val wasActive = _isRecording.value || _isPaused.value
+        manualTimerJob?.cancel() // Avbryt manuell timer
+        manualTimerJob = null    // Nollställ jobbet
 
         _countdown.value = null
         _isRecording.value = false
         _isPaused.value = false
         _weightAtPause.value = null
         _recordedSamplesFlow.value = emptyList()
-        _recordingTimeMillis.value = 0L
+        _recordingTimeMillis.value = 0L // Nollställ tiden
 
         // Send Reset Timer command if recording was active and connected
         if (wasActive && connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
@@ -238,11 +276,34 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
-    private fun addSamplePoint(measurement: ScaleMeasurement) {
-        val elapsedTimeMs = measurement.timeMillis ?: _recordingTimeMillis.value; if (elapsedTimeMs < 0) return
-        val newSample = BrewSample(brewId = 0, timeMillis = elapsedTimeMs, massGrams = String.format(Locale.US, "%.1f", measurement.weightGrams).toDouble(), flowRateGramsPerSecond = String.format(Locale.US, "%.1f", measurement.flowRateGramsPerSecond).toDouble())
-        // Avoid adding points with the exact same timestamp multiple times
-        _recordedSamplesFlow.update { list -> if (list.lastOrNull()?.timeMillis == newSample.timeMillis && list.isNotEmpty()) list else list + newSample }
+    // *** MODIFIERAD addSamplePoint ***
+    private fun addSamplePoint(measurementData: ScaleMeasurement) {
+        // Använd ALLTID _recordingTimeMillis för BrewSample timestamp
+        val sampleTimeMillis = _recordingTimeMillis.value // Använd appens interna timer
+        if (sampleTimeMillis < 0) return // Behåll säkerhetskoll
+
+        // Använd measurementData för vikt och flöde, men sampleTimeMillis för tiden
+        val weightGramsDouble = String.format(Locale.US, "%.1f", measurementData.weightGrams).toDouble()
+        // Säkerställ att flowRateGramsPerSecond inte är null innan formatering
+        val flowRateDouble = measurementData.flowRateGramsPerSecond?.let { flow ->
+            String.format(Locale.US, "%.1f", flow).toDouble()
+        } ?: 0.0 // Använd 0.0 om flowRate är null
+
+        val newSample = BrewSample(
+            brewId = 0, // Sätts korrekt när den sparas i databasen
+            timeMillis = sampleTimeMillis, // *** Använder nu appens tid ***
+            massGrams = weightGramsDouble,
+            flowRateGramsPerSecond = flowRateDouble // Använd det säkert hanterade värdet
+        )
+
+        // Undvik att lägga till punkter med exakt samma tidsstämpel flera gånger
+        _recordedSamplesFlow.update { list ->
+            if (list.lastOrNull()?.timeMillis == newSample.timeMillis && list.isNotEmpty()) {
+                list // Lägg inte till om tiden är identisk med senaste
+            } else {
+                list + newSample
+            }
+        }
     }
 
 
@@ -278,6 +339,7 @@ class ScaleViewModel @Inject constructor(
             is BleConnectionState.Disconnected -> {
                 Log.d("ScaleViewModel", "Disconnected. Manual: $isManualDisconnect")
                 measurementJob?.cancel(); measurementJob = null // Stop observation
+                manualTimerJob?.cancel(); manualTimerJob = null // Stoppa manuell timer
                 if(!isManualDisconnect && (_isRecording.value || _isPaused.value || _countdown.value != null)) { stopRecording() } // Reset recording state
                 // Auto-reconnect logic
                 val shouldRetry = !isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted
@@ -286,6 +348,7 @@ class ScaleViewModel @Inject constructor(
             is BleConnectionState.Error -> {
                 Log.e("ScaleViewModel", "Connection error: ${state.message}")
                 measurementJob?.cancel(); measurementJob = null // Stop observation
+                manualTimerJob?.cancel(); manualTimerJob = null // Stoppa manuell timer
                 if(_isRecording.value || _isPaused.value || _countdown.value != null) { stopRecording() } // Reset recording state
                 // Auto-reconnect logic
                 val shouldRetry = !isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && !reconnectAttempted
@@ -301,6 +364,7 @@ class ScaleViewModel @Inject constructor(
     }
     fun clearError() { if (_error.value != null) _error.value = null }
     override fun onCleared() {
-        super.onCleared(); Log.d("ScaleViewModel", "onCleared."); stopScan(); measurementJob?.cancel(); scanTimeoutJob?.cancel(); if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) { isManualDisconnect = true; disconnect() }
+        super.onCleared(); Log.d("ScaleViewModel", "onCleared."); stopScan(); measurementJob?.cancel(); scanTimeoutJob?.cancel(); manualTimerJob?.cancel() // Avbryt manuell timer
+        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) { isManualDisconnect = true; disconnect() }
     }
 }
