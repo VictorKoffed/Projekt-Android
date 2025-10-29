@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -438,7 +439,13 @@ fun <T> EditDropdownSelector(
             label = { Text(label) },
             // Ikon som indikerar om menyn är öppen eller stängd
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(), // Koppla textfältet till menyn
+            modifier = Modifier
+                .exposedDropdownSize(true)
+                .menuAnchor(
+                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                    enabled = true
+                )
+                .fillMaxWidth(), // Koppla textfältet till menyn
             colors = defaultTextFieldColors()
         )
         // Själva dropdown-menyn

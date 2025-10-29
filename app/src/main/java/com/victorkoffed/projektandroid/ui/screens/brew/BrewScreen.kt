@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -69,7 +70,7 @@ fun BrewScreen(
     val availableGrinders by vm.availableGrinders.collectAsState()
     val availableMethods by vm.availableMethods.collectAsState()
     val setupState = vm.brewSetupState
-    // State som indikerar om det finns sparade bryggningar att ladda ifrån
+    // State som indikerar om det finns tidigare bryggningar
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
 
     val scrollState = rememberScrollState()
@@ -283,7 +284,13 @@ fun <T> DropdownSelector(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier
+                .exposedDropdownSize(true)
+                .menuAnchor(
+                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                    enabled = true
+                )
+                .fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
