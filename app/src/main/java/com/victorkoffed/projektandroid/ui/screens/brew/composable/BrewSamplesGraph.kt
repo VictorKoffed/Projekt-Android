@@ -1,5 +1,4 @@
 package com.victorkoffed.projektandroid.ui.screens.brew.composable
-
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.padding
@@ -22,12 +21,6 @@ import androidx.core.graphics.withSave
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import kotlin.math.ceil
 import kotlin.math.max
-
-
-/**
- * Privat dataklass för att samla alla grafens dimensioner och skalningsfaktorer,
- * vilket underlättar delning av data mellan ritfunktionerna.
- */
 private data class GraphDrawingContext(
     val massColor: Color,
     val flowColor: Color,
@@ -51,17 +44,9 @@ private data class GraphDrawingContext(
     val yLabelPaddingLeft: Float,
     val yLabelPaddingRight: Float,
     val xLabelPadding: Float,
+    val weightTitleOffsetPx: Float,
+    val flowTitleOffsetPx: Float,
 )
-
-/**
- * Composable för att rita ut grafen baserat på BrewSample-data i BrewDetailScreen.
- * Visar vikt och/eller flödeshastighet över tid.
- *
- * @param samples Lista med mätpunkter från bryggningen.
- * @param showWeightLine Om viktkurvan ska visas.
- * @param showFlowLine Om flödeskurvan ska visas.
- * @param modifier Modifier för att anpassa layouten.
- */
 @SuppressLint("DefaultLocale")
 @Composable
 fun BrewSamplesGraph(
@@ -71,16 +56,16 @@ fun BrewSamplesGraph(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-
-    // Färger från temat
     val massColor = MaterialTheme.colorScheme.tertiary
     val flowColor = MaterialTheme.colorScheme.secondary
     val gridLineColor = Color.LightGray
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant // Färg för axellinjer
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     val graphLineStrokeWidth = with(LocalDensity.current) { 2.dp.toPx() }
-
-    // --- Paint-objekt för rendering ---
+    val weightTitleOffsetDp = 0.dp
+    val flowTitleOffsetDp = 30.dp
+    val weightTitleOffsetPx = with(LocalDensity.current) { weightTitleOffsetDp.toPx() }
+    val flowTitleOffsetPx = with(LocalDensity.current) { flowTitleOffsetDp.toPx() }
     val gridLinePaint = remember {
         Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
     }
@@ -114,28 +99,20 @@ fun BrewSamplesGraph(
             isFakeBoldText = true
         }
     }
-    // --- Slut Paint-objekt ---
-
     val hasFlowData = remember(samples) {
         samples.any { it.flowRateGramsPerSecond != null && it.flowRateGramsPerSecond > 0 }
     }
-
-    // --- Canvas-ritning ---
     Canvas(modifier = modifier.padding(start = 32.dp, end = 32.dp, top = 16.dp, bottom = 32.dp)) {
-        // --- Beräkna grafens dimensioner och skalning ---
         val xLabelPadding = 32.dp.toPx()
         val yLabelPaddingLeft = 32.dp.toPx()
         val yLabelPaddingRight = if (hasFlowData && showFlowLine) 32.dp.toPx() else 0.dp.toPx()
-
         val graphStartX = yLabelPaddingLeft
         val graphEndX = size.width - yLabelPaddingRight
         val graphTopY = 0f
         val graphBottomY = size.height - xLabelPadding
         val graphWidth = graphEndX - graphStartX
         val graphHeight = graphBottomY - graphTopY
-
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
-
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
@@ -145,8 +122,6 @@ fun BrewSamplesGraph(
             if (actualMaxFlow > visualMaxFlowCap) visualMaxFlowCap else ceil(actualMaxFlow / 5f) * 5f
         ) * 1.1f
         val maxFlowForGridLines = minOf(actualMaxFlow, visualMaxFlowCap) * 1.1f
-
-        // Skapa kontextobjektet för att skicka till hjälpfunkioner
         val drawingContext = GraphDrawingContext(
             massColor = massColor, flowColor = flowColor, axisColor = axisColor, gridLineColor = gridLineColor,
             gridLinePaint = gridLinePaint, numericLabelPaint = numericLabelPaint, numericLabelPaintRight = numericLabelPaintRight,
@@ -154,23 +129,16 @@ fun BrewSamplesGraph(
             graphStartX = graphStartX, graphEndX = graphEndX, graphTopY = graphTopY, graphBottomY = graphBottomY,
             graphWidth = graphWidth, graphHeight = graphHeight, maxTime = maxTime, maxMass = maxMass,
             maxFlowForScaling = maxFlowForScaling, maxFlowForGridLines = maxFlowForGridLines,
-            yLabelPaddingLeft = yLabelPaddingLeft, yLabelPaddingRight = yLabelPaddingRight, xLabelPadding = xLabelPadding
+            yLabelPaddingLeft = yLabelPaddingLeft, yLabelPaddingRight = yLabelPaddingRight, xLabelPadding = xLabelPadding,
+            weightTitleOffsetPx = weightTitleOffsetPx,
+            flowTitleOffsetPx = flowTitleOffsetPx
         )
-        // --- Slut Beräkning ---
-
-        // --- Anropa de utbrutna funktionerna ---
         drawGridAndLabels(hasFlowData, showFlowLine, drawingContext)
         drawAxes(hasFlowData, showFlowLine, drawingContext)
         drawDataPaths(samples, showWeightLine, showFlowLine, graphLineStrokeWidth, drawingContext)
         drawAxisTitles(hasFlowData, showFlowLine, drawingContext)
-        // --- Slut Anrop ---
     }
-    // --- Slut Canvas-ritning ---
 }
-
-/**
- * Ritar rutnätslinjer och tillhörande etiketter (Y- och X-axeln).
- */
 @SuppressLint("DefaultLocale")
 private fun DrawScope.drawGridAndLabels(
     hasFlowData: Boolean,
@@ -178,7 +146,6 @@ private fun DrawScope.drawGridAndLabels(
     ctx: GraphDrawingContext
 ) = with(ctx) {
     drawContext.canvas.nativeCanvas.apply {
-        // Horisontella linjer (Viktaxel) och vänstra etiketter
         val massGridInterval = 50f
         var currentMassGrid = massGridInterval
         while (currentMassGrid < maxMass / 1.1f) {
@@ -188,8 +155,6 @@ private fun DrawScope.drawGridAndLabels(
             drawText("${currentMassGrid.toInt()}g", yLabelPaddingLeft / 2, y + numericLabelPaint.textSize / 3, numericLabelPaint)
             currentMassGrid += massGridInterval
         }
-
-        // Högra etiketter (Flödesaxel)
         if (hasFlowData && showFlowLine) {
             val flowGridInterval = max(1f, ceil(maxFlowForGridLines / 1.1f / 3f))
             var currentFlowGrid = flowGridInterval
@@ -199,8 +164,6 @@ private fun DrawScope.drawGridAndLabels(
                 currentFlowGrid += flowGridInterval
             }
         }
-
-        // Vertikala linjer (Tidsaxel) och nedre etiketter
         val timeGridInterval = 30000f
         var currentTimeGrid = timeGridInterval
         while (currentTimeGrid < maxTime / 1.05f) {
@@ -213,25 +176,17 @@ private fun DrawScope.drawGridAndLabels(
         }
     }
 }
-
-/**
- * Ritar de yttre axellinjerna.
- */
 private fun DrawScope.drawAxes(
     hasFlowData: Boolean,
     showFlowLine: Boolean,
     ctx: GraphDrawingContext
 ) = with(ctx) {
-    drawLine(axisColor, Offset(graphStartX, graphTopY), Offset(graphStartX, graphBottomY)) // Vänster Y (Vikt)
-    drawLine(axisColor, Offset(graphStartX, graphBottomY), Offset(graphEndX, graphBottomY)) // Botten X (Tid)
-    if (hasFlowData && showFlowLine) { // Höger Y (Flöde)
+    drawLine(axisColor, Offset(graphStartX, graphTopY), Offset(graphStartX, graphBottomY))
+    drawLine(axisColor, Offset(graphStartX, graphBottomY), Offset(graphEndX, graphBottomY))
+    if (hasFlowData && showFlowLine) {
         drawLine(axisColor, Offset(graphEndX, graphTopY), Offset(graphEndX, graphBottomY))
     }
 }
-
-/**
- * Ritar datakurvorna (vikt och flöde).
- */
 private fun DrawScope.drawDataPaths(
     samples: List<BrewSample>,
     showWeightLine: Boolean,
@@ -243,24 +198,18 @@ private fun DrawScope.drawDataPaths(
         val massPath = Path()
         val flowPath = Path()
         var flowPathStarted = false
-
         samples.forEachIndexed { index, sample ->
             val x = graphStartX + (sample.timeMillis.toFloat() / maxTime) * graphWidth
             val clampedX = x.coerceIn(graphStartX, graphEndX)
-
-            // Viktkurva
             if (showWeightLine) {
                 val yMass = graphBottomY - (sample.massGrams.toFloat() / maxMass) * graphHeight
                 val clampedYMass = yMass.coerceIn(graphTopY, graphBottomY)
                 if (index == 0) massPath.moveTo(clampedX, clampedYMass) else massPath.lineTo(clampedX, clampedYMass)
             }
-
-            // Flödeskurva
             if (showFlowLine && sample.flowRateGramsPerSecond != null) {
                 val flowValue = sample.flowRateGramsPerSecond.toFloat()
                 val yFlow = graphBottomY - (flowValue / maxFlowForScaling) * graphHeight
                 val clampedYFlow = yFlow.coerceIn(graphTopY, graphBottomY)
-
                 if (!flowPathStarted) {
                     flowPath.moveTo(clampedX, clampedYFlow)
                     flowPathStarted = true
@@ -271,7 +220,6 @@ private fun DrawScope.drawDataPaths(
                 flowPathStarted = false
             }
         }
-
         if (showWeightLine) {
             drawPath(path = massPath, color = massColor, style = Stroke(width = strokeWidth))
         }
@@ -280,37 +228,27 @@ private fun DrawScope.drawDataPaths(
         }
     }
 }
-
-/**
- * Ritar axeltitlarna (Time, Weight, Flow) med rotation.
- */
 private fun DrawScope.drawAxisTitles(
     hasFlowData: Boolean,
     showFlowLine: Boolean,
     ctx: GraphDrawingContext
 ) = with(ctx) {
     drawContext.canvas.nativeCanvas.apply {
-        // Tidsaxelns titel
         drawText("Time", graphStartX + graphWidth / 2, size.height - xLabelPadding / 2 + axisTitlePaint.textSize / 3, axisTitlePaint)
-
         withSave {
             rotate(-90f)
-
-            // Viktaxelns titel
             drawText(
                 "Weight (g)",
                 -(graphTopY + graphHeight / 2),
-                yLabelPaddingLeft / 2 - axisTitlePaint.descent(),
+                weightTitleOffsetPx - axisTitlePaint.descent(),
                 axisTitlePaint
             )
-
-            // Flödesaxelns titel
             if (hasFlowData && showFlowLine) {
                 val flowAxisTitle = "Flow (g/s)"
                 drawText(
                     flowAxisTitle,
                     -(graphTopY + graphHeight / 2),
-                    size.width - yLabelPaddingRight / 2 - axisTitlePaintFlow.descent(),
+                    size.width + flowTitleOffsetPx - axisTitlePaintFlow.descent(),
                     axisTitlePaintFlow
                 )
             }
