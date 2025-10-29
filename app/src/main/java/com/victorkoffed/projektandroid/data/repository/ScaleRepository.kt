@@ -1,3 +1,4 @@
+// app/src/main/java/com/victorkoffed/projektandroid/data/repository/ScaleRepository.kt
 package com.victorkoffed.projektandroid.data.repository
 
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
@@ -20,12 +21,24 @@ interface ScaleRepository {
     /** Stänger den nuvarande BLE-anslutningen. */
     fun disconnect()
 
-    /** Ger en Flow med kontinuerliga mätvärden (vikt/flöde) från den anslutna vågen. */
+    /** Ger en Flow med kontinuerliga mätvärden (vikt/flöde/tid) från den anslutna vågen. */
     fun observeMeasurements(): Flow<ScaleMeasurement>
 
     /** Ger en StateFlow som reflekterar den aktuella anslutningsstatusen (Disconnected, Connecting, Connected, Error). */
     fun observeConnectionState(): StateFlow<BleConnectionState>
 
-    /** Skickar kommandot för att nollställa (tarera) vågens mätvärde. */
+    /** Skickar kommandot för att nollställa (tarera) vågens mätvärde (0x01). */
     fun tareScale()
+
+    /** Skickar kommandot för att nollställa (tarera) OCH starta vågens interna timer (0x07). */
+    fun tareScaleAndStartTimer()
+
+    /** Skickar kommandot för att stoppa vågens interna timer (0x05). */
+    fun stopTimer()
+
+    /** Skickar kommandot för att nollställa vågens interna timer (0x06). */
+    fun resetTimer()
+
+    /** Skickar kommandot för att starta vågens interna timer (0x04). */
+    fun startTimer()
 }
