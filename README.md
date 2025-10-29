@@ -87,10 +87,8 @@ com.victorkoffed.projektandroid/
 ##  Known issue (Bugfix)
 ---
 
-1. Fix so that the scale timer also starts in livebrewgraph.
-2. Flow in detailbrew dont cap flow to 20g/s
-3. Tare and auto tare in livebrew must tare 2 times to zero
-4. Clean up warnings and refactor ∞
+1. Flow in detailbrew dont cap flow to 20g/s
+2. Clean up warnings and refactor ∞
 
 ---
 
