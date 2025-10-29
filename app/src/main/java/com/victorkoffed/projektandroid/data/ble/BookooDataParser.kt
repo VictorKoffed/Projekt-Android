@@ -2,8 +2,6 @@ package com.victorkoffed.projektandroid.data.ble
 
 import android.util.Log
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
  * Singleton object för att hantera parsning av rådata (ByteArray) från Bookoo BLE-vågen
@@ -45,24 +43,18 @@ object BookooDataParser {
             val grams = rawWeight.toFloat() / 100.0f
 
             // Flöde (2 bytes, Index 11-12)
-            var flow = 0.0f
-            if (data.size >= 13) {
-                val flowSign = data[10].toInt() and 0xFF
-                val isFlowNegative = flowSign == 0x2D
+            var flow: Float
+            val flowSign = data[10].toInt() and 0xFF
+            val isFlowNegative = flowSign == 0x2D
 
-                val fH = data[11].toInt() and 0xFF
-                val fL = data[12].toInt() and 0xFF
-                var rawFlow = (fH shl 8) or fL
-                if (isFlowNegative && rawFlow != 0) rawFlow = -rawFlow
-                flow = rawFlow.toFloat() / 100.0f
-            }
+            val fH = data[11].toInt() and 0xFF
+            val fL = data[12].toInt() and 0xFF
+            var rawFlow = (fH shl 8) or fL
+            if (isFlowNegative && rawFlow != 0) rawFlow = -rawFlow
+            flow = rawFlow.toFloat() / 100.0f
 
             // Batteri (1 byte, Index 13)
-            val battery: Int? = if (data.size >= 14) {
-                data[13].toInt() and 0xFF // Byte 14 (index 13)
-            } else {
-                null
-            }
+            val battery: Int? = data[13].toInt() and 0xFF
 
             return ScaleMeasurement(grams, flow, scaleTimeMillis, battery)
 
@@ -72,5 +64,4 @@ object BookooDataParser {
         }
     }
 
-    private fun ByteArray.toHexString(): String = joinToString(separator = " ") { "%02x".format(it) }
 }
