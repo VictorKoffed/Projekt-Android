@@ -14,8 +14,12 @@ sealed class BleConnectionState {
     object Connecting : BleConnectionState()
 
     /** Anslutning etablerad och tjänster har upptäckts. */
-    // UPPDATERAD: Lade till deviceAddress
-    data class Connected(val deviceName: String, val deviceAddress: String) : BleConnectionState()
+    // UPPDATERAD: Lade till batteryPercent
+    data class Connected(
+        val deviceName: String,
+        val deviceAddress: String,
+        val batteryPercent: Int? = null // <-- LÄGG TILL DENNA RAD
+    ) : BleConnectionState()
 
     /** Ett fel uppstod under skanning, anslutning eller tjänstupptäckt. */
     data class Error(val message: String) : BleConnectionState()

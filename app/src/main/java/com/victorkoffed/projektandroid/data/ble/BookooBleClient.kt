@@ -110,9 +110,11 @@ class BookooBleClient(private val context: Context) {
                     Log.i("BookooBleClient", "CCCD descriptor write successful for ${descriptor.characteristic.uuid}")
                     // Confirm connection state after notification setup
                     if (connectionState.value is BleConnectionState.Connecting) {
+                        // *** ÄNDRING 1: Sätt batteryPercent = null vid anslutning ***
                         connectionState.value = BleConnectionState.Connected(
                             deviceName = gatt.device.name ?: gatt.device.address,
-                            deviceAddress = gatt.device.address
+                            deviceAddress = gatt.device.address,
+                            batteryPercent = null // <-- INITIERA SOM NULL
                         )
                         Log.i("BookooBleClient", "State set to Connected after CCCD write confirmation.")
                     }
@@ -245,11 +247,28 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-
+    // *** ÄNDRING 3: Uppdatera handleCharacteristicChanged ***
     private fun handleCharacteristicChanged(characteristic: BluetoothGattCharacteristic, value: ByteArray? = null) {
         val data: ByteArray? = value ?: characteristic.value
-        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID && data != null) { parseMeasurement(data)?.let { scope.launch { measurements.emit(it) } } }
-        else if (data == null) { Log.w("BookooBleClient", "Characteristic ${characteristic.uuid} changed but data was null.") }
+        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID && data != null) {
+
+            // Parse measurement (som nu inkluderar batteri)
+            parseMeasurement(data)?.let { measurement ->
+
+                // Emit measurement (för LiveBrewScreen)
+                scope.launch { measurements.emit(measurement) }
+
+                // NYTT: Uppdatera connectionState med batterinivå
+                val currentState = connectionState.value
+                if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
+                    // Uppdatera bara om värdet faktiskt har ändrats
+                    if (currentState.batteryPercent != measurement.batteryPercent) {
+                        connectionState.value = currentState.copy(batteryPercent = measurement.batteryPercent)
+                    }
+                }
+            }
+
+        } else if (data == null) { Log.w("BookooBleClient", "Characteristic ${characteristic.uuid} changed but data was null.") }
     }
 
     private fun handleDisconnect(gattInstance: BluetoothGatt?) {
@@ -276,6 +295,7 @@ class BookooBleClient(private val context: Context) {
     }
 
 
+    // *** ÄNDRING 2: Uppdatera parseMeasurement ***
     /** Parsar vågdata (inkl. tid). */
     private fun parseMeasurement(data: ByteArray): ScaleMeasurement? {
         if (data.size < 10 || data.getOrNull(0) != 0x03.toByte() || data.getOrNull(1) != 0x0B.toByte()) { /*Log.w("BookooBleClient", "Invalid pkg: ${data.toHexString()}");*/ return null } // Reduce log spam
@@ -283,7 +303,16 @@ class BookooBleClient(private val context: Context) {
             val msH=data[2].toInt() and 0xFF; val msM=data[3].toInt() and 0xFF; val msL=data[4].toInt() and 0xFF; val scaleTimeMillis=((msH shl 16) or (msM shl 8) or msL).toLong()
             val sign=data[6].toInt() and 0xFF; val neg=sign==0x2D; val wH=data[7].toInt() and 0xFF; val wM=data[8].toInt() and 0xFF; val wL=data[9].toInt() and 0xFF; var rawW=(wH shl 16) or (wM shl 8) or wL; if(neg && rawW!=0) rawW=-rawW; val grams=rawW.toFloat()/100.0f
             var flow=0.0f; if(data.size>=13){ val fSign=data[10].toInt() and 0xFF; val fNeg=fSign==0x2D; val fH=data[11].toInt() and 0xFF; val fL=data[12].toInt() and 0xFF; var rawF=(fH shl 8) or fL; if(fNeg && rawF!=0) rawF=-rawF; flow=rawF.toFloat()/100.0f }
-            return ScaleMeasurement(grams, flow, scaleTimeMillis)
+
+            // NYTT: Läs batterinivå (Byte 14, Index 13)
+            val battery: Int? = if(data.size >= 14) {
+                data[13].toInt() and 0xFF // data[13] är BYTE 14
+            } else {
+                null
+            }
+
+            return ScaleMeasurement(grams, flow, scaleTimeMillis, battery) // <-- UPPDATERA RETURVÄRDE
+
         } catch (e: Exception) { Log.e("BookooBleClient", "Parse error: ${data.toHexString()}", e); return null }
     }
 

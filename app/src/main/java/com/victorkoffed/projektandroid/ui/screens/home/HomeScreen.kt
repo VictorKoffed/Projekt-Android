@@ -347,6 +347,7 @@ fun InfoGrid(
 }
 
 
+// *** HELA ScaleStatusCard ÄR UPPDATERAD ***
 /**
  * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
  * Anpassar texten baserat på om en våg är ihågkommen.
@@ -360,7 +361,7 @@ fun ScaleStatusCard(
 ) {
     val icon: @Composable () -> Unit
     val title: String
-    val subtitle: String
+    val subtitle: String // <-- FLYTTAD HIT
     val iconColor: Color
     val titleColor: Color
     // Klickbar endast om Disconnected eller Error
@@ -368,23 +369,32 @@ fun ScaleStatusCard(
 
     when (connectionState) {
         is BleConnectionState.Connected -> {
+            val batteryLevel = connectionState.batteryPercent // <-- HÄMTA BATTERINIVÅ
+
             icon = { Icon(Icons.Default.BluetoothConnected, contentDescription = "Connected") }
             title = connectionState.deviceName.takeIf { it.isNotEmpty() } ?: "Connected"
-            subtitle = "Scale Connected"
+
+            // NY LOGIK: Visa batterinivå i undertiteln om den finns
+            subtitle = if (batteryLevel != null) {
+                "Battery: $batteryLevel%"
+            } else {
+                "Scale Connected"
+            }
+
             iconColor = MaterialTheme.colorScheme.primary
             titleColor = MaterialTheme.colorScheme.primary
         }
         is BleConnectionState.Connecting -> {
             icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
             title = "Connecting..."
-            subtitle = "Please wait"
+            subtitle = "Please wait" // <-- SÄTT SUBTITLE HÄR
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             titleColor = MaterialTheme.colorScheme.onSurface
         }
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
             title = "Connection Error"
-            subtitle = "Tap to retry" // Uppmaning att försöka igen
+            subtitle = "Tap to retry" // <-- SÄTT SUBTITLE HÄR
             iconColor = MaterialTheme.colorScheme.error
             titleColor = MaterialTheme.colorScheme.error
         }
@@ -392,7 +402,7 @@ fun ScaleStatusCard(
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
             // NY LOGIK: Visa olika undertitlar
-            subtitle = if (rememberedAddress == null) {
+            subtitle = if (rememberedAddress == null) { // <-- SÄTT SUBTITLE HÄR
                 // Ingen våg ihågkommen, visa instruktion
                 "Use Menu (☰) to connect"
             } else {
