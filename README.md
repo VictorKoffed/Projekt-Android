@@ -142,6 +142,8 @@ Kör tester:
 <p > <img src="docs/images/mockup_home.png" alt="Mockup Home" width="1296"/> </p>
 📲 Faktisk app (Live version)
 <p > <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="1299"/> </p>
+📲 Flowchart (Live version)
+<p > <img src="docs/images/Flowchart.png" alt="Coffee Journal App Screenshot" width="1182"/> </p>
 
 ---
 
