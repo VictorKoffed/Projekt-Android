@@ -36,7 +36,7 @@ data class BeanDetailState(
 @HiltViewModel
 class BeanDetailViewModel @Inject constructor(
     private val repository: CoffeeRepository,
-    private val savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     // Hämta beanId från SavedStateHandle

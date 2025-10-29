@@ -89,7 +89,6 @@ fun AppNavigationGraph(
                 coffeeImageVm = coffeeImageVm,
                 scaleVm = scaleVm,
                 snackbarHostState = snackbarHostState,
-                navigateToScreen = { /* No longer used from here */ },
                 onNavigateToBrewSetup = {
                     brewVm.clearBrewResults()
                     navController.navigate(Screen.BrewSetup.route)
@@ -218,8 +217,7 @@ fun AppNavigationGraph(
                 },
                 onTareClick = { scaleVm.tareScale() },
                 onNavigateBack = { navController.popBackStack() },
-                onResetClick = { scaleVm.stopRecording() },
-                navigateTo = { route -> navController.navigate(route) }
+                onResetClick = { scaleVm.stopRecording() }
             )
         }
 

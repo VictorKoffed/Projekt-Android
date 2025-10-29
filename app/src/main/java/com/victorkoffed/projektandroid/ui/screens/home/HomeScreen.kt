@@ -71,7 +71,6 @@ fun HomeScreen(
     coffeeImageVm: CoffeeImageViewModel,
     scaleVm: ScaleViewModel,
     snackbarHostState: SnackbarHostState,
-    navigateToScreen: (String) -> Unit = {},
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
     availableBeans: List<Bean>,

@@ -112,7 +112,7 @@ class BrewDetailViewModel @Inject constructor(
             _showArchivePromptOnEntry.value = beanIdToPrompt
             // Rensa argumentet från SavedStateHandle för att undvika att prompten visas igen vid rotation etc.
             // SavedStateHandle är mutable.
-            savedStateHandle.set("beanIdToArchivePrompt", -1L) // Sätt tillbaka till default
+            savedStateHandle["beanIdToArchivePrompt"] = -1L // Sätt tillbaka till default
         } else {
             Log.d(logTag, "No valid beanIdToArchivePrompt found in navArgs.")
         }
@@ -301,7 +301,7 @@ class BrewDetailViewModel @Inject constructor(
                     // loadBrewDetails() // Ladda om för att visa uppdaterad bönstatus
                     // Istället, bara uppdatera lokalt state om det inte redan reflekterats
                     _brewDetailState.update { currentState ->
-                        if (currentState.bean?.id == beanId && currentState.bean.isArchived == false) {
+                        if (currentState.bean?.id == beanId && !currentState.bean.isArchived) {
                             currentState.copy(bean = currentState.bean.copy(isArchived = true))
                         } else {
                             currentState

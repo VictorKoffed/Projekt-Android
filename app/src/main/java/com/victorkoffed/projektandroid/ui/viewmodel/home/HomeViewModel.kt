@@ -28,7 +28,7 @@ data class RecentBrewItem(
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: CoffeeRepository,
+    repository: CoffeeRepository,
     private val themePreferenceManager: ThemePreferenceManager
 ) : ViewModel() {
 

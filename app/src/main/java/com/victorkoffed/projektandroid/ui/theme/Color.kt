@@ -25,13 +25,8 @@ val GraphWeightBlack = Color(0xFF000000)
 
 // --- PLATSHÅLLARFÄRGER (SPECIFIKA FÖR UTVALDA KOMPONENTER) ---
 
-// Grå bakgrund för "Lägg till bild"-platshållaren
-val PlaceholderGray = Color(0xFFE7E7E7)
-
 // Mörkgrå färg för ikoner/text inuti bildplatshållaren (för kontrast)
 val PlaceholderDarkGray = Color(0xFF606060)
-
-val GentleBackground = Color(0xFFF5EFE6)
 
 // FÄRG: Ljusgrå för huvudbakgrund
 val AppBackgroundGray = Color(0xFFF0F0F0)

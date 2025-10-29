@@ -159,7 +159,7 @@ fun BrewSamplesGraph(
         // --- Slut Beräkning ---
 
         // --- Anropa de utbrutna funktionerna ---
-        drawGridAndLabels(samples, hasFlowData, showFlowLine, drawingContext)
+        drawGridAndLabels(hasFlowData, showFlowLine, drawingContext)
         drawAxes(hasFlowData, showFlowLine, drawingContext)
         drawDataPaths(samples, showWeightLine, showFlowLine, graphLineStrokeWidth, drawingContext)
         drawAxisTitles(hasFlowData, showFlowLine, drawingContext)
@@ -171,8 +171,8 @@ fun BrewSamplesGraph(
 /**
  * Ritar rutnätslinjer och tillhörande etiketter (Y- och X-axeln).
  */
+@SuppressLint("DefaultLocale")
 private fun DrawScope.drawGridAndLabels(
-    samples: List<BrewSample>,
     hasFlowData: Boolean,
     showFlowLine: Boolean,
     ctx: GraphDrawingContext

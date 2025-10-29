@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
@@ -77,8 +77,7 @@ fun LiveBrewScreen(
     onStopAndSaveClick: () -> Unit,
     onTareClick: () -> Unit,
     onNavigateBack: () -> Unit,
-    onResetClick: () -> Unit,
-    navigateTo: (String) -> Unit
+    onResetClick: () -> Unit
 ) {
     var showFlowInfo by remember { mutableStateOf(true) }
     var showDisconnectedAlert by remember { mutableStateOf(false) }
@@ -110,7 +109,7 @@ fun LiveBrewScreen(
                 title = { Text("Live Brew") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {

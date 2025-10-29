@@ -456,9 +456,9 @@ class ScaleViewModel @Inject constructor(
     }
 
     private fun ScaleMeasurement.formatFlowRateToDouble(): Double {
-        return flowRateGramsPerSecond?.let { flow ->
+        return flowRateGramsPerSecond.let { flow ->
             String.format(Locale.US, "%.1f", flow).toDouble()
-        } ?: 0.0
+        }
     }
 
     // --- Hantera anslutningsstatus (Auto-Connect & Disconnect) ---

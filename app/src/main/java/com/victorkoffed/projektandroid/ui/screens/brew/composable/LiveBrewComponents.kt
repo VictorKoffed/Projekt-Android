@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
@@ -142,7 +142,7 @@ fun StatusDisplay(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isPausedDueToDisconnect) {
                             // Meddelande när paus beror på bortkoppling
-                            Icon(Icons.Default.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
                             // Använder error color för varningstext
                             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onErrorContainer) {
