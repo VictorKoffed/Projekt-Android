@@ -59,6 +59,9 @@ import kotlin.time.Duration.Companion.seconds
 private const val PREFS_NAME = "ScalePrefs"
 private const val PREF_REMEMBERED_SCALE_ADDRESS = "remembered_scale_address"
 private const val PREF_REMEMBER_SCALE_ENABLED = "remember_scale_enabled"
+// NY KONSTANT för auto-connect
+private const val PREF_AUTO_CONNECT_ENABLED = "auto_connect_enabled"
+
 
 // Dataklass för returvärdet från stopRecordingAndSave
 data class SaveBrewResult(
@@ -152,13 +155,20 @@ class ScaleViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown
 
-    // --- Remember Scale State ---
+    // --- Remember & Auto-Connect Scale State ---
     private val _rememberScaleEnabled = MutableStateFlow(
         sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false)
     )
     val rememberScaleEnabled: StateFlow<Boolean> = _rememberScaleEnabled.asStateFlow()
 
-    // NYTT: Exponera den sparade adressen så UI:t vet om en våg är ihågkommen
+    // NYTT: State för Auto-Connect
+    private val _autoConnectEnabled = MutableStateFlow(
+        // Default till true om remember är på, annars false
+        sharedPreferences.getBoolean(PREF_AUTO_CONNECT_ENABLED, _rememberScaleEnabled.value)
+    )
+    val autoConnectEnabled: StateFlow<Boolean> = _autoConnectEnabled.asStateFlow()
+
+
     private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
     val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
 
@@ -168,6 +178,7 @@ class ScaleViewModel @Inject constructor(
     private var timerJob: Job? = null
 
     init {
+        // Försök auto-connect vid start om inställningarna tillåter
         attemptAutoConnect()
     }
 
@@ -285,10 +296,7 @@ class ScaleViewModel @Inject constructor(
         // Redan användarvänliga fel
         if (finalSamples.isEmpty()) { _error.value = "Ingen data spelades in."; return SaveBrewResult(null) }
 
-        // ***** KONTROLLERA DENNA DEL *****
-        // Felet du ser är troligen för att 'finalTimeMillis' inte är synlig här.
-        // Se till att 'val finalTimeMillis' är deklarerad *innan* denna rad.
-        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis // <-- DETTA ÄR RADEN SOM TROLIGEN VAR 294
+        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
 
         val beanId = setupState.selectedBean?.id
         val doseGrams = setupState.doseGrams.toDoubleOrNull()
@@ -302,7 +310,7 @@ class ScaleViewModel @Inject constructor(
         val newBrew = Brew(
             beanId = beanId,
             doseGrams = doseGrams,
-            startedAt = Date(actualStartTimeMillis), // <-- Här används variabeln
+            startedAt = Date(actualStartTimeMillis),
             grinderId = setupState.selectedGrinder?.id,
             methodId = setupState.selectedMethod?.id,
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
@@ -310,8 +318,6 @@ class ScaleViewModel @Inject constructor(
             brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
             notes = "Recorded${scaleInfo} on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}"
         )
-        // ***** SLUT PÅ KONTROLL *****
-
 
         val savedBrewId: Long? = viewModelScope.async {
             try {
@@ -363,7 +369,7 @@ class ScaleViewModel @Inject constructor(
 
 
     // ---------------------------------------------------------------------------------------------
-    // --- Funktionalitet för 'Kom Ihåg Våg' Preferens ---
+    // --- Funktionalitet för 'Kom Ihåg Våg' & Auto-Connect Preferenser ---
     // ---------------------------------------------------------------------------------------------
 
     fun setRememberScaleEnabled(enabled: Boolean) {
@@ -372,15 +378,33 @@ class ScaleViewModel @Inject constructor(
         Log.d("ScaleViewModel", "Set 'remember scale' to: $enabled")
 
         if (!enabled) {
-            saveRememberedScaleAddress(null)
+            // Om "kom ihåg" stängs av, stäng även av auto-connect och glöm adressen
+            setAutoConnectEnabled(false) // Stänger av auto-connect
+            saveRememberedScaleAddress(null) // Glömmer adressen
         } else {
+            // Om "kom ihåg" slås på, försök spara aktuell adress
             val currentState = connectionState.replayCache.lastOrNull()
             if (currentState is BleConnectionState.Connected) {
                 saveRememberedScaleAddress(currentState.deviceAddress)
+                // Slå på auto-connect som standard när man väljer att komma ihåg
+                setAutoConnectEnabled(true)
             } else {
                 Log.w("ScaleViewModel", "Tried to remember scale address, but not connected.")
+                // Sätt auto-connect till false om vi inte kunde spara adressen direkt
+                setAutoConnectEnabled(false)
             }
         }
+    }
+
+    // NY FUNKTION: För att ändra auto-connect separat
+    fun setAutoConnectEnabled(enabled: Boolean) {
+        // Tillåt bara att slå på auto-connect om "remember" också är på
+        val canEnable = _rememberScaleEnabled.value
+        val newValue = enabled && canEnable
+
+        sharedPreferences.edit { putBoolean(PREF_AUTO_CONNECT_ENABLED, newValue) }
+        _autoConnectEnabled.value = newValue
+        Log.d("ScaleViewModel", "Set 'auto connect' to: $newValue (Remember enabled: $canEnable)")
     }
 
 
@@ -388,13 +412,15 @@ class ScaleViewModel @Inject constructor(
         if (address != null && _rememberScaleEnabled.value) {
             sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
             Log.d("ScaleViewModel", "Saved scale address: $address")
-            _rememberedScaleAddress.value = address // <-- UPPDATERA NYTT STATE
+            _rememberedScaleAddress.value = address
         } else {
             if (sharedPreferences.contains(PREF_REMEMBERED_SCALE_ADDRESS)) {
                 sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
                 Log.d("ScaleViewModel", "Cleared saved scale address.")
             }
-            _rememberedScaleAddress.value = null // <-- UPPDATERA NYTT STATE
+            _rememberedScaleAddress.value = null
+            // Stäng av auto-connect om vi glömmer adressen
+            setAutoConnectEnabled(false)
         }
     }
 
@@ -407,18 +433,19 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
-    // NYTT: Offentlig funktion för att manuellt glömma vågen
+    // Offentlig funktion för att manuellt glömma vågen
     fun forgetRememberedScale() {
         Log.d("ScaleViewModel", "Manually forgetting scale.")
-        // Att sätta 'enabled' till false kommer automatiskt att
-        // anropa saveRememberedScaleAddress(null) och rensa minnet.
+        // Att stänga av "remember" triggar logiken i setRememberScaleEnabled
+        // som också stänger av auto-connect och rensar adressen.
         setRememberScaleEnabled(false)
     }
 
 
     private fun attemptAutoConnect() {
-        if (!_rememberScaleEnabled.value) {
-            Log.d("ScaleViewModel", "'Remember scale' is disabled, skipping auto-connect.")
+        // Kontrollera BÅDE remember OCH auto-connect
+        if (!_rememberScaleEnabled.value || !_autoConnectEnabled.value) {
+            Log.d("ScaleViewModel", "Auto-connect skipped (Remember: ${_rememberScaleEnabled.value}, AutoConnect: ${_autoConnectEnabled.value}).")
             return
         }
         val lastState = connectionState.replayCache.lastOrNull()
@@ -445,6 +472,7 @@ class ScaleViewModel @Inject constructor(
         when (state) {
             is BleConnectionState.Connected -> {
                 Log.i("ScaleViewModel", "Connected to ${state.deviceName} (${state.deviceAddress}).")
+                // Spara adressen om "remember" är på (behöver inte kolla auto-connect här)
                 if (_rememberScaleEnabled.value) {
                     saveRememberedScaleAddress(state.deviceAddress)
                 }
@@ -468,15 +496,17 @@ class ScaleViewModel @Inject constructor(
                     stopRecording()
                 }
 
-                if (!isManualDisconnect && _rememberScaleEnabled.value && connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting) {
+                // Försök auto-reconnect endast om INTE manuell disconnect OCH auto-connect är på
+                if (!isManualDisconnect && _rememberScaleEnabled.value && _autoConnectEnabled.value && connectionState.replayCache.lastOrNull() !is BleConnectionState.Connecting) {
                     viewModelScope.launch {
-                        Log.d("ScaleViewModel", "Unexpected disconnect. Waiting 2 seconds before attempting auto-reconnect...")
+                        Log.d("ScaleViewModel", "Unexpected disconnect with auto-connect enabled. Waiting 2 seconds before attempting auto-reconnect...")
                         delay(2000L)
-                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected && _rememberScaleEnabled.value) {
+                        // Dubbelkolla att vi fortfarande ska återansluta
+                        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Disconnected && _rememberScaleEnabled.value && _autoConnectEnabled.value) {
                             Log.i("ScaleViewModel", "Still disconnected. Attempting auto-reconnect.")
                             attemptAutoConnect()
                         } else {
-                            Log.d("ScaleViewModel", "State changed during delay, remember was disabled, or connection already in progress. Skipping auto-reconnect.")
+                            Log.d("ScaleViewModel", "State changed, remember/auto-connect disabled, or connection already in progress. Skipping auto-reconnect.")
                         }
                     }
                 }
@@ -501,14 +531,28 @@ class ScaleViewModel @Inject constructor(
     }
 
     /**
-     * NY FUNKTION: Initierar ett nytt försök att automatiskt ansluta till den sparade vågen.
-     * Används för manuell återanslutning från UI, t.ex. vid klick på statuskort.
+     * Initierar ett nytt försök att ansluta till den sparade vågen.
+     * Används för manuell återanslutning från UI. Respekterar INTE auto-connect setting.
      */
     fun retryConnection() {
         Log.i("ScaleViewModel", "Manual retry connection triggered.")
         clearError() // Rensa eventuella gamla fel
-        // Återanvänd samma logik som vid appstart
-        attemptAutoConnect()
+
+        // Kolla om vi har en adress att ansluta till
+        val rememberedAddress = loadRememberedScaleAddress()
+        if (rememberedAddress != null) {
+            val lastState = connectionState.replayCache.lastOrNull()
+            if (lastState is BleConnectionState.Connected || lastState is BleConnectionState.Connecting) {
+                Log.d("ScaleViewModel", "Manual retry skipped: Already connected or connecting.")
+                return
+            }
+            Log.i("ScaleViewModel", "Attempting manual connect to saved address: $rememberedAddress")
+            isManualDisconnect = false
+            scaleRepo.connect(rememberedAddress)
+        } else {
+            Log.w("ScaleViewModel", "Manual retry failed: No remembered scale address found.")
+            _error.value = "No scale remembered to connect to."
+        }
     }
 
 
@@ -521,7 +565,7 @@ class ScaleViewModel @Inject constructor(
         Log.d("ScaleViewModel", "onCleared called. Stopping scan and disconnecting.")
         stopScan()
         if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) {
-            isManualDisconnect = true
+            isManualDisconnect = true // Markera som manuell så att ingen auto-reconnect triggas
             disconnect()
         }
         measurementJob?.cancel()

@@ -73,9 +73,9 @@ fun ScaleConnectScreen(
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
     // Hämta felmeddelanden från ViewModel (för skanning/sparande)
     val error by vm.error.collectAsState()
-    // --- NYTT: Hämta Remember Scale State ---
+    // --- Hämta Remember & Auto-Connect State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
-    // NYTT: Hämta den ihågkomna adressen
+    val autoConnectEnabled by vm.autoConnectEnabled.collectAsState() // <-- NYTT STATE
     val rememberedAddress by vm.rememberedScaleAddress.collectAsState()
 
 
@@ -97,7 +97,7 @@ fun ScaleConnectScreen(
         }
     }
 
-    // NY: Effekt för att visa anslutningsfel i en Snackbar
+    // Effekt för att visa anslutningsfel i en Snackbar
     LaunchedEffect(connectionState) {
         if (connectionState is BleConnectionState.Error) {
             scope.launch {
@@ -142,15 +142,14 @@ fun ScaleConnectScreen(
             when (state) {
                 is BleConnectionState.Connected -> {
                     val measurement by vm.measurement.collectAsState(initial = ScaleMeasurement(0f, 0f))
-                    // TA BORT: val rememberScaleEnabled = vm.isRememberScaleEnabled()
 
                     ConnectedView(
                         deviceName = state.deviceName,
                         measurement = measurement,
-                        // NYTT: Skicka in det insamlade state-värdet
                         rememberScale = rememberScaleEnabled,
-                        // NYTT: Skicka funktionsreferensen direkt
+                        autoConnect = autoConnectEnabled, // <-- SKICKA MED AUTO-CONNECT STATE
                         onRememberScaleChange = vm::setRememberScaleEnabled,
+                        onAutoConnectChange = vm::setAutoConnectEnabled, // <-- SKICKA MED AUTO-CONNECT FUNKTION
                         onDisconnect = { vm.disconnect() },
                         onTare = { vm.tareScale() }
                     )
@@ -190,9 +189,10 @@ fun ScaleConnectScreen(
 private fun ConnectedView(
     deviceName: String,
     measurement: ScaleMeasurement,
-    // UPPDATERAD: Tar emot ett Boolean-värde direkt
     rememberScale: Boolean,
+    autoConnect: Boolean, // <-- NY PARAMETER
     onRememberScaleChange: (Boolean) -> Unit,
+    onAutoConnectChange: (Boolean) -> Unit, // <-- NY PARAMETER
     onDisconnect: () -> Unit,
     onTare: () -> Unit
 ) {
@@ -210,17 +210,37 @@ private fun ConnectedView(
         // Kontroll för "Kom ihåg våg"
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            // UPPDATERAD: Använd rememberScale direkt här
             modifier = Modifier.clickable { onRememberScaleChange(!rememberScale) }
         ) {
             Checkbox(
-                // UPPDATERAD: Använd rememberScale direkt här
                 checked = rememberScale,
                 onCheckedChange = onRememberScaleChange
             )
             Text("Remember this scale")
         }
+        // NY KONTROLL för "Auto-connect"
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            // Gör endast klickbar om "Remember" är på
+            modifier = Modifier.clickable(enabled = rememberScale) {
+                if (rememberScale) { // Dubbelkolla att remember är på innan ändring
+                    onAutoConnectChange(!autoConnect)
+                }
+            }
+        ) {
+            Checkbox(
+                checked = autoConnect,
+                onCheckedChange = onAutoConnectChange,
+                enabled = rememberScale // Checkbox är bara aktiv om "Remember" är på
+            )
+            Text(
+                text ="Auto-connect when available",
+                // Gråa ut texten om "Remember" är av
+                color = if (rememberScale) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
         Spacer(Modifier.height(16.dp))
+
 
         // Visning av aktuell vikt
         Text("Weight", style = MaterialTheme.typography.titleLarge)
@@ -249,10 +269,10 @@ private fun ScanningView(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
     connectionState: BleConnectionState,
-    rememberedAddress: String?, // <-- Ny parameter
+    rememberedAddress: String?,
     onToggleScan: () -> Unit,
     onDeviceClick: (DiscoveredDevice) -> Unit,
-    onForgetScaleClick: () -> Unit // <-- Ny parameter
+    onForgetScaleClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -266,7 +286,7 @@ private fun ScanningView(
             onToggleScan = onToggleScan
         )
 
-        // NYTT: Visa en rad för att glömma vågen om en adress finns sparad
+        // Visa en rad för att glömma vågen om en adress finns sparad
         if (rememberedAddress != null) {
             ForgetScaleRow(
                 address = rememberedAddress,
@@ -373,7 +393,7 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     }
 }
 
-// NYTT: Composable för att visa den sparade vågen och "Glöm"-knappen
+// Composable för att visa den sparade vågen och "Glöm"-knappen
 @Composable
 private fun ForgetScaleRow(
     address: String,

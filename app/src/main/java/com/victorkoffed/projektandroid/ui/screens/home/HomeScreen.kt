@@ -24,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Menu // Importera Menu-ikonen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -112,6 +112,8 @@ fun HomeScreen(
     val scaleConnectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
     )
+    // NYTT: Hämta rememberedAddress
+    val rememberedScaleAddress by scaleVm.rememberedScaleAddress.collectAsState()
 
     // State för att visa varning om setup saknas (kaffeböna/metod)
     var showSetupWarningDialog by remember { mutableStateOf(false) }
@@ -221,8 +223,8 @@ fun HomeScreen(
                     imageError = imageError,
                     timeSinceLastCoffee = timeSinceLastCoffee ?: "∞",
                     scaleConnectionState = scaleConnectionState,
+                    rememberedScaleAddress = rememberedScaleAddress, // <-- SKICKA MED ADRESS
                     onReloadImage = { coffeeImageVm.loadRandomCoffeeImage() },
-                    // NYTT: Skicka med retryConnection-funktionen från scaleVm
                     onRetryScaleConnect = { scaleVm.retryConnection() }
                 )
             }
@@ -284,8 +286,8 @@ fun InfoGrid(
     imageError: String?,
     timeSinceLastCoffee: String,
     scaleConnectionState: BleConnectionState,
+    rememberedScaleAddress: String?, // <-- NY PARAMETER
     onReloadImage: () -> Unit,
-    // NYTT: Ta emot onRetryScaleConnect callback
     onRetryScaleConnect: () -> Unit
 ) {
     val firstRowHeight = 160.dp
@@ -324,7 +326,7 @@ fun InfoGrid(
             // Kort 2: Vågens status (modifierad)
             ScaleStatusCard(
                 connectionState = scaleConnectionState,
-                // NYTT: Skicka med onRetryConnect istället för onClick
+                rememberedAddress = rememberedScaleAddress, // <-- SKICKA MED ADRESS
                 onRetryConnect = onRetryScaleConnect,
                 modifier = Modifier.weight(1f).height(firstRowHeight)
             )
@@ -332,7 +334,6 @@ fun InfoGrid(
 
         // Andra raden: Brews och Tid sedan kaffe
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // LÄGG TILLBAKA KORTET FÖR TOTAL BREWS
             InfoCard(title = totalBrews.toString(), subtitle = "Brews", modifier = Modifier.weight(1f).height(otherRowHeight))
             InfoCard(title = timeSinceLastCoffee, subtitle = "Since last coffee", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
@@ -348,12 +349,12 @@ fun InfoGrid(
 
 /**
  * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
- * ÄR NU KLICKBAR för att försöka ansluta igen vid fel eller frånkoppling.
+ * Anpassar texten baserat på om en våg är ihågkommen.
  */
 @Composable
 fun ScaleStatusCard(
     connectionState: BleConnectionState,
-    // NYTT: Callback för att försöka ansluta igen
+    rememberedAddress: String?, // <-- NY PARAMETER
     onRetryConnect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -362,7 +363,7 @@ fun ScaleStatusCard(
     val subtitle: String
     val iconColor: Color
     val titleColor: Color
-    // NYTT: Flagga för att avgöra om kortet ska vara klickbart
+    // Klickbar endast om Disconnected eller Error
     val isClickableForRetry = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
 
     when (connectionState) {
@@ -383,26 +384,30 @@ fun ScaleStatusCard(
         is BleConnectionState.Error -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
             title = "Connection Error"
-            // NYTT: Tydligare uppmaning i undertiteln
-            subtitle = "Tap to retry" // Eller behåll connectionState.message om du föredrar det
+            subtitle = "Tap to retry" // Uppmaning att försöka igen
             iconColor = MaterialTheme.colorScheme.error
             titleColor = MaterialTheme.colorScheme.error
         }
         BleConnectionState.Disconnected -> {
             icon = { Icon(Icons.Default.BluetoothDisabled, contentDescription = "Disconnected") }
             title = "Scale disconnected"
-            // NYTT: Tydligare uppmaning i undertiteln
-            subtitle = "Tap to retry connect" // Eller "Use menu to connect" om du vill behålla den
+            // NY LOGIK: Visa olika undertitlar
+            subtitle = if (rememberedAddress == null) {
+                // Ingen våg ihågkommen, visa instruktion
+                "Use Menu (☰) to connect"
+            } else {
+                // Våg ihågkommen, uppmana till att försöka igen
+                "Tap to retry connect"
+            }
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
             titleColor = MaterialTheme.colorScheme.onSurface
         }
     }
 
     Card(
-        // NYTT: Gör kortet klickbart endast om isClickableForRetry är sann
         modifier = modifier.clickable(
             enabled = isClickableForRetry,
-            onClick = onRetryConnect // Anropa retry-funktionen vid klick
+            onClick = onRetryConnect
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         shape = RoundedCornerShape(12.dp),
@@ -416,14 +421,25 @@ fun ScaleStatusCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                // Tvingar ikonen att använda den dynamiskt valda färgen
                 CompositionLocalProvider(LocalContentColor provides iconColor) {
                     icon()
                 }
             }
             Spacer(Modifier.height(4.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = titleColor)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            // För instruktionstexten, visa även menyikonen
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                // Visa menyikonen om det är instruktionstexten
+                if (connectionState is BleConnectionState.Disconnected && rememberedAddress == null) {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = null, // Dekorativ ikon
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp).padding(start = 4.dp)
+                    )
+                }
+            }
         }
     }
 }
