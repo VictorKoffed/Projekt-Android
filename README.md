@@ -18,6 +18,7 @@ Ett modernt kaffejournal byggt i **Kotlin** med **Jetpack Compose**. Appen är d
 - [Arkitektur](#-arkitektur)
 - [Avancerade Kotlin/Android-koncept som används](#-avancerade-kotlinandroid-koncept-som-används)
 - [Testning](#-testning)
+- [Skärmbilder](#-skärmbilder)
 - [Katalog över viktiga filer](#-katalog-över-viktiga-filer)
 - [License](#-license)
 
