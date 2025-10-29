@@ -101,147 +101,161 @@ fun BrewScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(paddingValues), // Applicerar Scaffold padding
         ) {
-            // Kontrollrad med funktionen "Ladda senaste inställningar"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+            // --- Scrollbart Innehåll (Formuläret) ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Tar all resterande plats och tillåter scrollning
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp), // Applicerar horisontell padding för innehållet
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Knapp för att ladda senaste använda inställningar
-                TextButton(
-                    onClick = { vm.loadLatestBrewSettings() },
-                    enabled = hasPreviousBrews // Endast aktiv om det finns data att ladda
+                // Kontrollrad med funktionen "Ladda senaste inställningar"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.History,
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize)
-                    )
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text("Load latest settings")
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-
-            // --- Inställningsformulär ---
-
-            // Dropdown för val av kaffeböna (obligatorisk, markerad med *)
-            DropdownSelector(
-                label = "Bean *",
-                options = availableBeans,
-                selectedOption = setupState.selectedBean,
-                onOptionSelected = { vm.selectBean(it) },
-                optionToString = { it?.name ?: "Select bean..." }
-            )
-            // Textfält för dos (obligatorisk)
-            OutlinedTextField(
-                value = setupState.doseGrams,
-                onValueChange = { vm.onDoseChange(it) },
-                label = { Text("Dose (g) *") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            // Dropdown för kvarn
-            DropdownSelector(
-                label = "Grinder",
-                options = availableGrinders,
-                selectedOption = setupState.selectedGrinder,
-                onOptionSelected = { vm.selectGrinder(it) },
-                optionToString = { it?.name ?: "Select grinder..." }
-            )
-            // Textfält för malningsinställning
-            OutlinedTextField(
-                value = setupState.grindSetting,
-                onValueChange = { vm.onGrindSettingChange(it) },
-                label = { Text("Grind Setting") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            // Textfält för kvarnhastighet
-            OutlinedTextField(
-                value = setupState.grindSpeedRpm,
-                onValueChange = { vm.onGrindSpeedChange(it) },
-                label = { Text("Grind Speed (RPM)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            // Dropdown för bryggmetod (obligatorisk)
-            DropdownSelector(
-                label = "Method *",
-                options = availableMethods,
-                selectedOption = setupState.selectedMethod,
-                onOptionSelected = { vm.selectMethod(it) },
-                optionToString = { it?.name ?: "Select method..." }
-            )
-            // Textfält för vattentemperatur
-            OutlinedTextField(
-                value = setupState.brewTempCelsius,
-                onValueChange = { vm.onBrewTempChange(it) },
-                label = { Text("Brew Temperature (°C)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(16.dp))
-
-            // --- Start Live Brew-knappen ---
-            Button(
-                onClick = {
-                    // Logik: Om vågen är ansluten, starta bryggningen direkt.
-                    if (scaleConnectionState is BleConnectionState.Connected) {
-                        onStartBrewClick(vm.getCurrentSetup())
-                    } else {
-                        // Annars, visa varningsdialogen för att välja åtgärd
-                        showConnectionAlert = true
+                    // Knapp för att ladda senaste använda inställningar
+                    TextButton(
+                        onClick = { vm.loadLatestBrewSettings() },
+                        enabled = hasPreviousBrews // Endast aktiv om det finns data att ladda
+                    ) {
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Load latest settings")
                     }
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                // Endast aktiv om alla obligatoriska fält (Bean, Dose, Method) är ifyllda
-                enabled = vm.isSetupValid(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                }
+                Spacer(Modifier.height(8.dp))
+
+                // --- Inställningsformulär ---
+
+                // Dropdown för val av kaffeböna (obligatorisk, markerad med *)
+                DropdownSelector(
+                    label = "Bean *",
+                    options = availableBeans,
+                    selectedOption = setupState.selectedBean,
+                    onOptionSelected = { vm.selectBean(it) },
+                    optionToString = { it?.name ?: "Select bean..." }
                 )
-            ) {
-                Text("Start Live Brew")
+                // Textfält för dos (obligatorisk)
+                OutlinedTextField(
+                    value = setupState.doseGrams,
+                    onValueChange = { vm.onDoseChange(it) },
+                    label = { Text("Dose (g) *") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                // Dropdown för kvarn
+                DropdownSelector(
+                    label = "Grinder",
+                    options = availableGrinders,
+                    selectedOption = setupState.selectedGrinder,
+                    onOptionSelected = { vm.selectGrinder(it) },
+                    optionToString = { it?.name ?: "Select grinder..." }
+                )
+                // Textfält för malningsinställning
+                OutlinedTextField(
+                    value = setupState.grindSetting,
+                    onValueChange = { vm.onGrindSettingChange(it) },
+                    label = { Text("Grind Setting") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // Textfält för kvarnhastighet
+                OutlinedTextField(
+                    value = setupState.grindSpeedRpm,
+                    onValueChange = { vm.onGrindSpeedChange(it) },
+                    label = { Text("Grind Speed (RPM)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                // Dropdown för bryggmetod (obligatorisk)
+                DropdownSelector(
+                    label = "Method *",
+                    options = availableMethods,
+                    selectedOption = setupState.selectedMethod,
+                    onOptionSelected = { vm.selectMethod(it) },
+                    optionToString = { it?.name ?: "Select method..." }
+                )
+                // Textfält för vattentemperatur
+                OutlinedTextField(
+                    value = setupState.brewTempCelsius,
+                    onValueChange = { vm.onBrewTempChange(it) },
+                    label = { Text("Brew Temperature (°C)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // Extra padding i slutet av scrollbart innehåll
+                Spacer(Modifier.height(16.dp))
             }
 
-
-            // --- Alert Dialog vid frånkopplad våg ---
-            if (showConnectionAlert) {
-                AlertDialog(
-                    onDismissRequest = { showConnectionAlert = false },
-                    title = { Text("Scale Not Connected") },
-                    text = { Text("The scale is not connected. How do you want to proceed?") },
-                    confirmButton = {
-                        // Alternativ 1: Navigera till anslutningsskärmen
-                        TextButton(onClick = {
-                            showConnectionAlert = false
-                            onNavigateToScale()
-                        }) {
-                            Text("Connect Scale")
+            // --- Fixerad Knapp (Alltid synlig) ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 8.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = {
+                        // Logik: Om vågen är ansluten, starta bryggningen direkt.
+                        if (scaleConnectionState is BleConnectionState.Connected) {
+                            onStartBrewClick(vm.getCurrentSetup())
+                        } else {
+                            // Annars, visa varningsdialogen för att välja åtgärd
+                            showConnectionAlert = true
                         }
                     },
-                    dismissButton = {
-                        // Alternativ 2: Avbryt
-                        TextButton(onClick = { showConnectionAlert = false }) {
-                            Text("Cancel")
-                        }
-                        // Alternativ 3: Fortsätt och spara utan realtidsdata
-                        TextButton(onClick = {
-                            showConnectionAlert = false
-                            onSaveWithoutGraph()
-                        }) {
-                            Text("Save without Graph")
-                        }
-                    }
-                )
+                    // Endast aktiv om alla obligatoriska fält (Bean, Dose, Method) är ifyllda
+                    enabled = vm.isSetupValid(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Start Live Brew")
+                }
             }
         }
+    } // Slut Scaffold Content Scope
+
+    // --- Alert Dialog vid frånkopplad våg (Behöver vara utanför Column för att flyta) ---
+    if (showConnectionAlert) {
+        AlertDialog(
+            onDismissRequest = { showConnectionAlert = false },
+            title = { Text("Scale Not Connected") },
+            text = { Text("The scale is not connected. How do you want to proceed?") },
+            confirmButton = {
+                // Alternativ 1: Navigera till anslutningsskärmen
+                TextButton(onClick = {
+                    showConnectionAlert = false
+                    onNavigateToScale()
+                }) {
+                    Text("Connect Scale")
+                }
+            },
+            dismissButton = {
+                // Alternativ 2: Avbryt
+                TextButton(onClick = { showConnectionAlert = false }) {
+                    Text("Cancel")
+                }
+                // Alternativ 3: Fortsätt och spara utan realtidsdata
+                TextButton(onClick = {
+                    showConnectionAlert = false
+                    onSaveWithoutGraph()
+                }) {
+                    Text("Save without Graph")
+                }
+            }
+        )
     }
 }
 
