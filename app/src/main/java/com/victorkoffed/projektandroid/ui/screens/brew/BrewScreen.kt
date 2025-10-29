@@ -109,7 +109,7 @@ fun BrewScreen(
             // Kontrollrad med funktionen "Ladda senaste inställningar"
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End, // Flyttar knappen till höger
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Knapp för att ladda senaste använda inställningar

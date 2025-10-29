@@ -1,7 +1,7 @@
 package com.victorkoffed.projektandroid
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp // <-- NY IMPORT
+import dagger.hilt.android.HiltAndroidApp
 
 /**
  * Anpassad Application-klass som håller globala singleton-instanser för
@@ -10,5 +10,5 @@ import dagger.hilt.android.HiltAndroidApp // <-- NY IMPORT
  *
  * Hilt kommer att hantera beroendeinjektionen för de flesta instanser.
  */
-@HiltAndroidApp // <-- NY ANNOTERING
+@HiltAndroidApp
 class CoffeeJournalApplication : Application()

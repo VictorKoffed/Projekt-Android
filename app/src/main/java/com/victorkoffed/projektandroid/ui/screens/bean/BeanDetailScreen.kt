@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/bean/BeanDetailScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.bean
 
 import android.annotation.SuppressLint
@@ -88,7 +87,7 @@ fun BeanDetailScreen(
     // UI-states från ViewModel
     val state by viewModel.beanDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
-    val showArchivePrompt by viewModel.showArchivePromptAfterSave.collectAsState() // Nytt state för prompt
+    val showArchivePrompt by viewModel.showArchivePromptAfterSave.collectAsState()
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showArchiveWeightWarningDialog by remember { mutableStateOf(false) }
 

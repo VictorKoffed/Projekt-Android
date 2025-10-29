@@ -25,9 +25,9 @@ private val LightCoffeeColorScheme = lightColorScheme(
     tertiaryContainer = CoffeeBrown.copy(alpha = 0.3f),
     onTertiaryContainer = Black,
 
-    // UPPDATERAD FÄRG: Bakgrund ska vara Ljusgrå (för bakom korten)
+    //  FÄRG: Bakgrund Ljusgrå (för bakom korten)
     background = AppBackgroundGray,
-    // UPPDATERAD FÄRG: Ytor (kort, TopAppBar, NavigationBar/Bottom Bar) ska vara Vit
+    //  FÄRG: Ytor (kort, TopAppBar, NavigationBar/Bottom Bar) ska vara Vita
     surface = Color.White,
     onSurface = Color.Black,
     onBackground = Color.Black,
@@ -41,7 +41,7 @@ private val LightCoffeeColorScheme = lightColorScheme(
  * Definierar en mörk färgpalett enligt Material 3-specifikationen.
  */
 private val DarkCoffeeColorScheme = darkColorScheme(
-    // Använd CoffeeDark (331A15) som bas och CoffeeBrown (DCC7AA) som accent
+    // Använder CoffeeDark (331A15) som bas och CoffeeBrown (DCC7AA) som accent
     primary = CoffeeBrown, // Primär accent
     onPrimary = Color.Black, // Textfärg som är läsbar på primary
     primaryContainer = CoffeeBrown.copy(alpha = 0.3f),
@@ -75,7 +75,6 @@ private val DarkCoffeeColorScheme = darkColorScheme(
  */
 @Composable
 fun ProjektAndroidTheme(
-    // NYTT: Kräver ThemePreferenceManager för att hämta det sparade valet.
     themePreferenceManager: ThemePreferenceManager,
     content: @Composable () -> Unit
 ) {

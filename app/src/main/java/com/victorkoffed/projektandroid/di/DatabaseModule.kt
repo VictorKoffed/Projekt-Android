@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/di/DatabaseModule.kt
 package com.victorkoffed.projektandroid.di
 
 import android.content.Context
@@ -38,7 +37,7 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideScaleRepository(impl: BookooScaleRepositoryImpl): ScaleRepository = impl
 
-    // --- NYTT: Scale Preference Manager ---
+    // --- Scale Preference Manager ---
     @Provides @Singleton
     fun provideScalePreferenceManager(@ApplicationContext context: Context): ScalePreferenceManager =
         ScalePreferenceManager(context)

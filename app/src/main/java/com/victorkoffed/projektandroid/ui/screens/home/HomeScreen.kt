@@ -1,14 +1,30 @@
 package com.victorkoffed.projektandroid.ui.screens.home
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // Importerar allt från layout
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.* // Importerar allt från material3
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,8 +40,11 @@ import androidx.compose.ui.unit.dp
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
-// NY IMPORT FÖR KOMPONENTER OCH HJÄLPFUNKTION
-import com.victorkoffed.projektandroid.ui.screens.home.composable.* import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
+import com.victorkoffed.projektandroid.ui.screens.home.composable.InfoGrid
+import com.victorkoffed.projektandroid.ui.screens.home.composable.NoBrewsTextWithIcon
+import com.victorkoffed.projektandroid.ui.screens.home.composable.RecentBrewCard
+import com.victorkoffed.projektandroid.ui.screens.home.composable.formatTimeSince
+import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.delay

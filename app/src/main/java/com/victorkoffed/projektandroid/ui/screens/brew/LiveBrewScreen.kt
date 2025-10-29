@@ -1,16 +1,12 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
-import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -37,10 +33,9 @@ import androidx.compose.ui.unit.dp
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-// NYA IMPORTER
-import com.victorkoffed.projektandroid.ui.screens.brew.composable.StatusDisplay
-import com.victorkoffed.projektandroid.ui.screens.brew.composable.LiveBrewGraph
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
+import com.victorkoffed.projektandroid.ui.screens.brew.composable.LiveBrewGraph
+import com.victorkoffed.projektandroid.ui.screens.brew.composable.StatusDisplay
 
 
 /**
@@ -82,7 +77,7 @@ fun LiveBrewScreen(
     onStopAndSaveClick: () -> Unit,
     onTareClick: () -> Unit,
     onNavigateBack: () -> Unit,
-    onResetClick: () -> Unit, // <--- LADES TILL HÄR
+    onResetClick: () -> Unit,
     navigateTo: (String) -> Unit
 ) {
     var showFlowInfo by remember { mutableStateOf(true) }
@@ -136,7 +131,6 @@ fun LiveBrewScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ANROP TILL UTBRUTEN KOMPONENT: StatusDisplay
             StatusDisplay(
                 currentTimeMillis = currentTimeMillis,
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
@@ -147,7 +141,6 @@ fun LiveBrewScreen(
                 countdown = countdown
             )
             Spacer(Modifier.height(16.dp))
-            // ANROP TILL UTBRUTEN KOMPONENT: LiveBrewGraph
             LiveBrewGraph(
                 samples = samples,
                 modifier = Modifier
@@ -174,7 +167,6 @@ fun LiveBrewScreen(
                 )
             )
             Spacer(Modifier.height(16.dp))
-            // ANROP TILL UTBRUTEN KOMPONENT: BrewControls
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
@@ -185,7 +177,7 @@ fun LiveBrewScreen(
                 onPauseClick = onPauseClick,
                 onResumeClick = onResumeClick,
                 onTareClick = onTareClick,
-                onResetClick = onResetClick // <--- KOPPLAD TILL NY PARAMETER
+                onResetClick = onResetClick
             )
         }
 

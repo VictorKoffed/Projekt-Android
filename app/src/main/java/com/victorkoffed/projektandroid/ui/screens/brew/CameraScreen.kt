@@ -47,9 +47,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel // <-- NY IMPORT
-import androidx.navigation.NavController // <-- NY IMPORT
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.CameraViewModel // <-- NY IMPORT (justera sökväg vid behov)
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.CameraViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale

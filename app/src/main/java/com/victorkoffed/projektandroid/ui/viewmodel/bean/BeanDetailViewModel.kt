@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/viewmodel/bean/BeanDetailViewModel.kt
 package com.victorkoffed.projektandroid.ui.viewmodel.bean
 
 import android.util.Log
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-// Ta bort onödig import: import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.ParseException
@@ -35,7 +33,6 @@ data class BeanDetailState(
     val error: String? = null
 )
 
-// Annotera med @HiltViewModel
 @HiltViewModel
 class BeanDetailViewModel @Inject constructor(
     private val repository: CoffeeRepository,
@@ -48,7 +45,7 @@ class BeanDetailViewModel @Inject constructor(
     private val _beanDetailState = MutableStateFlow(BeanDetailState())
     val beanDetailState: StateFlow<BeanDetailState> = _beanDetailState.asStateFlow()
 
-    // NYTT: State för att signalera att arkiveringsdialog ska visas efter sparande
+    // State för att signalera att arkiveringsdialog ska visas efter sparande
     private val _showArchivePromptAfterSave = MutableStateFlow(false)
     val showArchivePromptAfterSave: StateFlow<Boolean> = _showArchivePromptAfterSave.asStateFlow()
 
@@ -193,7 +190,7 @@ class BeanDetailViewModel @Inject constructor(
      * Arkiverar bönan (sätter isArchived till true).
      * @param onSuccess Callback som körs vid lyckad arkivering.
      */
-    fun archiveBean(onSuccess: () -> Unit = {}) { // Gör onSuccess valfri
+    fun archiveBean(onSuccess: () -> Unit = {}) {
         val beanToArchive = _beanDetailState.value.bean
         if (beanToArchive == null) return
 
@@ -243,7 +240,6 @@ class BeanDetailViewModel @Inject constructor(
                         repository.deleteBean(beanToDelete)
                         onSuccess()
                     } else {
-                        // Felet hanteras nu primärt av UI-logiken (dialogen)
                         _beanDetailState.update { it.copy(error = "Kan endast radera arkiverade bönor.") }
                     }
                 } catch (e: Exception) {

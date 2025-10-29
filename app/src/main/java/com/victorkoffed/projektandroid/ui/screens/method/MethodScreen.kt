@@ -49,7 +49,7 @@ import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 @Composable
 fun MethodScreen(
     vm: MethodViewModel,
-    onMenuClick: () -> Unit // ADDED
+    onMenuClick: () -> Unit
 ) {
     // Hämta listan med metoder som en Compose State
     val methods by vm.allMethods.collectAsState()
@@ -63,7 +63,6 @@ fun MethodScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Brew Methods") },
-                // ADDED: Navigation icon for the hamburger menu
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")

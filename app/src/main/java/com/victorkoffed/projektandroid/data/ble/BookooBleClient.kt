@@ -203,7 +203,7 @@ class BookooBleClient(private val context: Context) {
             connectionState.value = BleConnectionState.Connected(
                 deviceName = gatt.device.name ?: gatt.device.address,
                 deviceAddress = gatt.device.address,
-                batteryPercent = null // Batteriet uppdateras i handleCharacteristicChanged
+                batteryPercent = null
             )
             Log.i(TAG, "State set to Connected after CCCD write confirmation.")
         }
@@ -296,7 +296,7 @@ class BookooBleClient(private val context: Context) {
 
     /** Hanterar inkommande data från vågen via notifikationer. */
     private fun handleCharacteristicChanged(characteristic: BluetoothGattCharacteristic, value: ByteArray? = null) {
-        // Fix: modernt sätt att hämta värde.
+
         val data: ByteArray? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             value
         } else {
@@ -313,7 +313,7 @@ class BookooBleClient(private val context: Context) {
                 val currentState = connectionState.value
                 if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
                     if (currentState.batteryPercent != measurement.batteryPercent) {
-                        // FIX: Flytta state-uppdatering till mainHandler.post för trådsäkerhet
+
                         mainHandler.post {
                             val checkState = connectionState.value
                             if (checkState is BleConnectionState.Connected) {

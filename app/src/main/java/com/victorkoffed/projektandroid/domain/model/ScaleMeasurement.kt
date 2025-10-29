@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/domain/model/ScaleMeasurement.kt
 package com.victorkoffed.projektandroid.domain.model
 
 /**
@@ -13,5 +12,5 @@ data class ScaleMeasurement(
     val weightGrams: Float,
     val flowRateGramsPerSecond: Float,
     val timeMillis: Long? = null, // Tiden från vågen (nullable)
-    val batteryPercent: Int? = null // <-- LÄGG TILL DENNA RAD
+    val batteryPercent: Int? = null
 )

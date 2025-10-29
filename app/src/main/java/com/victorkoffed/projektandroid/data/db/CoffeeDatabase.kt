@@ -20,19 +20,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BrewSample::class
     ],
     views = [BrewMetrics::class],
-    // Databasversion. Måste ökas vid schemaändringar (t.ex. ny tabell eller kolumn).
-    version = 4, // UPPDATERAD TILL VERSION 4
-    // exportSchema bör vara 'false' i utveckling för att undvika varningar
+    version = 4,
     exportSchema = false
 )
-// TypeConverters används för att hantera icke-primitiva typer (som Date) i databasen.
 @TypeConverters(Converters::class)
 abstract class CoffeeDatabase : RoomDatabase() {
 
     abstract fun coffeeDao(): CoffeeDao
 
     companion object {
-        // Håller den singleton-instansen av databasen, garanterar trådsäkerhet.
         @Volatile
         private var INSTANCE: CoffeeDatabase? = null
 
@@ -47,7 +43,6 @@ abstract class CoffeeDatabase : RoomDatabase() {
                     CoffeeDatabase::class.java,
                     "coffee_journal.db"
                 )
-                    // Lägger till callback för att sätta upp triggers/vyer och initial data.
                     .addCallback(DatabaseCallback)
                     // Tillåter destruktiv migrering. Detta raderar befintlig data vid versionsökning,
                     // vilket är vanligt i utveckling men bör bytas ut mot riktiga migrationsstrategier i produktion.
@@ -64,7 +59,6 @@ abstract class CoffeeDatabase : RoomDatabase() {
         private val DatabaseCallback = object : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                // Aktivera foreign key constraints för databasintegritet.
                 db.execSQL("PRAGMA foreign_keys = ON;")
 
                 // För-populera med vanliga bryggmetoder

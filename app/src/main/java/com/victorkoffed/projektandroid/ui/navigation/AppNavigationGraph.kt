@@ -218,7 +218,7 @@ fun AppNavigationGraph(
                 },
                 onTareClick = { scaleVm.tareScale() },
                 onNavigateBack = { navController.popBackStack() },
-                onResetClick = { scaleVm.stopRecording() }, // FIX: Återställer inspelning/data
+                onResetClick = { scaleVm.stopRecording() },
                 navigateTo = { route -> navController.navigate(route) }
             )
         }

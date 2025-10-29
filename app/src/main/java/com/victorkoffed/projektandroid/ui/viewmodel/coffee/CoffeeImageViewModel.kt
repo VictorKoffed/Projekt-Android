@@ -4,18 +4,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import javax.inject.Inject // <-- NY IMPORT
+import javax.inject.Inject
 
 /**
  * ViewModel för att hantera logiken kring att hämta en slumpmässig kaffebild från ett externt API.
  * Använder en Hilt-injicerad Repository och Coroutines för nätverksanrop.
  */
 @HiltViewModel
-class CoffeeImageViewModel @Inject constructor( // <-- ANVÄND @Inject Constructor
-    private val imageRepository: CoffeeImageRepository // <-- NY INJICERAD DEPENDENCY
-) : ViewModel() { // <-- ÄRV FRÅN ViewModel ISTÄLLET FÖR AndroidViewModel
+class CoffeeImageViewModel @Inject constructor(
+    private val imageRepository: CoffeeImageRepository
+) : ViewModel() {
 
     // State för den slumpmässigt hämtade bildens URL.
     val imageUrl = mutableStateOf<String?>(null)
@@ -29,7 +29,7 @@ class CoffeeImageViewModel @Inject constructor( // <-- ANVÄND @Inject Construct
      * och uppdaterar det observerbara Compose-state:t.
      */
     fun loadRandomCoffeeImage() {
-        if (loading.value) return // Förhindra dubbla anrop
+        if (loading.value) return
 
         loading.value = true
         error.value = null

@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/domain/model/BleConnectionState.kt
 package com.victorkoffed.projektandroid.domain.model
 
 /**
@@ -14,11 +13,10 @@ sealed class BleConnectionState {
     object Connecting : BleConnectionState()
 
     /** Anslutning etablerad och tjänster har upptäckts. */
-    // UPPDATERAD: Lade till batteryPercent
     data class Connected(
         val deviceName: String,
         val deviceAddress: String,
-        val batteryPercent: Int? = null // <-- LÄGG TILL DENNA RAD
+        val batteryPercent: Int? = null
     ) : BleConnectionState()
 
     /** Ett fel uppstod under skanning, anslutning eller tjänstupptäckt. */

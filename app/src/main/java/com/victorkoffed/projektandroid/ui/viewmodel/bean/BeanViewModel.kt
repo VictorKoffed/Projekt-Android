@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -13,7 +13,7 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject // <-- NY IMPORT
+import javax.inject.Inject
 
 /**
  * ViewModel för hantering av Kaffebönor.
@@ -21,16 +21,16 @@ import javax.inject.Inject // <-- NY IMPORT
  * samt hantera tillägg av nya.
  * (Redigering/Borttagning/Arkivering hanteras nu i BeanDetailViewModel).
  */
-@HiltViewModel // <-- NY ANNOTERING
-class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
-    private val repository: CoffeeRepository // Injiceras av Hilt
+@HiltViewModel
+class BeanViewModel @Inject constructor(
+    private val repository: CoffeeRepository
 ) : ViewModel() {
 
     /**
      * Exponerar ett StateFlow av alla AKTIVA bönor från databasen.
      * StateIn används för att konvertera Flow till StateFlow, vilket gör den livscykelmedveten.
      */
-    val allBeans: StateFlow<List<Bean>> = repository.getAllBeans() // Denna hämtar nu bara aktiva
+    val allBeans: StateFlow<List<Bean>> = repository.getAllBeans()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -38,9 +38,9 @@ class BeanViewModel @Inject constructor( // <-- NYTT: @Inject constructor
         )
 
     /**
-     * NYTT: Exponerar ett StateFlow av alla ARKIVERADE bönor från databasen.
+     * Exponerar ett StateFlow av alla ARKIVERADE bönor från databasen.
      */
-    val archivedBeans: StateFlow<List<Bean>> = repository.getArchivedBeans() // Ny DAO-metod
+    val archivedBeans: StateFlow<List<Bean>> = repository.getArchivedBeans()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

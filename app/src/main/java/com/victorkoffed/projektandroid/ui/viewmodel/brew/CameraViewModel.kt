@@ -1,4 +1,4 @@
-package com.victorkoffed.projektandroid.ui.viewmodel.brew // Eller .camera om du skapar en ny katalog
+package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -8,8 +8,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
-    // SavedStateHandle injiceras automatiskt av Hilt, men vi behöver den inte här
-    // om vi bara skickar tillbaka resultatet till föregående skärm.
 ) : ViewModel() {
 
     /**
@@ -22,8 +20,4 @@ class CameraViewModel @Inject constructor(
             ?.set("captured_image_uri", uri.toString())
         navController.popBackStack()
     }
-
-    // Du kan flytta CameraX-relaterad logik (t.ex. state för lensFacing,
-    // hantering av imageCapture-instans) hit om du vill göra CameraScreen ännu tunnare.
-    // För detta exempel låter vi den logiken vara kvar i CameraScreen.
 }

@@ -17,11 +17,9 @@ val Black = Color(0xFF000000)
 // --- GRAFFÄRGER (SPECIFIKA KONSTANTER) ---
 
 // Sekundär färg: Används för flödesgrafen i LiveBrewScreen/BrewDetailScreen
-// Denna motsvarar ofta MaterialTheme.colorScheme.secondary
 val GraphFlowBlue = Color(0xFF007BFF)
 
 // Tertiär färg: Används för viktgrafen i LiveBrewScreen/BrewDetailScreen
-// Denna motsvarar ofta MaterialTheme.colorScheme.tertiary
 val GraphWeightBlack = Color(0xFF000000)
 
 
@@ -33,8 +31,7 @@ val PlaceholderGray = Color(0xFFE7E7E7)
 // Mörkgrå färg för ikoner/text inuti bildplatshållaren (för kontrast)
 val PlaceholderDarkGray = Color(0xFF606060)
 
-// NY FÄRG: Mjuk beige färg för bakgrund och ytor, ersätter skarp vit/ljusgrå.
 val GentleBackground = Color(0xFFF5EFE6)
 
-// NY FÄRG: Ljusgrå för huvudbakgrund
+// FÄRG: Ljusgrå för huvudbakgrund
 val AppBackgroundGray = Color(0xFFF0F0F0)

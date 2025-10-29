@@ -1,11 +1,10 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/viewmodel/brew/BrewDetailViewModel.kt
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.SavedStateHandle // <-- NY IMPORT
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
@@ -15,7 +14,7 @@ import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +29,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject // <-- NY IMPORT
+import javax.inject.Inject
 
 
 data class BrewDetailState(
@@ -46,9 +45,9 @@ data class BrewDetailState(
 
 // Annotera med @HiltViewModel
 @HiltViewModel
-class BrewDetailViewModel @Inject constructor( // <-- @Inject constructor
+class BrewDetailViewModel @Inject constructor(
     private val repository: CoffeeRepository,
-    private val savedStateHandle: SavedStateHandle // <-- Injicera SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val logTag = "BrewDetailVM"

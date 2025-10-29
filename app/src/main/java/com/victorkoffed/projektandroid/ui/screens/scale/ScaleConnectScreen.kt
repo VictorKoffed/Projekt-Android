@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/screens/scale/ScaleConnectScreen.kt
 package com.victorkoffed.projektandroid.ui.screens.scale
 
 import androidx.compose.animation.AnimatedContent
@@ -75,7 +74,7 @@ fun ScaleConnectScreen(
     val error by vm.error.collectAsState()
     // --- Hämta Remember & Auto-Connect State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
-    val autoConnectEnabled by vm.autoConnectEnabled.collectAsState() // <-- NYTT STATE
+    val autoConnectEnabled by vm.autoConnectEnabled.collectAsState() //
     val rememberedAddress by vm.rememberedScaleAddress.collectAsState()
 
 
@@ -102,11 +101,10 @@ fun ScaleConnectScreen(
         if (connectionState is BleConnectionState.Error) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = (connectionState as BleConnectionState.Error).message, // Det redan översatta meddelandet
+                    message = (connectionState as BleConnectionState.Error).message,
                     duration = SnackbarDuration.Long
                 )
             }
-            // Vi behöver inte rensa felet, det är en del av connectionState
         }
     }
 
@@ -147,9 +145,9 @@ fun ScaleConnectScreen(
                         deviceName = state.deviceName,
                         measurement = measurement,
                         rememberScale = rememberScaleEnabled,
-                        autoConnect = autoConnectEnabled, // <-- SKICKA MED AUTO-CONNECT STATE
+                        autoConnect = autoConnectEnabled,
                         onRememberScaleChange = vm::setRememberScaleEnabled,
-                        onAutoConnectChange = vm::setAutoConnectEnabled, // <-- SKICKA MED AUTO-CONNECT FUNKTION
+                        onAutoConnectChange = vm::setAutoConnectEnabled,
                         onDisconnect = { vm.disconnect() },
                         onTare = { vm.tareScale() }
                     )
@@ -190,9 +188,9 @@ private fun ConnectedView(
     deviceName: String,
     measurement: ScaleMeasurement,
     rememberScale: Boolean,
-    autoConnect: Boolean, // <-- NY PARAMETER
+    autoConnect: Boolean,
     onRememberScaleChange: (Boolean) -> Unit,
-    onAutoConnectChange: (Boolean) -> Unit, // <-- NY PARAMETER
+    onAutoConnectChange: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
     onTare: () -> Unit
 ) {
@@ -345,16 +343,16 @@ private fun DeviceList(
     onDeviceClick: (DiscoveredDevice) -> Unit
 ) {
     if (isScanning && devices.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
             Text("Scanning for devices...")
         }
     } else if (!isScanning && devices.isEmpty() && connectionState is BleConnectionState.Disconnected) { // Visa endast om Disconnected
         // Visa om scanningen avslutades utan resultat (och inget fel finns)
-        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
             Text("No devices found. Tap 'Start scanning' to search again.") // Tydligare text
         }
     } else if (connectionState is BleConnectionState.Error && devices.isEmpty()) { // Visa fel om inga enheter hittades OCH fel uppstod
-        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) { // Ändrad alignment
+        Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
             // Meddelandet här är nu det översatta från connectionState
             Text(connectionState.message)
         }
@@ -378,7 +376,6 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick), // Gör kortet klickbart för att initiera anslutning
         colors = CardDefaults.cardColors(
-            // Använd MaterialTheme.colorScheme.surface istället för Color.White
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
@@ -402,7 +399,7 @@ private fun ForgetScaleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp), // Ta bort horizontal padding, hanteras av föräldern
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

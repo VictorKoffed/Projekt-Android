@@ -18,7 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Unarchive // Importera Unarchive-ikonen
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.victorkoffed.projektandroid.data.db.Bean
@@ -171,7 +170,7 @@ fun BeanScreen(
 @Composable
 fun BeanCard(
     bean: Bean,
-    isArchived: Boolean = false, // Ny parameter
+    isArchived: Boolean = false,
     onClick: () -> Unit
 ) {
     val cardAlpha = if (isArchived) 0.7f else 1.0f // Gör arkiverade kort lite genomskinliga
@@ -183,7 +182,7 @@ fun BeanCard(
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isArchived) 1.dp else 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha) // Använd alpha
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha)
         )
     ) {
         Row(
@@ -191,7 +190,7 @@ fun BeanCard(
             verticalAlignment = Alignment.Top
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(bean.name, style = MaterialTheme.typography.titleMedium, color = textColor) // Använd textColor
+                Text(bean.name, style = MaterialTheme.typography.titleMedium, color = textColor)
                 bean.roaster?.let { Text("Roaster: $it", style = MaterialTheme.typography.bodyMedium, color = textColor) }
 
                 bean.roastDate?.let { roastDate ->

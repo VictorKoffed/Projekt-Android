@@ -12,7 +12,7 @@ import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Date
-import javax.inject.Inject // <-- NY IMPORT
+import javax.inject.Inject
 
 /**
  * Representerar all användarinmatning för en ny bryggning innan den sparas.
@@ -44,8 +44,8 @@ data class BrewSetupState(
  * ViewModel för att hantera inställningar inför en bryggning och visa eventuella resultat.
  */
 @HiltViewModel // <-- NY ANNOTERING
-class BrewViewModel @Inject constructor( // <-- NYTT: @Inject constructor
-    private val repository: CoffeeRepository // Injiceras av Hilt
+class BrewViewModel @Inject constructor(
+    private val repository: CoffeeRepository
 ) : ViewModel() {
 
     // --- State för dropdown-listor ---

@@ -3,14 +3,44 @@ package com.victorkoffed.projektandroid.ui.screens.brew.composable
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // Importerar allt från layout
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.* // Importerar alla filled ikoner
-import androidx.compose.material3.* // Importerar allt från material3
-import androidx.compose.runtime.* // Importerar allt från runtime
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,12 +49,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage // Behövs för BrewImageSection
+import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.data.db.BrewMetrics
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailState
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel // Behövs för BrewEditCard
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -40,7 +70,7 @@ fun DetailRow(label: String, value: String) {
         Text(
             text = label,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(100.dp) // Fast bredd för etiketten för linjering
+            modifier = Modifier.width(100.dp)
         )
         Text(value)
     }
@@ -106,7 +136,7 @@ fun BrewImageSection(
                     .clickable(onClick = onNavigateToCamera), // Navigera till kameran vid klick
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), // Mjukare färg
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
@@ -144,7 +174,7 @@ fun BrewSummaryCard(state: BrewDetailState) {
     val minutes = (totalTimeMillis / 1000 / 60).toInt()
     val seconds = (totalTimeMillis / 1000 % 60).toInt()
     val timeString = remember(minutes, seconds) {
-        String.format("%02d:%02d", minutes, seconds) // Formatera som MM:SS
+        String.format("%02d:%02d", minutes, seconds)
     }
 
     Card(
@@ -203,7 +233,7 @@ fun BrewEditCard(
                 options = availableGrinders,
                 selectedOption = grinder,
                 onOptionSelected = { viewModel.onEditGrinderSelected(it) },
-                optionToString = { it?.name ?: "Select grinder..." } // Text som visas i fältet
+                optionToString = { it?.name ?: "Select grinder..." }
             )
             // Textfält för malningsinställning
             OutlinedTextField(
@@ -211,7 +241,7 @@ fun BrewEditCard(
                 onValueChange = { viewModel.onEditGrindSettingChanged(it) },
                 label = { Text("Grind Setting") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = defaultTextFieldColors() // Använder hjälpfunktion för färger
+                colors = defaultTextFieldColors()
             )
             // Textfält för malningshastighet (endast siffror)
             OutlinedTextField(
@@ -270,12 +300,12 @@ fun BrewMetricsCard(metrics: BrewMetrics) {
             // Kolumn för Water
             MetricItem(
                 label = "Water",
-                value = "%.1f g".format(metrics.waterUsedGrams) // Formatera som X.X g
+                value = "%.1f g".format(metrics.waterUsedGrams)
             )
             // Kolumn för Dose
             MetricItem(
                 label = "Dose",
-                value = "%.1f g".format(metrics.doseGrams) // Formatera som X.X g
+                value = "%.1f g".format(metrics.doseGrams)
             )
         }
     }
@@ -325,7 +355,7 @@ fun BrewNotesSection(
 ) {
     Column {
         Text("Notes", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp)) // Lite luft mellan titel och fält
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (isEditing) {
             // Fullständig redigering i edit mode
@@ -335,8 +365,8 @@ fun BrewNotesSection(
                 label = { Text("Notes (Full Edit Mode)") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 100.dp), // Minst höjd för fältet
-                colors = defaultTextFieldColors() // Standardfärger
+                    .heightIn(min = 100.dp),
+                colors = defaultTextFieldColors()
             )
         } else {
             // Snabbredigering i visningsläge
@@ -352,14 +382,14 @@ fun BrewNotesSection(
                     label = { Text("Notes") },
                     enabled = true, // Alltid editerbart i detta läge
                     readOnly = false,
-                    modifier = Modifier.weight(1f).heightIn(min = 100.dp), // Tar upp resterande bredd
+                    modifier = Modifier.weight(1f).heightIn(min = 100.dp),
                     colors = defaultTextFieldColors()
                 )
                 // Spara-knapp för snabbredigering
                 IconButton(
                     onClick = onSaveQuickEditNotes,
-                    enabled = hasUnsavedQuickNotes, // Aktiv endast vid osparade ändringar
-                    modifier = Modifier.align(Alignment.Top).offset(y = 8.dp) // Justera position lite
+                    enabled = hasUnsavedQuickNotes,
+                    modifier = Modifier.align(Alignment.Top).offset(y = 8.dp)
                 ) {
                     Icon(
                         Icons.Default.Save,
@@ -409,7 +439,7 @@ fun <T> EditDropdownSelector(
             // Ikon som indikerar om menyn är öppen eller stängd
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor().fillMaxWidth(), // Koppla textfältet till menyn
-            colors = defaultTextFieldColors() // Standardfärger för textfält
+            colors = defaultTextFieldColors()
         )
         // Själva dropdown-menyn
         ExposedDropdownMenu(

@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/data/repository/BookooScaleRepositoryImpl.kt
 package com.victorkoffed.projektandroid.data.repository
 
 import android.Manifest

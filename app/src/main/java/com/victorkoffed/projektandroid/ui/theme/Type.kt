@@ -21,9 +21,6 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     ),
 
-    // --- Exempel på andra vanliga stilar som kan anpassas: ---
-
-    // Används för rubriker i kort och sektioner (t.ex. "Notes", "Weight")
     titleMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold, // Gör rubriker fetare

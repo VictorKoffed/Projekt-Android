@@ -73,7 +73,7 @@ data class Bean(
 
     // NYTT: Markerar om bönan är arkiverad (dold från huvudlistor)
     @ColumnInfo(name = "is_archived")
-    val isArchived: Boolean = false, // FALSE som standard
+    val isArchived: Boolean = false,
 
     val notes: String?
 )

@@ -7,28 +7,38 @@ import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager // <-- NY IMPORT
+import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 // --- Konstanter ---
 private const val TAG = "ScaleViewModel"
-// REMOVED preference constants
 private val SCAN_TIMEOUT = 10.seconds
 
 /** Data class som returneras efter att en bryggning har sparats. */
@@ -61,12 +71,11 @@ class ScaleViewModel @Inject constructor(
     app: Application,
     private val scaleRepo: ScaleRepository,
     private val coffeeRepo: CoffeeRepository,
-    private val prefsManager: ScalePreferenceManager // <-- NY INJEKTION
+    private val prefsManager: ScalePreferenceManager
 ) : AndroidViewModel(app) {
 
-    // REMOVED sharedPreferences
     private var isManualDisconnect = false
-    private var reconnectAttempted = false // FIX: Denna flagga fungerar som ett lås för tryAutoReconnect
+    private var reconnectAttempted = false
 
     // --- StateFlows (Exposed to UI) ---
     private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
@@ -547,9 +556,7 @@ class ScaleViewModel @Inject constructor(
     // --- Inställningar (Persistence) ---
 
     fun setRememberScaleEnabled(enabled: Boolean) {
-        prefsManager.setRememberScaleEnabled(enabled) // <-- ANVÄND MANAGER
-
-        // KRITISK FIX: Nollställ låset för auto-återanslutning vid manuell inställningsändring
+        prefsManager.setRememberScaleEnabled(enabled)
         reconnectAttempted = false
 
         // Måste även hantera sparande av adress här om vi har en anslutning (för att hantera omedelbart aktivering)
@@ -563,11 +570,11 @@ class ScaleViewModel @Inject constructor(
     }
 
     fun setAutoConnectEnabled(enabled: Boolean) {
-        prefsManager.setAutoConnectEnabled(enabled) // <-- ANVÄND MANAGER
+        prefsManager.setAutoConnectEnabled(enabled)
     }
 
     fun forgetRememberedScale() {
-        prefsManager.forgetScale() // <-- ANVÄND MANAGER
+        prefsManager.forgetScale()
         // Nollställ lås
         reconnectAttempted = false
     }
@@ -592,7 +599,7 @@ class ScaleViewModel @Inject constructor(
     fun retryConnection() {
         clearError()
         reconnectAttempted = false
-        val addr = prefsManager.loadRememberedScaleAddress() // <-- Använd Manager
+        val addr = prefsManager.loadRememberedScaleAddress()
         if (addr != null) {
             val state = connectionState.replayCache.lastOrNull()
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return

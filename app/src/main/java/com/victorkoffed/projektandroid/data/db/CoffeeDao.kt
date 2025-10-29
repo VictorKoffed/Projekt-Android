@@ -53,7 +53,7 @@ interface CoffeeDao {
         WHERE A.is_archived = 0
         ORDER BY B.started_at DESC
     """)
-    fun getAllBrews(): Flow<List<Brew>> // Denna hämtar fortfarande bara aktiva för listan
+    fun getAllBrews(): Flow<List<Brew>>
 
     // NY FUNKTION: Hämta ALLA brews, oavsett bönans arkivstatus, sorterade efter datum
     @Query("SELECT * FROM Brew ORDER BY started_at DESC")
@@ -69,9 +69,6 @@ interface CoffeeDao {
     suspend fun deleteBrewTransaction(brew: Brew) {
         incrementBeanStock(brew.beanId, brew.doseGrams)
         deleteBrew(brew)
-        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
-        // val bean = getBeanById(brew.beanId)
-        // if (bean != null) updateBean(bean)
     }
 
     @Query("SELECT * FROM Brew WHERE bean_id = :beanId ORDER BY started_at DESC")
@@ -93,9 +90,6 @@ interface CoffeeDao {
         val samplesWithBrewId = samples.map { it.copy(brewId = brewId) }
         insertBrewSamples(samplesWithBrewId)
         decrementBeanStock(brew.beanId, brew.doseGrams)
-        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
-        // val bean = getBeanById(brew.beanId)
-        // if (bean != null) updateBean(bean)
         return brewId
     }
 
@@ -103,9 +97,6 @@ interface CoffeeDao {
     suspend fun addBrew(brew: Brew): Long {
         val brewId = insertBrew(brew)
         decrementBeanStock(brew.beanId, brew.doseGrams)
-        // Uppdatera bönan behöver inte göras här då stocken uppdateras direkt
-        // val bean = getBeanById(brew.beanId)
-        // if (bean != null) updateBean(bean)
         return brewId
     }
 }

@@ -88,7 +88,6 @@ fun GrinderScreen(
             if (grinders.isEmpty()) {
                 Text("No grinders added yet.")
             } else {
-                // LazyColumn för effektiv visning av listan
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -96,8 +95,8 @@ fun GrinderScreen(
                     items(grinders) { grinder ->
                         GrinderCard(
                             grinder = grinder,
-                            onClick = { grinderToEdit = grinder }, // Sätt state för redigering
-                            onDeleteClick = { grinderToDelete = grinder } // Sätt state för borttagning
+                            onClick = { grinderToEdit = grinder },
+                            onDeleteClick = { grinderToDelete = grinder }
                         )
                     }
                 }
@@ -121,9 +120,9 @@ fun GrinderScreen(
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
-                onDismiss = { grinderToEdit = null }, // Nollställ state vid stängning
+                onDismiss = { grinderToEdit = null },
                 onSaveGrinder = { updatedGrinder ->
-                    vm.updateGrinder(updatedGrinder) // Anropa ViewModel för att spara
+                    vm.updateGrinder(updatedGrinder)
                     grinderToEdit = null
                 }
             )
@@ -134,10 +133,10 @@ fun GrinderScreen(
             DeleteGrinderConfirmationDialog(
                 grinderName = currentGrinder.name,
                 onConfirm = {
-                    vm.deleteGrinder(currentGrinder) // Anropa ViewModel för att radera
+                    vm.deleteGrinder(currentGrinder)
                     grinderToDelete = null
                 },
-                onDismiss = { grinderToDelete = null } // Nollställ state vid avbryt
+                onDismiss = { grinderToDelete = null }
             )
         }
     }
@@ -156,7 +155,7 @@ fun GrinderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick), // Gör kortet klickbart för redigering
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -174,7 +173,7 @@ fun GrinderCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete grinder",
-                    tint = MaterialTheme.colorScheme.primary // Använd primärfärg för ikonen
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

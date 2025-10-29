@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/data/repository/ScaleRepository.kt
 package com.victorkoffed.projektandroid.data.repository
 
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState

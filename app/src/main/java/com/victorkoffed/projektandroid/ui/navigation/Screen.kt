@@ -48,7 +48,7 @@ sealed class Screen(val route: String) {
             return if (beanIdToArchivePrompt != null && beanIdToArchivePrompt > 0) {
                 "$baseRoute?beanIdToArchivePrompt=$beanIdToArchivePrompt"
             } else {
-                baseRoute // Ingen query parameter behövs
+                baseRoute
             }
         }
     }

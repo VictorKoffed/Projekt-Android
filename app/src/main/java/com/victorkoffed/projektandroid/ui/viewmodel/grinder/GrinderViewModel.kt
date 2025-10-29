@@ -4,20 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // <-- NY IMPORT
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject // <-- NY IMPORT
+import javax.inject.Inject
 
 /**
  * ViewModel för att hantera CRUD-operationer (Skapa, Läsa, Uppdatera, Radera)
  * relaterade till Grinders (kaffekvarnar).
  */
-@HiltViewModel // <-- NY ANNOTERING
-class GrinderViewModel @Inject constructor( // <-- NYTT: @Inject constructor
-    private val repository: CoffeeRepository // Injiceras av Hilt
+@HiltViewModel
+class GrinderViewModel @Inject constructor(
+    private val repository: CoffeeRepository
 ) : ViewModel() {
 
     /**

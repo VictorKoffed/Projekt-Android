@@ -43,7 +43,7 @@ class CoffeeRepositoryImpl @Inject constructor(
 
     // --- Bryggning (Brew) ---
     override fun getAllBrews(): Flow<List<Brew>> = dao.getAllBrews() // För listan (endast aktiva)
-    override fun getAllBrewsIncludingArchived(): Flow<List<Brew>> = dao.getAllBrewsIncludingArchived() // NY IMPLEMENTATION
+    override fun getAllBrewsIncludingArchived(): Flow<List<Brew>> = dao.getAllBrewsIncludingArchived()
     override suspend fun getBrewById(id: Long): Brew? = dao.getBrewById(id)
     override suspend fun addBrew(brew: Brew): Long = dao.addBrew(brew)
     override suspend fun updateBrew(brew: Brew) = dao.updateBrew(brew)

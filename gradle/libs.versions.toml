@@ -1,31 +1,28 @@
 [versions]
 # --- ANDROID PLATFORM & KOTLIN ---
-# (Dina uppdaterade versioner)
-agp = "8.13.0" # Eller din uppdaterade version
-kotlin = "2.2.21" # Eller din uppdaterade version
-ksp = "2.2.20-2.0.3" # ELLER din uppdaterade version som matchar Kotlin
+agp = "8.13.0"
+kotlin = "2.2.21"
+ksp = "2.2.20-2.0.3"
 
 # --- KÄRNBIBLIOTEK ---
-coreKtx = "1.17.0" # Eller din uppdaterade version
-lifecycleRuntimeKtx = "2.9.4" # Eller din uppdaterade version
-activityCompose = "1.11.0" # Eller din uppdaterade version
+coreKtx = "1.17.0"
+lifecycleRuntimeKtx = "2.9.4"
+activityCompose = "1.11.0"
 
 # --- COMPOSE ---
-composeBom = "2025.10.01" # Din uppdaterade version
-# Ta bort 'foundation = "..."' här om du låter BOM styra den
+composeBom = "2025.10.01"
 
 # --- DATALAGER ---
-room = "2.8.3" # Din uppdaterade version
+room = "2.8.3"
 
 # --- HILT ---
-hilt = "2.57.2" # Din uppdaterade version (Kontrollera SENASTE STABILA)
-hiltNavigationCompose = "1.3.0" # Din uppdaterade version (Kontrollera SENASTE STABILA)
+hilt = "2.57.2"
+hiltNavigationCompose = "1.3.0"
 
 # --- FUNKTIONELLA BERODEN ---
-# volley = "1.2.1" <--- BORTTAGEN
-coil = "2.7.0" # Eller din uppdaterade version
-navigation-compose = "2.9.5" # Din uppdaterade version (Kontrollera SENASTE STABILA)
-camerax = "1.5.1" # Din uppdaterade version (Kontrollera SENASTE STABILA)
+coil = "2.7.0"
+navigation-compose = "2.9.5"
+camerax = "1.5.1"
 
 # --- TESTNING ---
 junit = "4.13.2"
@@ -49,7 +46,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
-androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" } # Ingen version.ref om BOM styr
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 
@@ -69,14 +66,10 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 
 # --- HILT ---
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
-# Byt namn här för tydlighet om du använder KAPT
 hilt-compiler-kapt = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
-# ELLER om du vill prova KSP för Hilt (mindre vanligt, kan kräva annan setup)
-# hilt-compiler-ksp = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 # --- ÖVRIGA FUNKTIONELLA BIBLIOTEK ---
-# volley = { group = "com.android.volley", name = "volley", version.ref = "volley" } <--- BORTTAGEN
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # --- TESTNING ---
@@ -91,6 +84,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-# Lägg till KAPT plugin definition
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

@@ -1,6 +1,5 @@
 package com.victorkoffed.projektandroid.ui.screens.brew.composable
 
-// Importer som behövs för grafen
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.padding
@@ -17,13 +16,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp // <-- Denna behövs för toPx() att fungera
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.withSave
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
+
 
 /**
  * Privat dataklass för att samla alla grafens dimensioner och skalningsfaktorer,
@@ -77,13 +76,11 @@ fun BrewSamplesGraph(
     val massColor = MaterialTheme.colorScheme.tertiary
     val flowColor = MaterialTheme.colorScheme.secondary
     val gridLineColor = Color.LightGray
-    val textColor = MaterialTheme.colorScheme.onSurface.toArgb() // Använd tema-färg
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant // Färg för axellinjer
-    // Följande rad är anledningen till att 'toPx' misslyckades i den ursprungliga filen
-    val graphLineStrokeWidth = with(LocalDensity.current) { 2.dp.toPx() } // <-- Rätt sätt att få float-värde
+    val graphLineStrokeWidth = with(LocalDensity.current) { 2.dp.toPx() }
 
     // --- Paint-objekt för rendering ---
-    // Paint-objekt har flyttats utanför Canvas men ihågkomna i Compose.
     val gridLinePaint = remember {
         Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f))
     }

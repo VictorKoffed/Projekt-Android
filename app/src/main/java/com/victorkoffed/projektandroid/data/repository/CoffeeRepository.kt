@@ -35,8 +35,8 @@ interface CoffeeRepository {
     fun getTotalBeanCount(): Flow<Int>
 
     // --- Bryggning (Brew) ---
-    fun getAllBrews(): Flow<List<Brew>> // Hämtar fortfarande bara aktiva för listan
-    fun getAllBrewsIncludingArchived(): Flow<List<Brew>> // NY FUNKTION
+    fun getAllBrews(): Flow<List<Brew>> // Hämtar bara aktiva för listan
+    fun getAllBrewsIncludingArchived(): Flow<List<Brew>>
     suspend fun getBrewById(id: Long): Brew?
     suspend fun addBrew(brew: Brew): Long
     suspend fun updateBrew(brew: Brew)

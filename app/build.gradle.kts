@@ -2,9 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.kapt) // Applicera KAPT
-    alias(libs.plugins.hilt)        // Applicera Hilt
-    alias(libs.plugins.ksp)         // Applicera KSP
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -64,13 +64,12 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     // --- ÖVRIGA ---
-    // implementation(libs.volley) <--- BORTTAGEN
     implementation(libs.coil.compose)
 
     // --- ROOM (KSP) ---
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler) // Room använder KSP
+    ksp(libs.androidx.room.compiler)
 
 
     // --- NAVIGATION ---
@@ -84,7 +83,7 @@ dependencies {
 
     // --- HILT (KAPT) ---
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler.kapt) // Använd KAPT-kompilatorn för Hilt
+    kapt(libs.hilt.compiler.kapt)
     implementation(libs.hilt.navigation.compose)
 
     // --- TEST ---
