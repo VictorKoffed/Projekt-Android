@@ -50,17 +50,6 @@ import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import kotlin.math.ceil
 import kotlin.math.max
 
-/**
- * Visar aktuell tid, vikt, flöde och status (inspelning/paus/nedräkning) från vågen.
- *
- * @param currentTimeMillis Tiden i millisekunder för den pågående bryggningen.
- * @param currentMeasurement Den senaste mätningen (vikt och flöde).
- * @param isRecording Anger om inspelning pågår.
- * @param isPaused Anger om inspelningen är pausad (manuellt eller p.g.a. frånkoppling).
- * @param isPausedDueToDisconnect Anger om pausen beror på frånkoppling.
- * @param showFlow Anger om flödeshastigheten ska visas.
- * @param countdown Nedräkningsvärdet (om start håller på).
- */
 @SuppressLint("DefaultLocale")
 @Composable
 fun StatusDisplay(
@@ -72,25 +61,20 @@ fun StatusDisplay(
     showFlow: Boolean,
     countdown: Int?
 ) {
-    // Formatera tiden till MM:SS
     val timeString = remember(currentTimeMillis) {
         val minutes = (currentTimeMillis / 1000 / 60).toInt()
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
         String.format("%02d:%02d", minutes, seconds)
     }
-    // Formatera mätvärden
     val weightString = remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
     val flowString = remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
-
-    // Bestäm bakgrundsfärg baserat på status
     val containerColor = when {
         countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-        isPausedDueToDisconnect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) // Röd/orange vid disconnect-paus
-        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Grå vid manuell paus
+        isPausedDueToDisconnect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         isRecording -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Standard grå/dämpad
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor)
@@ -104,7 +88,6 @@ fun StatusDisplay(
             verticalArrangement = Arrangement.Center
         ) {
             if (countdown != null) {
-                // Nedräkningsvy
                 Text(
                     text = "Starting in...",
                     style = MaterialTheme.typography.titleLarge,
@@ -117,7 +100,6 @@ fun StatusDisplay(
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             } else {
-                // Normal mätvy
                 Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -136,20 +118,16 @@ fun StatusDisplay(
                         }
                     }
                 }
-                // Visa statusmeddelande vid paus
                 if (isPaused) {
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isPausedDueToDisconnect) {
-                            // Meddelande när paus beror på bortkoppling
                             Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
-                            // Använder error color för varningstext
                             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onErrorContainer) {
                                 Text("Paused - Reconnecting...", fontSize = 14.sp)
                             }
                         } else {
-                            // Meddelande vid manuell paus
                             Text("Paused", fontSize = 14.sp)
                         }
                     }
@@ -159,26 +137,16 @@ fun StatusDisplay(
     }
 }
 
-/**
- * Composable för att rita ut realtidsgrafen i Live Brew-läge.
- * Denna visar endast vikt över tid (följer LiveBrewScreen original).
- *
- * @param samples De insamlade BrewSample-punkterna.
- * @param modifier Modifier för layout.
- */
 @Composable
 fun LiveBrewGraph(
     samples: List<BrewSample>,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-
     val graphLineColor = MaterialTheme.colorScheme.tertiary
     val textColor = MaterialTheme.colorScheme.onBackground.toArgb()
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridLineColor = Color.LightGray
-
-    // Paint-objekt för textetiketter (används i nativeCanvas)
     val textPaint = remember(textColor) {
         android.graphics.Paint().apply {
             color = textColor
@@ -186,7 +154,6 @@ fun LiveBrewGraph(
             textSize = 10.sp.value * density.density
         }
     }
-    // Paint-objekt för axeltitlar
     val axisLabelPaint = remember(textColor) {
         android.graphics.Paint().apply {
             color = textColor
@@ -195,7 +162,6 @@ fun LiveBrewGraph(
             isFakeBoldText = true
         }
     }
-    // PathEffect för att rita prickade linjer
     val gridLinePaint = remember {
         Stroke(
             width = 1f,
@@ -203,27 +169,25 @@ fun LiveBrewGraph(
         )
     }
 
+    // Variabler för justering
+    val yLabelPadding = 32.dp
+    val weightTitleOffsetDp = 0.dp
+
+    val yLabelPaddingPx = with(LocalDensity.current) { yLabelPadding.toPx() }
+    val weightTitleOffsetPx = with(LocalDensity.current) { weightTitleOffsetDp.toPx() }
+
     Canvas(modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)) {
         val axisPadding = 0f
         val xLabelPadding = 24.dp.toPx()
-        val yLabelPadding = 24.dp.toPx()
-
-        // Grafens rityta
-        val graphWidth = size.width - yLabelPadding - axisPadding
+        val graphWidth = size.width - yLabelPaddingPx - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
-
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
-
-        // Skalning för tid och vikt
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
-
         val xAxisY = size.height - xLabelPadding
-        val yAxisX = yLabelPadding
-
+        val yAxisX = yLabelPaddingPx
         drawContext.canvas.nativeCanvas.apply {
-            // Rita rutnät och etiketter för Vikt (Y-axel)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -235,12 +199,10 @@ fun LiveBrewGraph(
                     strokeWidth = gridLinePaint.width,
                     pathEffect = gridLinePaint.pathEffect
                 )
-                drawText("${currentMassGrid.toInt()}g", yLabelPadding / 2, y + textPaint.textSize / 3, textPaint)
+                drawText("${currentMassGrid.toInt()}g", yLabelPaddingPx / 2, y + textPaint.textSize / 3, textPaint)
                 currentMassGrid += massGridInterval
             }
-
-            // Rita rutnät och etiketter för Tid (X-axel)
-            val timeGridInterval = 30000f // 30 sekunder
+            val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
                 val x = yAxisX + (currentTimeGrid / maxTime) * graphWidth
@@ -255,25 +217,19 @@ fun LiveBrewGraph(
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
-
-            // Rita axeltitlar
             drawText("Time", yAxisX + graphWidth / 2, size.height + axisLabelPaint.textSize / 2, axisLabelPaint)
             withSave {
                 rotate(-90f)
                 drawText(
                     "Weight (g)",
                     -(axisPadding + graphHeight / 2),
-                    yLabelPadding / 2 - axisLabelPaint.descent(),
+                    weightTitleOffsetPx - axisLabelPaint.descent(),
                     axisLabelPaint
                 )
             }
         }
-
-        // Rita axellinjer
         drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY))
         drawLine(axisColor, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY))
-
-        // Rita viktkurvan
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
@@ -293,20 +249,6 @@ fun LiveBrewGraph(
     }
 }
 
-/**
- * Visar och hanterar kontrollknapparna (Start/Paus/Återuppta, Tara, Återställ) för live-bryggningen.
- *
- * @param isRecording Anger om inspelning pågår.
- * @param isPaused Anger om inspelningen är pausad.
- * @param isPausedDueToDisconnect Anger om pausen beror på frånkoppling.
- * @param isConnected Anger om vågen är ansluten.
- * @param countdown Nedräkningsvärdet (om start håller på).
- * @param onStartClick Callback för att starta inspelningen.
- * @param onPauseClick Callback för att manuellt pausa inspelningen.
- * @param onResumeClick Callback för att återuppta inspelningen.
- * @param onTareClick Callback för att tarera vågen.
- * @param onResetClick Callback för att återställa inspelningen.
- */
 @Composable
 fun BrewControls(
     isRecording: Boolean,
@@ -321,15 +263,12 @@ fun BrewControls(
     onResetClick: () -> Unit
 ) {
     val isBusy = countdown != null
-    // Återställningsknappen ska vara inaktiv om paus beror på disconnect (för att tvinga fram Resume)
     val enableReset = (isRecording || isPaused) && !isBusy && !isPausedDueToDisconnect
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Återställ (Replay) knapp
         IconButton(
             onClick = onResetClick,
             enabled = enableReset
@@ -337,30 +276,27 @@ fun BrewControls(
             Icon(
                 imageVector = Icons.Default.Replay,
                 contentDescription = "Reset recording",
-                // Gråa ut om inaktiv
                 tint = if (enableReset) LocalContentColor.current else Color.Gray
             )
         }
-
-        // Huvudknapp (Start/Paus/Återuppta)
         Button(
             onClick = {
                 when {
-                    isPaused -> onResumeClick() // Om pausad, återuppta
-                    isRecording -> onPauseClick() // Om inspelning pågår, pausa manuellt
-                    else -> onStartClick() // Annars, starta ny inspelning
+                    isPaused -> onResumeClick()
+                    isRecording -> onPauseClick()
+                    else -> onStartClick()
                 }
             },
             modifier = Modifier.size(72.dp),
             contentPadding = PaddingValues(0.dp),
-            enabled = !isBusy && (isConnected || isPausedDueToDisconnect) // Aktivera om inte upptagen OCH antingen ansluten ELLER pausad p.g.a. disconnect
+            enabled = !isBusy && (isConnected || isPausedDueToDisconnect)
         ) {
             Icon(
                 imageVector = when {
-                    isBusy -> Icons.Default.Timer // Nedräkning pågår
-                    isPaused -> Icons.Default.PlayArrow // Visa Play (för att återuppta)
-                    isRecording -> Icons.Default.Pause // Visa Pause
-                    else -> Icons.Default.PlayArrow // Visa Play (för att starta)
+                    isBusy -> Icons.Default.Timer
+                    isPaused -> Icons.Default.PlayArrow
+                    isRecording -> Icons.Default.Pause
+                    else -> Icons.Default.PlayArrow
                 },
                 contentDescription = when {
                     isBusy -> "Starting..."
@@ -372,11 +308,8 @@ fun BrewControls(
                 modifier = Modifier.size(40.dp)
             )
         }
-
-        // Tara-knapp (T)
         OutlinedButton(
             onClick = onTareClick,
-            // Endast aktiv om: Ansluten OCH Inte upptagen OCH (Inte inspelning ELLER Pausad)
             enabled = isConnected && !isBusy && (!isRecording || isPaused),
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
