@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +75,8 @@ fun ScaleConnectScreen(
     val error by vm.error.collectAsState()
     // --- NYTT: Hämta Remember Scale State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
+    // NYTT: Hämta den ihågkomna adressen
+    val rememberedAddress by vm.rememberedScaleAddress.collectAsState()
 
 
     // --- Snackbar state för felmeddelanden ---
@@ -165,13 +168,15 @@ fun ScaleConnectScreen(
                         devices = devices,
                         isScanning = isScanning,
                         connectionState = state,
+                        rememberedAddress = rememberedAddress, // <-- Skicka med nya state
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
                         onDeviceClick = { device ->
                             // Tillåt anslutning endast om vågen är frånkopplad eller i fel-läge
                             if (state is BleConnectionState.Disconnected || state is BleConnectionState.Error) {
                                 vm.connect(device)
                             }
-                        }
+                        },
+                        onForgetScaleClick = { vm.forgetRememberedScale() } // <-- Skicka med ny callback
                     )
                 }
             }
@@ -238,15 +243,16 @@ private fun ConnectedView(
 }
 
 
-// --- ScanningView, ScanControls, DeviceList, DeviceCard förblir desamma ---
 // --- ScanningView ---
 @Composable
 private fun ScanningView(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
     connectionState: BleConnectionState,
+    rememberedAddress: String?, // <-- Ny parameter
     onToggleScan: () -> Unit,
-    onDeviceClick: (DiscoveredDevice) -> Unit
+    onDeviceClick: (DiscoveredDevice) -> Unit,
+    onForgetScaleClick: () -> Unit // <-- Ny parameter
 ) {
     Column(
         modifier = Modifier
@@ -259,6 +265,14 @@ private fun ScanningView(
             connectionState = connectionState,
             onToggleScan = onToggleScan
         )
+
+        // NYTT: Visa en rad för att glömma vågen om en adress finns sparad
+        if (rememberedAddress != null) {
+            ForgetScaleRow(
+                address = rememberedAddress,
+                onClick = onForgetScaleClick
+            )
+        }
 
         // Separator mellan kontroller och lista
         HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
@@ -355,6 +369,37 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
             )
             Text(text = "Address: ${device.address}", style = MaterialTheme.typography.bodySmall)
             Text(text = "Signal strength: ${device.rssi} dBm", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+// NYTT: Composable för att visa den sparade vågen och "Glöm"-knappen
+@Composable
+private fun ForgetScaleRow(
+    address: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp), // Ta bort horizontal padding, hanteras av föräldern
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "Remembered scale:",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = address,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        TextButton(onClick = onClick) {
+            Text("Forget")
         }
     }
 }

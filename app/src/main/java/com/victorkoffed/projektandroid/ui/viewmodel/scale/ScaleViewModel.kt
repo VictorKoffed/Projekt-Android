@@ -158,6 +158,10 @@ class ScaleViewModel @Inject constructor(
     )
     val rememberScaleEnabled: StateFlow<Boolean> = _rememberScaleEnabled.asStateFlow()
 
+    // NYTT: Exponera den sparade adressen så UI:t vet om en våg är ihågkommen
+    private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
+    val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
+
     private var recordingStartTime: Long = 0L
     private var timePausedAt: Long = 0L
     private var measurementJob: Job? = null
@@ -384,11 +388,13 @@ class ScaleViewModel @Inject constructor(
         if (address != null && _rememberScaleEnabled.value) {
             sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
             Log.d("ScaleViewModel", "Saved scale address: $address")
+            _rememberedScaleAddress.value = address // <-- UPPDATERA NYTT STATE
         } else {
             if (sharedPreferences.contains(PREF_REMEMBERED_SCALE_ADDRESS)) {
                 sharedPreferences.edit { remove(PREF_REMEMBERED_SCALE_ADDRESS) }
                 Log.d("ScaleViewModel", "Cleared saved scale address.")
             }
+            _rememberedScaleAddress.value = null // <-- UPPDATERA NYTT STATE
         }
     }
 
@@ -399,6 +405,14 @@ class ScaleViewModel @Inject constructor(
         } else {
             null
         }
+    }
+
+    // NYTT: Offentlig funktion för att manuellt glömma vågen
+    fun forgetRememberedScale() {
+        Log.d("ScaleViewModel", "Manually forgetting scale.")
+        // Att sätta 'enabled' till false kommer automatiskt att
+        // anropa saveRememberedScaleAddress(null) och rensa minnet.
+        setRememberScaleEnabled(false)
     }
 
 
