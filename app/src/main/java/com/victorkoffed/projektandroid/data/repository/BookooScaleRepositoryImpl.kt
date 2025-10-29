@@ -1,6 +1,7 @@
 package com.victorkoffed.projektandroid.data.repository
 
 import android.Manifest
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -28,10 +29,21 @@ class BookooScaleRepositoryImpl @Inject constructor(
     private val client: BookooBleClient by lazy { BookooBleClient(context) }
 
     override fun startScanDevices(): Flow<List<DiscoveredDevice>> {
+        // 1. KONTROLL: Behörigheter
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            // Kastar ett fel som fångas i ViewModel.
             return flow { throw SecurityException("Missing BLUETOOTH_SCAN permission.") }
         }
 
+        // 2. KONTROLL: Bluetooth Adapter Status
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        if (adapter == null || !adapter.isEnabled) {
+            // Returnerar ett flow som kastar ett fel om adaptern är null eller avstängd.
+            // Detta fångas i ViewModel och översätts till ett användarvänligt felmeddelande.
+            return flow { throw IllegalStateException("Bluetooth is turned off or unavailable.") }
+        }
+
+        // 3. Starta skanning via BLE-klienten (som nu är skyddad av 2. KONTROLL)
         return client.startScan()
             .map { result ->
                 DiscoveredDevice(

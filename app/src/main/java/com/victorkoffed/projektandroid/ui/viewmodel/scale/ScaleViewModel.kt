@@ -1,6 +1,8 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
 import android.app.Application
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -158,12 +160,25 @@ class ScaleViewModel @Inject constructor(
         attemptAutoConnect()
     }
 
+    // NY HJÄLPFUNKTION: Kontrollerar om Bluetooth är påslaget
+    private fun isBluetoothAvailableAndEnabled(): Boolean {
+        val adapter = (getApplication<Application>().getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        return adapter != null && adapter.isEnabled
+    }
+
     // --- Skanning & Anslutning ---
 
     fun startScan() {
         if (_isScanning.value) return
         _devices.value = emptyList(); clearError(); _isScanning.value = true; reconnectAttempted = false
         scanJob?.cancel(); scanTimeoutJob?.cancel()
+
+        // NY KONTROLL: Avbryt omedelbart om Bluetooth är avstängt
+        if (!isBluetoothAvailableAndEnabled()) {
+            _error.value = "Bluetooth is turned off."
+            _isScanning.value = false // Återställ flaggan
+            return
+        }
 
         scanJob = viewModelScope.launch {
             try {
@@ -192,6 +207,12 @@ class ScaleViewModel @Inject constructor(
     }
 
     fun connect(device: DiscoveredDevice) {
+        // NY KONTROLL: Avbryt omedelbart om Bluetooth är avstängt
+        if (!isBluetoothAvailableAndEnabled()) {
+            _error.value = "Bluetooth is turned off."
+            return
+        }
+
         stopScan()
         _tareOffset.value = 0.0f
         isManualDisconnect = false
@@ -592,6 +613,12 @@ class ScaleViewModel @Inject constructor(
         // Använder Manager för att hämta adressen
         val addr = prefsManager.loadRememberedScaleAddress()
         if (addr != null) {
+            // Avbryt om Bluetooth är avstängt
+            if (!isBluetoothAvailableAndEnabled()) {
+                _error.value = "Bluetooth is turned off for auto-connect."
+                return
+            }
+
             isManualDisconnect = false
             clearError()
             scaleRepo.connect(addr)
@@ -603,6 +630,12 @@ class ScaleViewModel @Inject constructor(
         reconnectAttempted = false
         val addr = prefsManager.loadRememberedScaleAddress()
         if (addr != null) {
+            // NY KONTROLL: Avbryt omedelbart om Bluetooth är avstängt
+            if (!isBluetoothAvailableAndEnabled()) {
+                _error.value = "Bluetooth is turned off. Please turn it on to reconnect."
+                return
+            }
+
             val state = connectionState.replayCache.lastOrNull()
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return
             isManualDisconnect = false
