@@ -1,4 +1,3 @@
-// app/src/main/java/com/victorkoffed/projektandroid/ui/viewmodel/scale/ScaleViewModel.kt
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
 import android.app.Application
@@ -104,9 +103,15 @@ class ScaleViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown.asStateFlow()
 
-    val rememberScaleEnabled: StateFlow<Boolean> = MutableStateFlow(sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false)).asStateFlow()
-    val autoConnectEnabled: StateFlow<Boolean> = MutableStateFlow(sharedPreferences.getBoolean(PREF_AUTO_CONNECT_ENABLED, rememberScaleEnabled.value)).asStateFlow()
-    val rememberedScaleAddress: StateFlow<String?> = MutableStateFlow(loadRememberedScaleAddress()).asStateFlow()
+    // FIX: Använder nu privata MutableStateFlows för att hantera inställningar säkert
+    private val _rememberScaleEnabled = MutableStateFlow(sharedPreferences.getBoolean(PREF_REMEMBER_SCALE_ENABLED, false))
+    val rememberScaleEnabled: StateFlow<Boolean> = _rememberScaleEnabled.asStateFlow()
+
+    private val _autoConnectEnabled = MutableStateFlow(sharedPreferences.getBoolean(PREF_AUTO_CONNECT_ENABLED, _rememberScaleEnabled.value))
+    val autoConnectEnabled: StateFlow<Boolean> = _autoConnectEnabled.asStateFlow()
+
+    private val _rememberedScaleAddress = MutableStateFlow(loadRememberedScaleAddress())
+    val rememberedScaleAddress: StateFlow<String?> = _rememberedScaleAddress.asStateFlow()
 
     // --- Private Job Management ---
     private var scanJob: Job? = null
@@ -550,11 +555,17 @@ class ScaleViewModel @Inject constructor(
 
     fun setRememberScaleEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_REMEMBER_SCALE_ENABLED, enabled) }
-        // Manuell uppdatering av StateFlow här för att säkerställa snabb UI-respons
-        (rememberScaleEnabled as MutableStateFlow<Boolean>).value = enabled
 
-        if (!enabled) { setAutoConnectEnabled(false); saveRememberedScaleAddress(null) }
-        else {
+        // KRITISK FIX: Nollställ låset för auto-återanslutning vid manuell inställningsändring
+        reconnectAttempted = false
+
+        // FIX: Uppdatera privat StateFlow
+        _rememberScaleEnabled.value = enabled
+
+        if (!enabled) {
+            setAutoConnectEnabled(false)
+            saveRememberedScaleAddress(null)
+        } else {
             val cs = connectionState.replayCache.lastOrNull()
             if (cs is BleConnectionState.Connected) {
                 saveRememberedScaleAddress(cs.deviceAddress)
@@ -568,15 +579,15 @@ class ScaleViewModel @Inject constructor(
 
     fun setAutoConnectEnabled(enabled: Boolean) {
         val newValue = enabled && rememberScaleEnabled.value
-        if (autoConnectEnabled.value != newValue) {
+        if (_autoConnectEnabled.value != newValue) { // Jämför med privat värde
             sharedPreferences.edit { putBoolean(PREF_AUTO_CONNECT_ENABLED, newValue) }
-            // Manuell uppdatering av StateFlow här
-            (autoConnectEnabled as MutableStateFlow<Boolean>).value = newValue
+            // FIX: Uppdatera privat StateFlow
+            _autoConnectEnabled.value = newValue
         }
     }
 
     private fun saveRememberedScaleAddress(address: String?) {
-        val current = rememberedScaleAddress.value
+        val current = _rememberedScaleAddress.value
         if (address != null && rememberScaleEnabled.value) {
             if (current != address) {
                 sharedPreferences.edit { putString(PREF_REMEMBERED_SCALE_ADDRESS, address) }
@@ -587,8 +598,8 @@ class ScaleViewModel @Inject constructor(
                 setAutoConnectEnabled(false)
             }
         }
-        // Manuell uppdatering av StateFlow här för att säkerställa snabb UI-respons
-        (rememberedScaleAddress as MutableStateFlow<String?>).value = loadRememberedScaleAddress()
+        // FIX: Uppdatera privat StateFlow från persistence
+        _rememberedScaleAddress.value = loadRememberedScaleAddress()
     }
 
     private fun loadRememberedScaleAddress(): String? {
