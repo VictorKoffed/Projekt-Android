@@ -144,8 +144,6 @@ Kör tester:
 
 ## 📚 Katalog över viktiga filer
 
----
-
 <details><summary><strong>Gradle/Konfiguration</strong></summary>
 
 - `gradle/libs.versions.toml` – Central hantering av beroenden
