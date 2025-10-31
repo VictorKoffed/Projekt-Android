@@ -52,39 +52,27 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewScreen(
-
     onStartBrewClick: () -> Unit,
-    // Callback för att spara bryggningen utan realtidsgraf.
     onSaveWithoutGraph: (newBrewId: Long?) -> Unit,
-    // Callback för att navigera till anslutningsskärmen.
     onNavigateToScale: () -> Unit,
-    // Callback för att nollställa 'completedBrewId' i NavHost/Activity.
     onNavigateBack: () -> Unit,
-    // Hämta ViewModels lokalt
     vm: BrewViewModel = hiltViewModel(),
     scaleVm: ScaleViewModel = hiltViewModel()
 ) {
-    // Hämta listor och states från ViewModel för UI-bindning
     val availableBeans by vm.availableBeans.collectAsState()
     val availableGrinders by vm.availableGrinders.collectAsState()
     val availableMethods by vm.availableMethods.collectAsState()
     val setupState = vm.brewSetupState
-    // State som indikerar om det finns tidigare bryggningar
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
-
-    // Hämta scaleConnectionState lokalt
     val scaleConnectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
     )
 
     val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope() // Lokalt scope för att spara
+    val scope = rememberCoroutineScope()
 
-    // Lokalt state för att visa bekräftelsedialog vid frånkopplad våg
     var showConnectionAlert by remember { mutableStateOf(false) }
 
-    // Nollställer ViewModel-state och NavHost-ID när skärmen laddas med ett avslutat ID.
-    // Detta säkerställer att skärmen alltid visar setup-läget.
     LaunchedEffect(Unit) {
         vm.clearBrewResults()
     }
@@ -104,15 +92,15 @@ fun BrewScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues), // Applicerar Scaffold padding
+                .padding(paddingValues),
         ) {
             // --- Scrollbart Innehåll (Formuläret) ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Tar all resterande plats och tillåter scrollning
+                    .weight(1f)
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 16.dp), // Applicerar horisontell padding för innehållet
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Kontrollrad med funktionen "Ladda senaste inställningar"
@@ -121,10 +109,9 @@ fun BrewScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Knapp för att ladda senaste använda inställningar
                     TextButton(
                         onClick = { vm.loadLatestBrewSettings() },
-                        enabled = hasPreviousBrews // Endast aktiv om det finns data att ladda
+                        enabled = hasPreviousBrews
                     ) {
                         Icon(
                             Icons.Default.History,
@@ -147,15 +134,24 @@ fun BrewScreen(
                     onOptionSelected = { vm.selectBean(it) },
                     optionToString = { it?.name ?: "Select bean..." }
                 )
+
                 // Textfält för dos (obligatorisk)
                 OutlinedTextField(
-                    value = setupState.doseGrams,
+                    value = setupState.doseGrams.value,
                     onValueChange = { vm.onDoseChange(it) },
                     label = { Text("Dose (g) *") },
+                    isError = setupState.doseGrams.error != null,
+                    supportingText = {
+                        if (setupState.doseGrams.error != null) {
+                            Text(text = setupState.doseGrams.error)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(Modifier.height(8.dp))
+
                 // Dropdown för kvarn
                 DropdownSelector(
                     label = "Grinder",
@@ -164,6 +160,7 @@ fun BrewScreen(
                     onOptionSelected = { vm.selectGrinder(it) },
                     optionToString = { it?.name ?: "Select grinder..." }
                 )
+
                 // Textfält för malningsinställning
                 OutlinedTextField(
                     value = setupState.grindSetting,
@@ -171,15 +168,24 @@ fun BrewScreen(
                     label = { Text("Grind Setting") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 // Textfält för kvarnhastighet
                 OutlinedTextField(
-                    value = setupState.grindSpeedRpm,
+                    value = setupState.grindSpeedRpm.value,
                     onValueChange = { vm.onGrindSpeedChange(it) },
                     label = { Text("Grind Speed (RPM)") },
+                    isError = setupState.grindSpeedRpm.error != null,
+                    supportingText = {
+                        if (setupState.grindSpeedRpm.error != null) {
+                            Text(text = setupState.grindSpeedRpm.error)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(Modifier.height(8.dp))
+
                 // Dropdown för bryggmetod (obligatorisk)
                 DropdownSelector(
                     label = "Method *",
@@ -188,14 +194,22 @@ fun BrewScreen(
                     onOptionSelected = { vm.selectMethod(it) },
                     optionToString = { it?.name ?: "Select method..." }
                 )
+
                 // Textfält för vattentemperatur
                 OutlinedTextField(
-                    value = setupState.brewTempCelsius,
+                    value = setupState.brewTempCelsius.value,
                     onValueChange = { vm.onBrewTempChange(it) },
                     label = { Text("Brew Temperature (°C)") },
+                    isError = setupState.brewTempCelsius.error != null,
+                    supportingText = {
+                        if (setupState.brewTempCelsius.error != null) {
+                            Text(text = setupState.brewTempCelsius.error)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 // Extra padding i slutet av scrollbart innehåll
                 Spacer(Modifier.height(16.dp))
             }
@@ -210,16 +224,13 @@ fun BrewScreen(
             ) {
                 Button(
                     onClick = {
-                        // Logik: Om vågen är ansluten, starta bryggningen direkt.
                         if (scaleConnectionState is BleConnectionState.Connected) {
-                            vm.clearBrewResults() // Nollställ vm
-                            onStartBrewClick() // Anropa nav callback
+                            vm.clearBrewResults()
+                            onStartBrewClick()
                         } else {
-                            // Annars, visa varningsdialogen för att välja åtgärd
                             showConnectionAlert = true
                         }
                     },
-                    // Endast aktiv om alla obligatoriska fält (Bean, Dose, Method) är ifyllda
                     enabled = vm.isSetupValid(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -229,9 +240,9 @@ fun BrewScreen(
                 }
             }
         }
-    } // Slut Scaffold Content Scope
+    }
 
-    // --- Alert Dialog vid frånkopplad våg (Behöver vara utanför Column för att flyta) ---
+    // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
             onDismissRequest = { },
@@ -252,10 +263,9 @@ fun BrewScreen(
                 }
                 // Alternativ 3: Fortsätt och spara utan realtidsdata
                 TextButton(onClick = {
-                    scope.launch { // Använd lokalt scope
-                        vm.getCurrentSetup() // Get current setup data
+                    scope.launch {
                         val newBrewId = vm.saveBrewWithoutSamples()
-                        onSaveWithoutGraph(newBrewId) // Anropa nav callback med IDt
+                        onSaveWithoutGraph(newBrewId)
                     }
                 }) {
                     Text("Save without Graph")
@@ -275,7 +285,6 @@ fun <T> DropdownSelector(
     onOptionSelected: (T?) -> Unit,
     optionToString: (T?) -> String
 ) {
-    // Standard Composable för att hantera urval från en lista i ett OutlinedTextField
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(

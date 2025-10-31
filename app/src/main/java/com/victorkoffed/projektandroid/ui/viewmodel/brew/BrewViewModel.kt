@@ -28,30 +28,34 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-/**
- * Representerar all användarinmatning för en ny bryggning innan den sparas.
- */
+/** Representerar inmatningsvärde och tillhörande fel. */
+data class NumericInput(
+    val value: String = "",
+    val error: String? = null
+)
+
+/** Representerar all användarinmatning för en ny bryggning innan den sparas. */
 data class BrewSetupState(
     val selectedBean: Bean? = null,
-    val doseGrams: String = "",
+    val doseGrams: NumericInput = NumericInput(),
     val selectedGrinder: Grinder? = null,
     val grindSetting: String = "",
-    val grindSpeedRpm: String = "",
+    val grindSpeedRpm: NumericInput = NumericInput(),
     val selectedMethod: Method? = null,
-    val brewTempCelsius: String = "",
+    val brewTempCelsius: NumericInput = NumericInput(),
     val notes: String = ""
 )
 
-/** Data class som returneras efter att en bryggning har sparats. (Flyttad från ScaleViewModel) */
+/** Data class som returneras efter att en bryggning har sparats. */
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
-/**
- * ViewModel för att hantera inställningar inför en bryggning och visa eventuella resultat.
- */
-@HiltViewModel // <-- NY ANNOTERING
+@HiltViewModel
 class BrewViewModel @Inject constructor(
     private val repository: CoffeeRepository
 ) : ViewModel() {
+
+    private val decimalRegex = Regex("^\\d*\\.?\\d*$")
+    private val integerRegex = Regex("^\\d*$")
 
     // --- State för dropdown-listor ---
     val availableBeans: StateFlow<List<Bean>> = repository.getAllBeans()
@@ -81,17 +85,59 @@ class BrewViewModel @Inject constructor(
 
     // --- Funktioner för att uppdatera inställningar ---
     fun selectBean(bean: Bean?) { brewSetupState = brewSetupState.copy(selectedBean = bean) }
-    fun onDoseChange(dose: String) { if (dose.matches(Regex("^\\d*\\.?\\d*$"))) brewSetupState = brewSetupState.copy(doseGrams = dose) }
+
+    fun onDoseChange(dose: String) {
+        val isValid = dose.matches(decimalRegex)
+        brewSetupState = brewSetupState.copy(
+            doseGrams = brewSetupState.doseGrams.copy(
+                value = dose,
+                error = if (isValid || dose.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 20.5)"
+            )
+        )
+    }
+
     fun selectGrinder(grinder: Grinder?) { brewSetupState = brewSetupState.copy(selectedGrinder = grinder) }
     fun onGrindSettingChange(setting: String) { brewSetupState = brewSetupState.copy(grindSetting = setting) }
-    fun onGrindSpeedChange(rpm: String) { if (rpm.matches(Regex("^\\d*$"))) brewSetupState = brewSetupState.copy(grindSpeedRpm = rpm) }
-    fun selectMethod(method: Method?) { brewSetupState = brewSetupState.copy(selectedMethod = method) }
-    fun onBrewTempChange(temp: String) { if (temp.matches(Regex("^\\d*\\.?\\d*$"))) brewSetupState = brewSetupState.copy(brewTempCelsius = temp) }
 
-    fun isSetupValid(): Boolean { return brewSetupState.selectedBean != null && brewSetupState.doseGrams.toDoubleOrNull()?.let { it > 0 } == true && brewSetupState.selectedMethod != null }
+    fun onGrindSpeedChange(rpm: String) {
+        val isValid = rpm.matches(integerRegex)
+        brewSetupState = brewSetupState.copy(
+            grindSpeedRpm = brewSetupState.grindSpeedRpm.copy(
+                value = rpm,
+                error = if (isValid || rpm.isBlank()) null else "Måste vara ett heltal"
+            )
+        )
+    }
+
+    fun selectMethod(method: Method?) { brewSetupState = brewSetupState.copy(selectedMethod = method) }
+
+    fun onBrewTempChange(temp: String) {
+        val isValid = temp.matches(decimalRegex)
+        brewSetupState = brewSetupState.copy(
+            brewTempCelsius = brewSetupState.brewTempCelsius.copy(
+                value = temp,
+                error = if (isValid || temp.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 94.5)"
+            )
+        )
+    }
+
+    fun isSetupValid(): Boolean {
+        val doseValue = brewSetupState.doseGrams.value.toDoubleOrNull()
+        val doseValid = doseValue?.let { it > 0 } == true
+
+        val noInputErrors = brewSetupState.doseGrams.error == null &&
+                brewSetupState.grindSpeedRpm.error == null &&
+                brewSetupState.brewTempCelsius.error == null
+
+        return brewSetupState.selectedBean != null &&
+                brewSetupState.selectedMethod != null &&
+                doseValid &&
+                noInputErrors
+    }
+
     fun getCurrentSetup(): BrewSetupState { return brewSetupState }
 
-    // --- FUNKTIONER FÖR RESULTAT ---
+    // --- Funktioner för resultat ---
     fun loadBrewResults(brewId: Long?) {
         if (brewId == null) {
             _completedBrewMetrics.value = null
@@ -120,7 +166,7 @@ class BrewViewModel @Inject constructor(
     }
 
 
-    // --- FUNKTION: Ladda inställningar från senaste bryggningen ---
+    // --- Funktion: Ladda inställningar från senaste bryggningen ---
     fun loadLatestBrewSettings() {
         viewModelScope.launch {
             val latestBrew = repository.getAllBrews().firstOrNull()?.firstOrNull()
@@ -132,19 +178,19 @@ class BrewViewModel @Inject constructor(
 
                 brewSetupState = brewSetupState.copy(
                     selectedBean = bean,
-                    doseGrams = latestBrew.doseGrams.toString(),
+                    doseGrams = NumericInput(latestBrew.doseGrams.toString()),
                     selectedGrinder = grinder,
                     grindSetting = latestBrew.grindSetting ?: "",
-                    grindSpeedRpm = latestBrew.grindSpeedRpm?.toInt()?.toString() ?: "",
+                    grindSpeedRpm = NumericInput(latestBrew.grindSpeedRpm?.toInt()?.toString() ?: ""),
                     selectedMethod = method,
-                    brewTempCelsius = latestBrew.brewTempCelsius?.toString() ?: "",
+                    brewTempCelsius = NumericInput(latestBrew.brewTempCelsius?.toString() ?: ""),
                     notes = ""
                 )
             }
         }
     }
 
-    // --- FUNKTION: Spara bryggning utan grafer ---
+    // --- Funktion: Spara bryggning utan grafer ---
     suspend fun saveBrewWithoutSamples(): Long? {
         if (!isSetupValid()) {
             return null
@@ -154,13 +200,13 @@ class BrewViewModel @Inject constructor(
 
         val newBrew = Brew(
             beanId = currentSetup.selectedBean!!.id,
-            doseGrams = currentSetup.doseGrams.toDouble(),
+            doseGrams = currentSetup.doseGrams.value.toDouble(),
             startedAt = Date(System.currentTimeMillis()),
             grinderId = currentSetup.selectedGrinder?.id,
             methodId = currentSetup.selectedMethod!!.id,
             grindSetting = currentSetup.grindSetting.takeIf { it.isNotBlank() },
-            grindSpeedRpm = currentSetup.grindSpeedRpm.toDoubleOrNull(),
-            brewTempCelsius = currentSetup.brewTempCelsius.toDoubleOrNull(),
+            grindSpeedRpm = currentSetup.grindSpeedRpm.value.toDoubleOrNull(),
+            brewTempCelsius = currentSetup.brewTempCelsius.value.toDoubleOrNull(),
             notes = currentSetup.notes.takeIf { it.isNotBlank() }
         )
 
@@ -174,23 +220,22 @@ class BrewViewModel @Inject constructor(
     }
 
     /**
-     * NY FUNKTION: Sparar en live-bryggning.
-     * Logik flyttad från ScaleViewModel.
+     * Sparar en live-bryggning.
      */
     suspend fun saveLiveBrew(
         setupState: BrewSetupState,
         finalSamples: List<BrewSample>,
         finalTimeMillis: Long,
-        scaleDeviceName: String? // Skicka in vågnamn för anteckningar
+        scaleDeviceName: String?
     ): SaveBrewResult {
         if (finalSamples.size < 2 || finalTimeMillis <= 0) {
             _error.value = "Not enough data recorded to save."
             return SaveBrewResult(null)
         }
 
-        // Validera Setup
+        // Validera Setup (använder nu .value för att konvertera)
         val beanId = setupState.selectedBean?.id
-        val doseGrams = setupState.doseGrams.toDoubleOrNull()
+        val doseGrams = setupState.doseGrams.value.toDoubleOrNull()
         if (beanId == null || doseGrams == null) {
             _error.value = "Missing bean/dose in setup."
             return SaveBrewResult(null)
@@ -206,8 +251,8 @@ class BrewViewModel @Inject constructor(
             grinderId = setupState.selectedGrinder?.id,
             methodId = setupState.selectedMethod?.id,
             grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
-            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(),
-            brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
+            grindSpeedRpm = setupState.grindSpeedRpm.value.toDoubleOrNull(),
+            brewTempCelsius = setupState.brewTempCelsius.value.toDoubleOrNull(),
             notes = "Recorded${scaleInfo} on ${
                 SimpleDateFormat(
                     "yyyy-MM-dd HH:mm",
