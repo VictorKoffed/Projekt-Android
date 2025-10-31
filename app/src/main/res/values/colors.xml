@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="gentle_beige">#FFF5EFE6</color>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="gentle_beige" tools:ignore="UnusedResources">#FFF5EFE6</color>
 </resources>

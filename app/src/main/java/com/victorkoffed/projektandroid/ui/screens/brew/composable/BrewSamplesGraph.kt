@@ -33,7 +33,7 @@ private data class GraphDrawingContext(
     val axisTitlePaintFlow: android.graphics.Paint,
     val graphStartX: Float,
     val graphEndX: Float,
-    val graphTopY: Float,
+    @Suppress("SameParameterValue") val graphTopY: Float,
     val graphBottomY: Float,
     val graphWidth: Float,
     val graphHeight: Float,
