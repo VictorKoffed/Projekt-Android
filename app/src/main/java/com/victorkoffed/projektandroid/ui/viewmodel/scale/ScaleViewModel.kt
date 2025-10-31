@@ -6,21 +6,16 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-// import com.victorkoffed.projektandroid.data.db.Brew // Tas bort
-import com.victorkoffed.projektandroid.data.db.BrewSample // <-- ÅTERSTÄLLD IMPORT
-// import com.victorkoffed.projektandroid.data.repository.CoffeeRepository // Tas bort
+import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-// import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // Tas bort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-// import kotlinx.coroutines.async // Tas bort
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,16 +23,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-// import java.text.SimpleDateFormat // Tas bort
-// import java.util.Date // Tas bort
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
+
 // --- Konstanter ---
 private const val TAG = "ScaleViewModel"
 private val SCAN_TIMEOUT = 10.seconds
@@ -53,7 +46,6 @@ private object BleErrorTranslator {
             rawMessage.contains("GATT Error") -> "Connection error ($rawMessage)."
             rawMessage.contains("permission", ignoreCase = true) -> "Bluetooth permission missing."
             rawMessage.contains("address", ignoreCase = true) -> "Invalid address."
-            // Uppdaterade översättningar för de nya felen från BookooBleClient
             rawMessage.contains("BLE scan failed") -> "BLE scan failed."
             rawMessage.contains("Bluetooth is turned off.") -> "Bluetooth is turned off."
             rawMessage.contains("Bluetooth hardware not available.") -> "Bluetooth hardware not available."
@@ -113,7 +105,6 @@ class ScaleViewModel @Inject constructor(
     val rememberScaleEnabled: StateFlow<Boolean> = prefsManager.rememberScaleEnabled
     val autoConnectEnabled: StateFlow<Boolean> = prefsManager.autoConnectEnabled
     val rememberedScaleAddress: StateFlow<String?> = prefsManager.rememberedScaleAddress
-    // REMOVED old preference flows
 
     // --- Private Job Management ---
     private var scanJob: Job? = null
@@ -135,7 +126,8 @@ class ScaleViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f, 0.0f))
 
     /** Delat Flöde för anslutningsstatus (med översatta fel och sidoeffekter). */
-    val connectionState: SharedFlow<BleConnectionState> = scaleRepo.observeConnectionState()
+    // ÄNDRING: Går från SharedFlow till StateFlow
+    val connectionState: StateFlow<BleConnectionState> = scaleRepo.observeConnectionState()
         .map { state ->
             // Översätt råa felmeddelanden innan de exponeras
             if (state is BleConnectionState.Error) {
@@ -146,7 +138,12 @@ class ScaleViewModel @Inject constructor(
         }
         // Hantera sidoeffekter (auto-connect, paus vid disconnect) i denna onEach
         .onEach { state -> handleConnectionStateChange(state) }
-        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+        // ÄNDRING: Använder stateIn istället för shareIn
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = BleConnectionState.Disconnected // Sätter ett startvärde
+        )
 
 
     init {
@@ -288,7 +285,7 @@ class ScaleViewModel @Inject constructor(
     }
 
     fun tareScale() {
-        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Connected) {
+        if (connectionState.value !is BleConnectionState.Connected) {
             _error.value = "Scale not connected."; return
         }
         scaleRepo.tareScale()
@@ -304,7 +301,7 @@ class ScaleViewModel @Inject constructor(
     /** Startar nedräkning och signalerar till vågen att starta timer. */
     fun startRecording() {
         if (_isRecording.value || _isPaused.value || _countdown.value != null) return
-        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Connected) { _error.value = "Scale not connected."; return }
+        if (connectionState.value !is BleConnectionState.Connected) { _error.value = "Scale not connected."; return }
 
         viewModelScope.launch {
             try {
@@ -323,7 +320,7 @@ class ScaleViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting recording", e)
                 _countdown.value = null; _error.value = "Could not start."
-                if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) scaleRepo.resetTimer()
+                if (connectionState.value is BleConnectionState.Connected) scaleRepo.resetTimer()
             }
         }
     }
@@ -347,7 +344,7 @@ class ScaleViewModel @Inject constructor(
         _isPaused.value = true
         _isPausedDueToDisconnect.value = false
         _weightAtPause.value = measurement.value.weightGrams
-        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
+        if (connectionState.value is BleConnectionState.Connected) {
             scaleRepo.stopTimer()
         }
         Log.d(TAG, "Manually paused.")
@@ -361,7 +358,7 @@ class ScaleViewModel @Inject constructor(
         _weightAtPause.value = null
 
         // Skicka Start Timer-kommando endast om ansluten
-        if (connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
+        if (connectionState.value is BleConnectionState.Connected) {
             scaleRepo.startTimer()
             Log.d(TAG, "Resumed. Sent Start Timer.")
         } else {
@@ -388,7 +385,7 @@ class ScaleViewModel @Inject constructor(
         _recordingTimeMillis.value = 0L
 
         // Skicka Reset Timer-kommando om inspelning var aktiv/pausad och ansluten
-        if (wasRecordingOrPaused && connectionState.replayCache.lastOrNull() is BleConnectionState.Connected) {
+        if (wasRecordingOrPaused && connectionState.value is BleConnectionState.Connected) {
             scaleRepo.resetTimer()
             Log.d(TAG, "Recording stopped/reset. Sent Reset Timer.")
         } else {
@@ -498,7 +495,7 @@ class ScaleViewModel @Inject constructor(
 
         viewModelScope.launch {
             delay(2000L) // Vänta lite innan återförsök
-            val currentState = connectionState.replayCache.lastOrNull()
+            val currentState = connectionState.value
 
             // Kontrollera om återanslutning fortfarande behövs
             val stillNeedsReconnect = currentState !is BleConnectionState.Connected &&
@@ -527,7 +524,7 @@ class ScaleViewModel @Inject constructor(
 
         // Måste även hantera sparande av adress här om vi har en anslutning (för att hantera omedelbart aktivering)
         if (enabled) {
-            val cs = connectionState.replayCache.lastOrNull()
+            val cs = connectionState.value
             if (cs is BleConnectionState.Connected) {
                 prefsManager.setRememberedScaleAddress(cs.deviceAddress)
                 prefsManager.setAutoConnectEnabled(true)
@@ -560,7 +557,7 @@ class ScaleViewModel @Inject constructor(
     private fun attemptAutoConnect() {
         // Använder Manager för att läsa tillstånd
         if (!rememberScaleEnabled.value || !autoConnectEnabled.value) return
-        val state = connectionState.replayCache.lastOrNull()
+        val state = connectionState.value
         if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) {
             reconnectAttempted = false; return
         }
@@ -591,7 +588,7 @@ class ScaleViewModel @Inject constructor(
                 return
             }
 
-            val state = connectionState.replayCache.lastOrNull()
+            val state = connectionState.value
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return
             isManualDisconnect = false
             scaleRepo.connect(addr)
@@ -613,7 +610,7 @@ class ScaleViewModel @Inject constructor(
         scanTimeoutJob?.cancel()
         manualTimerJob?.cancel()
         // Stäng anslutningen om den var aktiv och inte redan Disconnected
-        if (connectionState.replayCache.lastOrNull() !is BleConnectionState.Disconnected) {
+        if (connectionState.value !is BleConnectionState.Disconnected) {
             isManualDisconnect = true // Markera som avsiktlig disconnect
             scaleRepo.disconnect()
         }
