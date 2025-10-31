@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -66,6 +66,7 @@ fun AppNavigationGraph(
                     navController.navigate(Screen.BrewDetail.createRoute(brewId))
                 },
                 onMenuClick = startDrawerOpen // Use the callback
+                // homeVm, coffeeImageVm, scaleVm, brewVm hämtas nu lokalt i HomeScreen
             )
         }
 
@@ -97,6 +98,7 @@ fun AppNavigationGraph(
             ScaleConnectScreen(
                 snackbarHostState = snackbarHostState, // Skicka vidare globala
                 onNavigateBack = { navController.popBackStack() }
+                // scaleVm hämtas lokalt
             )
         }
 
@@ -104,7 +106,7 @@ fun AppNavigationGraph(
         composable(Screen.BrewSetup.route) {
             val scope = rememberCoroutineScope() // Lokalt scope för snackbar
             BrewScreen(
-                // vm, completedBrewId, etc tas bort. Skärmen hämtar dem själv.
+                // vm, scaleConnectionState tas bort. Skärmen hämtar dem själv.
                 onStartBrewClick = {
                     navController.navigate(Screen.LiveBrew.route)
                 },
@@ -144,6 +146,7 @@ fun AppNavigationGraph(
                         launchSingleTop = true // Avoid multiple instances
                     }
                 }
+                // scaleVm och brewVm hämtas nu lokalt i LiveBrewScreen
             )
         }
 

@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -39,6 +41,9 @@ data class BrewSetupState(
     val brewTempCelsius: String = "",
     val notes: String = ""
 )
+
+/** Data class som returneras efter att en bryggning har sparats. (Flyttad från ScaleViewModel) */
+data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
 /**
  * ViewModel för att hantera inställningar inför en bryggning och visa eventuella resultat.
@@ -59,6 +64,10 @@ class BrewViewModel @Inject constructor(
     // --- State för användarinmatning ---
     var brewSetupState by mutableStateOf(BrewSetupState())
         private set
+
+    // --- State för felhantering vid sparande ---
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
 
     // --- State för att visa resultat ---
     private val _completedBrewMetrics = MutableStateFlow<BrewMetrics?>(null)
@@ -162,5 +171,79 @@ class BrewViewModel @Inject constructor(
                 null
             }
         }.await()
+    }
+
+    /**
+     * NY FUNKTION: Sparar en live-bryggning.
+     * Logik flyttad från ScaleViewModel.
+     */
+    suspend fun saveLiveBrew(
+        setupState: BrewSetupState,
+        finalSamples: List<BrewSample>,
+        finalTimeMillis: Long,
+        scaleDeviceName: String? // Skicka in vågnamn för anteckningar
+    ): SaveBrewResult {
+        if (finalSamples.size < 2 || finalTimeMillis <= 0) {
+            _error.value = "Not enough data recorded to save."
+            return SaveBrewResult(null)
+        }
+
+        // Validera Setup
+        val beanId = setupState.selectedBean?.id
+        val doseGrams = setupState.doseGrams.toDoubleOrNull()
+        if (beanId == null || doseGrams == null) {
+            _error.value = "Missing bean/dose in setup."
+            return SaveBrewResult(null)
+        }
+
+        // Skapa Brew-objekt
+        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
+        val scaleInfo = scaleDeviceName?.let { " via $it" } ?: ""
+        val newBrew = Brew(
+            beanId = beanId,
+            doseGrams = doseGrams,
+            startedAt = Date(actualStartTimeMillis),
+            grinderId = setupState.selectedGrinder?.id,
+            methodId = setupState.selectedMethod?.id,
+            grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
+            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(),
+            brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
+            notes = "Recorded${scaleInfo} on ${
+                SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm",
+                    Locale.getDefault()
+                ).format(Date())
+            }"
+        )
+
+        // Spara Brew och Samples (med transaktion)
+        val savedBrewId: Long? = viewModelScope.async {
+            try {
+                val id = repository.addBrewWithSamples(newBrew, finalSamples)
+                clearError()
+                id
+            } catch (e: Exception) {
+                _error.value = "Save failed: ${e.message}"
+                null
+            }
+        }.await()
+
+        var beanIdReachedZero: Long? = null
+        if (savedBrewId != null) {
+            // Kontrollera om lagersaldot nu är noll efter att dosen dragits bort
+            try {
+                val bean = repository.getBeanById(beanId)
+                if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
+                    beanIdReachedZero = beanId
+                }
+            } catch (_: Exception) {
+                // Log.e(TAG, "Check bean stock failed after save", e) // Kan inte logga TAG här
+            }
+        }
+        return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

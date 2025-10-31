@@ -33,7 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
@@ -82,8 +82,26 @@ fun LiveBrewScreen(
     // Logik för att stoppa och spara, nu flyttad hit
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
+            // 1. Hämta setup-datan från BrewViewModel
             val currentSetup = brewVm.getCurrentSetup()
-            val saveResult = scaleVm.stopRecordingAndSave(currentSetup)
+
+            // 2. Stoppa inspelningen på vågen (detta nollställer *inte* samples/time i VM)
+            scaleVm.stopRecording()
+
+            // 3. Hämta de slutgiltiga inspelade värdena
+            val finalSamples = scaleVm.recordedSamplesFlow.value
+            val finalTime = scaleVm.recordingTimeMillis.value
+
+            // 4. Hämta vågens namn (om ansluten) för anteckningar
+            val scaleName = (connectionState as? BleConnectionState.Connected)?.deviceName
+
+            // 5. Anropa den *nya* spara-funktionen på BrewViewModel
+            val saveResult = brewVm.saveLiveBrew(
+                setupState = currentSetup,
+                finalSamples = finalSamples,
+                finalTimeMillis = finalTime,
+                scaleDeviceName = scaleName
+            )
 
             if (saveResult.brewId != null) {
                 // Använd nav-callback
@@ -195,7 +213,7 @@ fun LiveBrewScreen(
         // Dialog vid anslutningsfel under pågående inspelning/paus
         if (showDisconnectedAlert) {
             AlertDialog(
-                onDismissRequest = { },
+                onDismissRequest = { }, // Tillåt att stänga
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
@@ -205,6 +223,7 @@ fun LiveBrewScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = {
+                        // Stäng dialogen
                         onStopAndSaveClick()
                     }) {
                         Text("Stop & Save As Is")

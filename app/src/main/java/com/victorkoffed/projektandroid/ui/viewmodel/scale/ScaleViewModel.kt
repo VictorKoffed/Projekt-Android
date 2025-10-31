@@ -6,18 +6,18 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.victorkoffed.projektandroid.data.db.Brew
-import com.victorkoffed.projektandroid.data.db.BrewSample
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+// import com.victorkoffed.projektandroid.data.db.Brew // Tas bort
+import com.victorkoffed.projektandroid.data.db.BrewSample // <-- ÅTERSTÄLLD IMPORT
+// import com.victorkoffed.projektandroid.data.repository.CoffeeRepository // Tas bort
 import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
+// import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState // Tas bort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
+// import kotlinx.coroutines.async // Tas bort
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -33,18 +33,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+// import java.text.SimpleDateFormat // Tas bort
+// import java.util.Date // Tas bort
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
-
 // --- Konstanter ---
 private const val TAG = "ScaleViewModel"
 private val SCAN_TIMEOUT = 10.seconds
-
-/** Data class som returneras efter att en bryggning har sparats. */
-data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
 /**
  * Översätter råa BLE-felmeddelanden till användarvänliga strängar.
@@ -75,7 +71,7 @@ private object BleErrorTranslator {
 class ScaleViewModel @Inject constructor(
     app: Application,
     private val scaleRepo: ScaleRepository,
-    private val coffeeRepo: CoffeeRepository,
+    // private val coffeeRepo: CoffeeRepository, // Tas bort
     private val prefsManager: ScalePreferenceManager
 ) : AndroidViewModel(app) {
 
@@ -373,59 +369,6 @@ class ScaleViewModel @Inject constructor(
             startManualTimer()
             Log.w(TAG, "Resumed but scale disconnected. Starting manual timer.")
         }
-    }
-
-    /** Stoppar inspelningen, sparar data och rensar state. */
-    suspend fun stopRecordingAndSave(setupState: BrewSetupState): SaveBrewResult {
-        if (_countdown.value != null || (!_isRecording.value && !_isPaused.value)) {
-            stopRecording(); return SaveBrewResult(null)
-        }
-        val finalTimeMillis = _recordingTimeMillis.value; val finalSamples = _recordedSamplesFlow.value
-        stopRecording()
-
-        if (finalSamples.size < 2 || finalTimeMillis <= 0) {
-            _error.value = "Not enough data recorded to save."; return SaveBrewResult(null)
-        }
-
-        // Validera Setup
-        val beanId = setupState.selectedBean?.id; val doseGrams = setupState.doseGrams.toDoubleOrNull()
-        if (beanId == null || doseGrams == null) {
-            _error.value = "Missing bean/dose in setup."; return SaveBrewResult(null)
-        }
-
-        // Skapa Brew-objekt
-        val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
-        val scaleInfo = (connectionState.replayCache.lastOrNull() as? BleConnectionState.Connected)?.let { " via ${it.deviceName}" } ?: ""
-        val newBrew = Brew(
-            beanId = beanId, doseGrams = doseGrams, startedAt = Date(actualStartTimeMillis), grinderId = setupState.selectedGrinder?.id,
-            methodId = setupState.selectedMethod?.id, grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
-            grindSpeedRpm = setupState.grindSpeedRpm.toDoubleOrNull(), brewTempCelsius = setupState.brewTempCelsius.toDoubleOrNull(),
-            notes = "Recorded${scaleInfo} on ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())}"
-        )
-
-        // Spara Brew och Samples (med transaktion)
-        val savedBrewId: Long? = viewModelScope.async {
-            try {
-                val id = coffeeRepo.addBrewWithSamples(newBrew, finalSamples)
-                clearError(); id
-            } catch (e: Exception) {
-                _error.value = "Save failed: ${e.message}"; null
-            }
-        }.await()
-
-        var beanIdReachedZero: Long? = null
-        if (savedBrewId != null) {
-            // Kontrollera om lagersaldot nu är noll efter att dosen dragits bort
-            try {
-                val bean = coffeeRepo.getBeanById(beanId)
-                if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
-                    beanIdReachedZero = beanId
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Check bean stock failed after save", e)
-            }
-        }
-        return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
     /** Stoppar inspelning/paus, nollställer state och skickar Reset Timer. */
