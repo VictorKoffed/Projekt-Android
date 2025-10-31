@@ -67,12 +67,27 @@ class BookooBleClient(private val context: Context) {
             }
         }
 
-        @Deprecated("Used internally for older Android versions", ReplaceWith("onCharacteristicChanged(gatt, characteristic, characteristic.value)"))
+        @Deprecated(
+            "Used internally for older Android versions",
+            ReplaceWith("onCharacteristicChanged(gatt, characteristic, characteristic.value)")
+        )
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            handleCharacteristicChanged(characteristic)
+            // Äldre API: hämta värdet från characteristic.value
+            @Suppress("DEPRECATION")
+            val data = characteristic.value
+            if (data != null) {
+                handleCharacteristicChanged(characteristic, data)
+            } else {
+                Log.w(TAG, "Characteristic ${characteristic.uuid} changed but data was null (old API).")
+            }
         }
 
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
             handleCharacteristicChanged(characteristic, value)
         }
 
@@ -113,14 +128,12 @@ class BookooBleClient(private val context: Context) {
         } else if (currentScanner == null) {
             close(IllegalStateException("Bluetooth scanner unavailable."))
         } else {
-            // NY KORRIGERING: Aggressiv try-catch runt startScan för att fånga RuntimeExceptions.
             try {
                 currentScanner.startScan(null, settings, callback)
             } catch (e: SecurityException) {
                 Log.e(TAG, "SecurityException during startScan", e)
                 close(IllegalStateException("Permission missing for scan."))
             } catch (e: Exception) {
-                // Fångar alla oväntade RuntimeExceptions (t.ex. vid BT state issue)
                 Log.e(TAG, "BLE startScan failed unexpectedly with general exception", e)
                 close(IllegalStateException("BLE scan failed unexpectedly: ${e.message}"))
             }
@@ -328,23 +341,17 @@ class BookooBleClient(private val context: Context) {
     }
 
     /** Hanterar inkommande data från vågen via notifikationer. */
-    private fun handleCharacteristicChanged(characteristic: BluetoothGattCharacteristic, value: ByteArray? = null) {
-
-        val data: ByteArray? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            value
-        } else {
-            @Suppress("DEPRECATION")
-            value ?: characteristic.value
-        }
-
-        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID && data != null) {
+    private fun handleCharacteristicChanged(
+        characteristic: BluetoothGattCharacteristic,
+        data: ByteArray
+    ) {
+        if (characteristic.uuid == WEIGHT_CHARACTERISTIC_UUID) {
             BookooDataParser.parseMeasurement(data)?.let { measurement ->
                 scope.launch { measurements.emit(measurement) }
 
                 val currentState = connectionState.value
                 if (currentState is BleConnectionState.Connected && measurement.batteryPercent != null) {
                     if (currentState.batteryPercent != measurement.batteryPercent) {
-
                         mainHandler.post {
                             val checkState = connectionState.value
                             if (checkState is BleConnectionState.Connected) {
@@ -354,8 +361,6 @@ class BookooBleClient(private val context: Context) {
                     }
                 }
             }
-        } else if (data == null) {
-            Log.w(TAG, "Characteristic ${characteristic.uuid} changed but data was null.")
         }
     }
 
