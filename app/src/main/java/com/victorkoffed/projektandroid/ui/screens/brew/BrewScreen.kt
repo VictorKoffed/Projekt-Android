@@ -52,19 +52,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewScreen(
-    // ID för en nyligen avslutad bryggning. Används för att nollställa tillståndet vid navigation.
-    // completedBrewId: Long?, // Tas bort
-    // Aktuell anslutningsstatus till Bluetooth-vågen.
-    // scaleConnectionState: BleConnectionState, // Tas bort
-    // Callback för att starta en live-bryggning.
-    onStartBrewClick: () -> Unit, // Ändrad från (setup: BrewSetupState) -> Unit
+
+    onStartBrewClick: () -> Unit,
     // Callback för att spara bryggningen utan realtidsgraf.
-    onSaveWithoutGraph: (newBrewId: Long?) -> Unit, // Ändrad från () -> Unit
+    onSaveWithoutGraph: (newBrewId: Long?) -> Unit,
     // Callback för att navigera till anslutningsskärmen.
     onNavigateToScale: () -> Unit,
     // Callback för att nollställa 'completedBrewId' i NavHost/Activity.
-    // onClearResult: () -> Unit, // Tas bort
-    // Callback för att navigera tillbaka.
     onNavigateBack: () -> Unit,
     // Hämta ViewModels lokalt
     vm: BrewViewModel = hiltViewModel(),
@@ -91,11 +85,8 @@ fun BrewScreen(
 
     // Nollställer ViewModel-state och NavHost-ID när skärmen laddas med ett avslutat ID.
     // Detta säkerställer att skärmen alltid visar setup-läget.
-    LaunchedEffect(Unit) { // Ändrad från completedBrewId
-        // if (completedBrewId != null) { // Tas bort
+    LaunchedEffect(Unit) {
         vm.clearBrewResults()
-        // onClearResult() // Tas bort
-        // } // Tas bort
     }
 
     Scaffold(

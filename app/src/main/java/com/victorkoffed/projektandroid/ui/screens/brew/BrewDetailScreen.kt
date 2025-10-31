@@ -79,7 +79,7 @@ fun BrewDetailScreen(
     onNavigateToCamera: () -> Unit,
     onNavigateToImageFullscreen: (String) -> Unit,
     viewModel: BrewDetailViewModel,
-    snackbarHostState: SnackbarHostState, // <-- FIX: Ta emot den globala
+    snackbarHostState: SnackbarHostState,
     navBackStackEntry: NavBackStackEntry // Används för bild-URI och arkiveringsprompt
 ) {
     // --- States ---
@@ -94,7 +94,7 @@ fun BrewDetailScreen(
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
     // State för Snackbar
-    // val snackbarHostState = remember { SnackbarHostState() } // <-- FIX: Ta bort lokal instans
+    // val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // State för bild från kameran
     val savedImageUri by navBackStackEntry.savedStateHandle

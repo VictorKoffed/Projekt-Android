@@ -8,7 +8,7 @@ import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepository
 import com.victorkoffed.projektandroid.data.repository.CoffeeImageRepositoryImpl
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepositoryImpl
-import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager // <-- NY IMPORT
+import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager
 import com.victorkoffed.projektandroid.data.repository.ScaleRepository
 import dagger.Module
 import dagger.Provides

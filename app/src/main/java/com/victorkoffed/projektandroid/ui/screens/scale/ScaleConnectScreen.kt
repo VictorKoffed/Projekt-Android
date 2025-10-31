@@ -78,7 +78,6 @@ fun ScaleConnectScreen(
 
 
     // --- Snackbar state för felmeddelanden ---
-    // val snackbarHostState = remember { SnackbarHostState() } // Tas bort
 
     // Effekt för att visa (skanning/sparande) felmeddelanden i en Snackbar
     LaunchedEffect(error) {
@@ -92,20 +91,6 @@ fun ScaleConnectScreen(
         // Nollställ felet i ViewModel så det inte visas igen
         vm.clearError()
     }
-
-    // Effekt för att visa anslutningsfel i en Snackbar
-    // Tas bort - hanteras nu globalt i MainActivity
-    /*
-    LaunchedEffect(connectionState) {
-        (connectionState as? BleConnectionState.Error)?.let {
-            snackbarHostState.showSnackbar(
-                message = it.message,
-                duration = SnackbarDuration.Long
-            )
-        }
-    }
-    */
-
 
     Scaffold(
         topBar = {

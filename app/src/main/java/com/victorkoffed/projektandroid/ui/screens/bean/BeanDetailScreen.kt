@@ -81,7 +81,7 @@ private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.get
 fun BeanDetailScreen(
     onNavigateBack: () -> Unit,
     onBrewClick: (Long) -> Unit,
-    snackbarHostState: SnackbarHostState, // <-- FIX: Ta emot den globala
+    snackbarHostState: SnackbarHostState,
     // Hämta ViewModel direkt här med Hilt.
     viewModel: BeanDetailViewModel = hiltViewModel()
 ) {

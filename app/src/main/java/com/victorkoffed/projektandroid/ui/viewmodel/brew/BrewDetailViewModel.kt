@@ -55,10 +55,6 @@ class BrewDetailViewModel @Inject constructor(
     // Hämta brewId från SavedStateHandle (obligatoriskt argument)
     private val brewId: Long = savedStateHandle.get<Long>("brewId") ?: throw IllegalArgumentException("brewId not found in SavedStateHandle")
 
-    // Hämta beanIdToArchivePrompt från SavedStateHandle (valfritt argument, kan vara null eller -1L)
-    // VI GÖR DETTA I INIT ISTÄLLET FÖR ATT UPPDATERA STATE DIREKT
-    // private val initialBeanIdToArchivePrompt: Long? = savedStateHandle.get<Long>("beanIdToArchivePrompt")?.takeIf { it > 0 }
-
     private val _brewDetailState = MutableStateFlow(BrewDetailState())
     val brewDetailState: StateFlow<BrewDetailState> = _brewDetailState.asStateFlow()
 

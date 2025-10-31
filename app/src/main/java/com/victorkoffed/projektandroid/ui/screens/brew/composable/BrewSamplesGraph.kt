@@ -21,6 +21,7 @@ import androidx.core.graphics.withSave
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import kotlin.math.ceil
 import kotlin.math.max
+
 private data class GraphDrawingContext(
     val massColor: Color,
     val flowColor: Color,
