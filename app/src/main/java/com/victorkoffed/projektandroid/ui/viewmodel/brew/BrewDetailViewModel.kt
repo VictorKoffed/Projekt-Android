@@ -43,6 +43,9 @@ data class BrewDetailState(
     val error: String? = null
 )
 
+// Nyckel definierad i CameraViewModel.kt för att spara URI.
+private const val CAMERA_URI_KEY = "captured_image_uri"
+
 // Annotera med @HiltViewModel
 @HiltViewModel
 class BrewDetailViewModel @Inject constructor(
@@ -61,6 +64,13 @@ class BrewDetailViewModel @Inject constructor(
     // State för att visa arkiveringsdialog vid start
     private val _showArchivePromptOnEntry = MutableStateFlow<Long?>(null) // Håller beanId
     val showArchivePromptOnEntry: StateFlow<Long?> = _showArchivePromptOnEntry.asStateFlow()
+
+    // FIX 1a: Exponera bild-URI från SavedStateHandle som StateFlow
+    val capturedImageUri: StateFlow<String?>
+        get() = savedStateHandle.getStateFlow(
+            key = CAMERA_URI_KEY,
+            initialValue = null
+        )
 
     var quickEditNotes by mutableStateOf("")
         private set
@@ -95,6 +105,17 @@ class BrewDetailViewModel @Inject constructor(
             checkForArchivePromptOnEntry()
         } else {
             _brewDetailState.update { it.copy(isLoading = false, error = "Invalid Brew ID provided.") }
+        }
+
+        // FIX 1b: Konsumera och rensa URI-resultatet i ViewModel
+        viewModelScope.launch {
+            capturedImageUri.collectLatest { uri ->
+                if (uri != null) {
+                    updateBrewImageUri(uri)
+                    // Rensa värdet från SavedStateHandle så det inte återanvänds
+                    savedStateHandle[CAMERA_URI_KEY] = null
+                }
+            }
         }
     }
 

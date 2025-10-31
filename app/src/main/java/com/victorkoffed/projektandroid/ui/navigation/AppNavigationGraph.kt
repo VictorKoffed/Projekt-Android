@@ -167,8 +167,7 @@ fun AppNavigationGraph(
                     navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
                 },
                 viewModel = brewDetailViewModel,
-                snackbarHostState = snackbarHostState, // Skicka vidare globala
-                navBackStackEntry = backStackEntry
+                snackbarHostState = snackbarHostState // Skicka vidare globala
             )
         }
 

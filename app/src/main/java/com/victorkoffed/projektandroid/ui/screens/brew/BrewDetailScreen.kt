@@ -44,7 +44,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavBackStackEntry
 import coil.compose.AsyncImage
 import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.ui.screens.bean.ArchiveConfirmationDialog
@@ -79,8 +77,7 @@ fun BrewDetailScreen(
     onNavigateToCamera: () -> Unit,
     onNavigateToImageFullscreen: (String) -> Unit,
     viewModel: BrewDetailViewModel,
-    snackbarHostState: SnackbarHostState,
-    navBackStackEntry: NavBackStackEntry // Används för bild-URI och arkiveringsprompt
+    snackbarHostState: SnackbarHostState
 ) {
     // --- States ---
     val state by viewModel.brewDetailState.collectAsState()
@@ -96,10 +93,11 @@ fun BrewDetailScreen(
     // State för Snackbar
     // val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // State för bild från kameran
-    val savedImageUri by navBackStackEntry.savedStateHandle
-        .getLiveData<String>("captured_image_uri")
-        .observeAsState()
+
+    // FIX 2a: Hämta StateFlow direkt från ViewModel (tidigare LiveData/observeAsState)
+    // Denna variabel används bara för att trigga LaunchedEffect, men behålls för att visa konsumtion.
+    val savedImageUri by viewModel.capturedImageUri.collectAsState()
+
     // State för arkiveringsdialog
     val beanForPrompt = state.bean
     // Beräkna om snabbspara-knappen för anteckningar ska vara aktiv.
@@ -108,14 +106,16 @@ fun BrewDetailScreen(
     // --- Slut States ---
 
     // --- LaunchedEffects ---
-    // Hantera returvärde (bild-URI) från CameraScreen
+    // FIX 2b: Denna LaunchedEffect behövs inte längre för att anropa viewModel.updateBrewImageUri,
+    // eftersom ViewModel nu själv hanterar StateFlow-uppdateringen och DB-sparandet i sin init-block.
+    // Den behålls tom för att hantera eventuell framtida logik som ska köras efter att bilden sparats.
     LaunchedEffect(savedImageUri) {
+        @Suppress("ControlFlowWithEmptyBody")
         if (savedImageUri != null) {
-            viewModel.updateBrewImageUri(savedImageUri)
-            // Rensa värdet så det inte återanvänds
-            navBackStackEntry.savedStateHandle.remove<String>("captured_image_uri")
+            // Logik för att uppdatera DB är nu i ViewModel.
         }
     }
+
     // Visa felmeddelanden från ViewModel i Snackbar
     LaunchedEffect(state.error) {
         if (state.error != null) {
@@ -239,14 +239,22 @@ fun BrewDetailScreen(
                                 onClick = { showWeightLine = !showWeightLine },
                                 label = { Text("Weight") },
                                 leadingIcon = { Icon(if (showWeightLine) Icons.Filled.Check else Icons.Filled.Close, if (showWeightLine) "Visible" else "Hidden") },
-                                colors = FilterChipDefaults.filterChipColors( /* ... färger ... */ )
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                )
                             )
                             FilterChip(
                                 selected = showFlowLine,
                                 onClick = { showFlowLine = !showFlowLine },
                                 label = { Text("Flow") },
                                 leadingIcon = { Icon(if (showFlowLine) Icons.Filled.Check else Icons.Filled.Close, if (showFlowLine) "Visible" else "Hidden") },
-                                colors = FilterChipDefaults.filterChipColors( /* ... färger ... */ )
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondary,
+                                )
                             )
                         }
 
@@ -295,6 +303,7 @@ fun BrewDetailScreen(
                                         viewModel.deleteCurrentBrew {
                                             onNavigateBack() // Gå tillbaka efter lyckad radering
                                         }
+                                        // Stäng dialogen
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
