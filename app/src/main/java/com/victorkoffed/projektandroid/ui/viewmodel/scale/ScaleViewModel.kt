@@ -495,6 +495,15 @@ class ScaleViewModel @Inject constructor(
 
         viewModelScope.launch {
             delay(2000L) // Vänta lite innan återförsök
+
+            // KONTROLL FÖR ATT HEDRA MANUELL FRÅNKOPPLING EFTER FÖRDRÖJNINGEN.
+            // Detta förhindrar återanslutning om isManualDisconnect sattes under fördröjningen.
+            if (isManualDisconnect) { // <-- Lade till denna kontroll
+                Log.d(TAG, "Auto-reconnect cancelled because isManualDisconnect is true after delay.")
+                reconnectAttempted = false // Frisläpp låset
+                return@launch
+            }
+
             val currentState = connectionState.value
 
             // Kontrollera om återanslutning fortfarande behövs
