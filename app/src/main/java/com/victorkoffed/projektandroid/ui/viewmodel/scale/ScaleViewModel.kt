@@ -597,8 +597,20 @@ class ScaleViewModel @Inject constructor(
     }
 
     fun forgetRememberedScale() {
+        Log.d(TAG, "ForgetScale called. Stopping all BLE activity.")
+
+        // 1. Stoppa all pågående scanning (avbryter scanJob)
+        stopScan()
+
+        // 2. Koppla ifrån all aktiv eller pågående anslutning.
+        //    Detta sätter `isManualDisconnect = true` internt, vilket förhindrar auto-reconnect.
+        disconnect()
+
+        // 3. Glöm inställningarna i SharedPreferences.
+        //    Detta sätter `rememberScaleEnabled` och `autoConnectEnabled` till false.
         prefsManager.forgetScale()
-        // Nollställ lås
+
+        // 4. Nollställ reconnect-låset (även om disconnect() redan gör det för säkerhets skull)
         reconnectAttempted = false
     }
 
