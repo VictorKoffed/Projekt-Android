@@ -143,7 +143,7 @@ Kör tester:
 📲 Faktisk app (Live version)
 <p > <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="1299"/> </p>
 📲 Flowchart (Live version)
-<p > <img src="docs/images/Flowchart.png" alt="Coffee Journal App Screenshot" width="1182"/> </p>
+<p > <img src="docs/images/Flowchart.png" alt="Coffee Journal App Screenshot" width="955"/> </p>
 
 ---
 

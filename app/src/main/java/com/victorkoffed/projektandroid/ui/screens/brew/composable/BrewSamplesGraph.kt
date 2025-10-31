@@ -106,11 +106,10 @@ fun BrewSamplesGraph(
         val xLabelPadding = 32.dp.toPx()
         val yLabelPaddingLeft = 32.dp.toPx()
         val yLabelPaddingRight = if (hasFlowData && showFlowLine) 32.dp.toPx() else 0.dp.toPx()
-        val graphStartX = yLabelPaddingLeft
         val graphEndX = size.width - yLabelPaddingRight
         val graphTopY = 0f
         val graphBottomY = size.height - xLabelPadding
-        val graphWidth = graphEndX - graphStartX
+        val graphWidth = graphEndX - yLabelPaddingLeft
         val graphHeight = graphBottomY - graphTopY
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
@@ -126,7 +125,7 @@ fun BrewSamplesGraph(
             massColor = massColor, flowColor = flowColor, axisColor = axisColor, gridLineColor = gridLineColor,
             gridLinePaint = gridLinePaint, numericLabelPaint = numericLabelPaint, numericLabelPaintRight = numericLabelPaintRight,
             axisTitlePaint = axisTitlePaint, axisTitlePaintFlow = axisTitlePaintFlow,
-            graphStartX = graphStartX, graphEndX = graphEndX, graphTopY = graphTopY, graphBottomY = graphBottomY,
+            graphStartX = yLabelPaddingLeft, graphEndX = graphEndX, graphTopY = graphTopY, graphBottomY = graphBottomY,
             graphWidth = graphWidth, graphHeight = graphHeight, maxTime = maxTime, maxMass = maxMass,
             maxFlowForScaling = maxFlowForScaling, maxFlowForGridLines = maxFlowForGridLines,
             yLabelPaddingLeft = yLabelPaddingLeft, yLabelPaddingRight = yLabelPaddingRight, xLabelPadding = xLabelPadding,

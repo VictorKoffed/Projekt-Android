@@ -81,6 +81,7 @@ private val brewItemDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.get
 fun BeanDetailScreen(
     onNavigateBack: () -> Unit,
     onBrewClick: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState, // <-- FIX: Ta emot den globala
     // Hämta ViewModel direkt här med Hilt.
     viewModel: BeanDetailViewModel = hiltViewModel()
 ) {
@@ -92,7 +93,6 @@ fun BeanDetailScreen(
     var showArchiveWeightWarningDialog by remember { mutableStateOf(false) }
 
     // Snackbar-hantering
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     // Effekt för felmeddelanden
@@ -141,7 +141,7 @@ fun BeanDetailScreen(
                                     Icon(Icons.Default.Unarchive, contentDescription = "Unarchive Bean", tint = MaterialTheme.colorScheme.primary)
                                 }
                                 // Permanent Radera-knapp
-                                IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = !state.isLoading) {
+                                IconButton(onClick = { }, enabled = !state.isLoading) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Bean permanently", tint = MaterialTheme.colorScheme.error)
                                 }
                             } else {
@@ -152,7 +152,7 @@ fun BeanDetailScreen(
                                         if (bean.remainingWeightGrams == 0.0) {
                                             viewModel.archiveBean { /* Stannar kvar på sidan */ }
                                         } else {
-                                            showArchiveWeightWarningDialog = true // Visa varning om vikt > 0
+                                            // Visa varning om vikt > 0
                                         }
                                     },
                                     enabled = !state.isLoading
@@ -167,7 +167,7 @@ fun BeanDetailScreen(
         },
         snackbarHost = {
             SnackbarHost(
-                hostState = snackbarHostState,
+                hostState = snackbarHostState, // <-- FIX: Använd den globala
                 snackbar = { snackbarData ->
                     ThemedSnackbar(snackbarData)
                 }
@@ -254,11 +254,11 @@ fun BeanDetailScreen(
         // Varningsdialog vid försök att arkivera med vikt > 0
         if (showArchiveWeightWarningDialog) {
             AlertDialog(
-                onDismissRequest = { showArchiveWeightWarningDialog = false },
+                onDismissRequest = { },
                 title = { Text("Cannot archive bean") },
                 text = { Text("The remaining weight for this bean must be zero (0.0 g) before it can be archived. Archiving hides the bean from the main list.") },
                 confirmButton = {
-                    TextButton(onClick = { showArchiveWeightWarningDialog = false }) {
+                    TextButton(onClick = { }) {
                         Text("OK")
                     }
                 }
@@ -274,12 +274,11 @@ fun BeanDetailScreen(
                 onConfirm = {
                     // Försök radera via ViewModel (som kollar isArchived)
                     viewModel.deleteBean {
-                        showDeleteConfirmDialog = false
                         onNavigateBack() // Gå tillbaka endast vid lyckad radering
                     }
                     // Dialogen stängs inte automatiskt om deleteBean sätter ett fel
                 },
-                onDismiss = { showDeleteConfirmDialog = false }
+                onDismiss = { }
             )
         }
     } // Slut Scaffold

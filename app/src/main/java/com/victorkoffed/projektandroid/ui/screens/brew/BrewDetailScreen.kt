@@ -79,6 +79,7 @@ fun BrewDetailScreen(
     onNavigateToCamera: () -> Unit,
     onNavigateToImageFullscreen: (String) -> Unit,
     viewModel: BrewDetailViewModel,
+    snackbarHostState: SnackbarHostState, // <-- FIX: Ta emot den globala
     navBackStackEntry: NavBackStackEntry // Används för bild-URI och arkiveringsprompt
 ) {
     // --- States ---
@@ -93,7 +94,7 @@ fun BrewDetailScreen(
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
     // State för Snackbar
-    val snackbarHostState = remember { SnackbarHostState() }
+    // val snackbarHostState = remember { SnackbarHostState() } // <-- FIX: Ta bort lokal instans
     val scope = rememberCoroutineScope()
     // State för bild från kameran
     val savedImageUri by navBackStackEntry.savedStateHandle
@@ -162,7 +163,7 @@ fun BrewDetailScreen(
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, "Edit")
                         }
-                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
+                        IconButton(onClick = { }, enabled = state.brew != null) {
                             Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -172,7 +173,7 @@ fun BrewDetailScreen(
         },
         snackbarHost = {
             // Använder den anpassade ThemedSnackbar
-            SnackbarHost(snackbarHostState) { snackbarData ->
+            SnackbarHost(snackbarHostState) { snackbarData -> // <-- FIX: Använd den globala
                 ThemedSnackbar(snackbarData)
             }
         }
@@ -285,21 +286,20 @@ fun BrewDetailScreen(
                     // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
-                            onDismissRequest = { showDeleteConfirmDialog = false },
+                            onDismissRequest = { },
                             title = { Text("Delete brew?") },
                             text = { Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.") },
                             confirmButton = {
                                 Button(
                                     onClick = {
                                         viewModel.deleteCurrentBrew {
-                                            showDeleteConfirmDialog = false
                                             onNavigateBack() // Gå tillbaka efter lyckad radering
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
                             },
-                            dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
+                            dismissButton = { TextButton(onClick = { }) { Text("Cancel") } }
                         )
                     }
 

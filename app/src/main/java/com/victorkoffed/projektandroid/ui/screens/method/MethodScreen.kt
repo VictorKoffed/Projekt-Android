@@ -107,10 +107,9 @@ fun MethodScreen(
         // Lägg till dialog
         if (showAddDialog) {
             AddMethodDialog(
-                onDismiss = { showAddDialog = false },
+                onDismiss = { },
                 onAddMethod = { name ->
                     vm.addMethod(name)
-                    showAddDialog = false
                 }
             )
         }
@@ -119,10 +118,9 @@ fun MethodScreen(
         methodToEdit?.let { currentMethod ->
             EditMethodDialog(
                 method = currentMethod,
-                onDismiss = { methodToEdit = null },
+                onDismiss = { },
                 onSaveMethod = { updatedMethod ->
                     vm.updateMethod(updatedMethod) // Uppdatera ViewModel
-                    methodToEdit = null
                 }
             )
         }
@@ -133,9 +131,8 @@ fun MethodScreen(
                 methodName = currentMethod.name,
                 onConfirm = {
                     vm.deleteMethod(currentMethod) // Radera via ViewModel
-                    methodToDelete = null
                 },
-                onDismiss = { methodToDelete = null }
+                onDismiss = { }
             )
         }
     }
@@ -193,7 +190,7 @@ fun AddMethodDialog(
         text = {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { },
                 label = { Text("Method Name *") },
                 singleLine = true
             )
@@ -228,7 +225,7 @@ fun EditMethodDialog(
         text = {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { },
                 label = { Text("Method Name *") },
                 singleLine = true
             )

@@ -37,33 +37,38 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewScreen(
-    vm: BrewViewModel,
     // ID för en nyligen avslutad bryggning. Används för att nollställa tillståndet vid navigation.
-    completedBrewId: Long?,
+    // completedBrewId: Long?, // Tas bort
     // Aktuell anslutningsstatus till Bluetooth-vågen.
-    scaleConnectionState: BleConnectionState,
+    // scaleConnectionState: BleConnectionState, // Tas bort
     // Callback för att starta en live-bryggning.
-    onStartBrewClick: (setup: BrewSetupState) -> Unit,
+    onStartBrewClick: () -> Unit, // Ändrad från (setup: BrewSetupState) -> Unit
     // Callback för att spara bryggningen utan realtidsgraf.
-    onSaveWithoutGraph: () -> Unit,
+    onSaveWithoutGraph: (newBrewId: Long?) -> Unit, // Ändrad från () -> Unit
     // Callback för att navigera till anslutningsskärmen.
     onNavigateToScale: () -> Unit,
     // Callback för att nollställa 'completedBrewId' i NavHost/Activity.
-    onClearResult: () -> Unit,
+    // onClearResult: () -> Unit, // Tas bort
     // Callback för att navigera tillbaka.
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    // Hämta ViewModels lokalt
+    vm: BrewViewModel = hiltViewModel(),
+    scaleVm: ScaleViewModel = hiltViewModel()
 ) {
     // Hämta listor och states från ViewModel för UI-bindning
     val availableBeans by vm.availableBeans.collectAsState()
@@ -73,18 +78,24 @@ fun BrewScreen(
     // State som indikerar om det finns tidigare bryggningar
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
 
+    // Hämta scaleConnectionState lokalt
+    val scaleConnectionState by scaleVm.connectionState.collectAsState(
+        initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
+    )
+
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope() // Lokalt scope för att spara
 
     // Lokalt state för att visa bekräftelsedialog vid frånkopplad våg
     var showConnectionAlert by remember { mutableStateOf(false) }
 
     // Nollställer ViewModel-state och NavHost-ID när skärmen laddas med ett avslutat ID.
     // Detta säkerställer att skärmen alltid visar setup-läget.
-    LaunchedEffect(completedBrewId) {
-        if (completedBrewId != null) {
-            vm.clearBrewResults()
-            onClearResult()
-        }
+    LaunchedEffect(Unit) { // Ändrad från completedBrewId
+        // if (completedBrewId != null) { // Tas bort
+        vm.clearBrewResults()
+        // onClearResult() // Tas bort
+        // } // Tas bort
     }
 
     Scaffold(
@@ -210,7 +221,8 @@ fun BrewScreen(
                     onClick = {
                         // Logik: Om vågen är ansluten, starta bryggningen direkt.
                         if (scaleConnectionState is BleConnectionState.Connected) {
-                            onStartBrewClick(vm.getCurrentSetup())
+                            vm.clearBrewResults() // Nollställ vm
+                            onStartBrewClick() // Anropa nav callback
                         } else {
                             // Annars, visa varningsdialogen för att välja åtgärd
                             showConnectionAlert = true
@@ -231,13 +243,12 @@ fun BrewScreen(
     // --- Alert Dialog vid frånkopplad våg (Behöver vara utanför Column för att flyta) ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { showConnectionAlert = false },
+            onDismissRequest = { },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
                 // Alternativ 1: Navigera till anslutningsskärmen
                 TextButton(onClick = {
-                    showConnectionAlert = false
                     onNavigateToScale()
                 }) {
                     Text("Connect Scale")
@@ -245,13 +256,16 @@ fun BrewScreen(
             },
             dismissButton = {
                 // Alternativ 2: Avbryt
-                TextButton(onClick = { showConnectionAlert = false }) {
+                TextButton(onClick = { }) {
                     Text("Cancel")
                 }
                 // Alternativ 3: Fortsätt och spara utan realtidsdata
                 TextButton(onClick = {
-                    showConnectionAlert = false
-                    onSaveWithoutGraph()
+                    scope.launch { // Använd lokalt scope
+                        vm.getCurrentSetup() // Get current setup data
+                        val newBrewId = vm.saveBrewWithoutSamples()
+                        onSaveWithoutGraph(newBrewId) // Anropa nav callback med IDt
+                    }
                 }) {
                     Text("Save without Graph")
                 }
@@ -275,7 +289,7 @@ fun <T> DropdownSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { },
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(

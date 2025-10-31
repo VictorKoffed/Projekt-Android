@@ -1,5 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,77 +24,88 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.victorkoffed.projektandroid.data.db.BrewSample
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.LiveBrewGraph
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.StatusDisplay
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
+import kotlinx.coroutines.launch
 
 
 /**
  * Huvudskärmen för att hantera live-bryggning med realtidsdata från vågen.
  * Orkestrerar layouten genom att använda utbrutna Composables för statusdisplay, graf och kontroller.
  *
- * @param samples De insamlade BrewSample-punkterna.
- * @param currentMeasurement Den senaste mätningen (vikt och flöde).
- * @param currentTimeMillis Tiden i millisekunder för den pågående bryggningen.
- * @param isRecording Anger om inspelning pågår.
- * @param isPaused Anger om inspelningen är pausad.
- * @param isPausedDueToDisconnect Anger om pausen beror på frånkoppling.
- * @param weightAtPause Vikten vid paus (används för att visa statisk vikt).
- * @param connectionState Aktuell Bluetooth-anslutningsstatus.
- * @param countdown Nedräkningsvärdet (om start håller på).
- * @param onStartClick Callback för att starta inspelningen.
- * @param onPauseClick Callback för att manuellt pausa inspelningen.
- * @param onResumeClick Callback för att återuppta inspelningen.
- * @param onStopAndSaveClick Callback för att stoppa och spara bryggningen.
- * @param onTareClick Callback för att tarera vågen.
  * @param onNavigateBack Callback för att navigera tillbaka.
- * @param onResetClick Callback för att manuellt återställa inspelningen. <--- NYTT HÄR
+ * @param onNavigateToDetail Callback för att navigera till detaljskärmen efter sparande.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveBrewScreen(
-    samples: List<BrewSample>,
-    currentMeasurement: ScaleMeasurement,
-    currentTimeMillis: Long,
-    isRecording: Boolean,
-    isPaused: Boolean,
-    isPausedDueToDisconnect: Boolean,
-    weightAtPause: Float?,
-    connectionState: BleConnectionState,
-    countdown: Int?,
-    onStartClick: () -> Unit,
-    onPauseClick: () -> Unit,
-    onResumeClick: () -> Unit,
-    onStopAndSaveClick: () -> Unit,
-    onTareClick: () -> Unit,
     onNavigateBack: () -> Unit,
-    onResetClick: () -> Unit
+    onNavigateToDetail: (brewId: Long, beanIdToArchivePrompt: Long?) -> Unit,
+    scaleVm: ScaleViewModel = hiltViewModel(),
+    brewVm: BrewViewModel = hiltViewModel()
 ) {
+    // Hämta alla nödvändiga states från ScaleViewModel lokalt
+    val samples by scaleVm.recordedSamplesFlow.collectAsState()
+    val time by scaleVm.recordingTimeMillis.collectAsState()
+    val isRecording by scaleVm.isRecording.collectAsState()
+    val isPaused by scaleVm.isPaused.collectAsState()
+    val isPausedDueToDisconnect by scaleVm.isPausedDueToDisconnect.collectAsState()
+    val currentMeasurement by scaleVm.measurement.collectAsState()
+    val weightAtPause by scaleVm.weightAtPause.collectAsState()
+    val countdown by scaleVm.countdown.collectAsState()
+    val connectionState by scaleVm.connectionState.collectAsState(
+        initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
+    )
+
+    val scope = rememberCoroutineScope()
+
     var showFlowInfo by remember { mutableStateOf(true) }
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
 
+    // Logik för att stoppa och spara, nu flyttad hit
+    val onStopAndSaveClick: () -> Unit = {
+        scope.launch {
+            val currentSetup = brewVm.getCurrentSetup()
+            val saveResult = scaleVm.stopRecordingAndSave(currentSetup)
+
+            if (saveResult.brewId != null) {
+                // Använd nav-callback
+                onNavigateToDetail(saveResult.brewId, saveResult.beanIdReachedZero)
+            } else {
+                Log.w("LiveBrewScreen", "Save cancelled or failed, returning to setup.")
+                // Global error handling via Snackbar in MainActivity takes care of user feedback
+                onNavigateBack() // Go back to BrewSetup
+            }
+        }
+    }
+
     // Logik: Hantera dialog vid oväntad frånkoppling under inspelning/paus
     LaunchedEffect(connectionState, isRecording, isPaused, isPausedDueToDisconnect) {
         if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
             (isRecording || isPaused) &&
-            !isPausedDueToDisconnect &&
-            !isPaused
+            !isPausedDueToDisconnect && // Se till att den inte redan är pausad pga disconnect
+            !isPaused // Se till att den inte redan är manuellt pausad
         ) {
             alertTitle = if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost"
             alertMessage = if (connectionState is BleConnectionState.Error) {
-                connectionState.message + " Recording paused."
+                (connectionState as BleConnectionState.Error).message + " Recording paused."
             } else {
                 "The connection to the scale was lost. Recording paused."
             }
@@ -114,7 +126,7 @@ fun LiveBrewScreen(
                 },
                 actions = {
                     TextButton(
-                        onClick = onStopAndSaveClick,
+                        onClick = onStopAndSaveClick, // Använd den lokalt definierade logiken
                         enabled = isRecording || isPaused || countdown != null
                     ) {
                         Text("Done")
@@ -131,7 +143,7 @@ fun LiveBrewScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             StatusDisplay(
-                currentTimeMillis = currentTimeMillis,
+                currentTimeMillis = time,
                 currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
@@ -172,28 +184,27 @@ fun LiveBrewScreen(
                 isPausedDueToDisconnect = isPausedDueToDisconnect,
                 isConnected = connectionState is BleConnectionState.Connected,
                 countdown = countdown,
-                onStartClick = onStartClick,
-                onPauseClick = onPauseClick,
-                onResumeClick = onResumeClick,
-                onTareClick = onTareClick,
-                onResetClick = onResetClick
+                onStartClick = { scaleVm.startRecording() },
+                onPauseClick = { scaleVm.pauseRecording() },
+                onResumeClick = { scaleVm.resumeRecording() },
+                onTareClick = { scaleVm.tareScale() },
+                onResetClick = { scaleVm.stopRecording() } // Skickar vidare anropet
             )
         }
 
         // Dialog vid anslutningsfel under pågående inspelning/paus
         if (showDisconnectedAlert) {
             AlertDialog(
-                onDismissRequest = { showDisconnectedAlert = false },
+                onDismissRequest = { },
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
-                    TextButton(onClick = { showDisconnectedAlert = false }) {
+                    TextButton(onClick = { }) {
                         Text("OK")
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        showDisconnectedAlert = false
                         onStopAndSaveClick()
                     }) {
                         Text("Stop & Save As Is")

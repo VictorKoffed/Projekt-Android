@@ -108,10 +108,9 @@ fun GrinderScreen(
         // Lägg till dialog
         if (showAddDialog) {
             AddGrinderDialog(
-                onDismiss = { showAddDialog = false },
+                onDismiss = { },
                 onAddGrinder = { name, notes ->
                     vm.addGrinder(name, notes)
-                    showAddDialog = false
                 }
             )
         }
@@ -120,10 +119,9 @@ fun GrinderScreen(
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
-                onDismiss = { grinderToEdit = null },
+                onDismiss = { },
                 onSaveGrinder = { updatedGrinder ->
                     vm.updateGrinder(updatedGrinder)
-                    grinderToEdit = null
                 }
             )
         }
@@ -134,9 +132,8 @@ fun GrinderScreen(
                 grinderName = currentGrinder.name,
                 onConfirm = {
                     vm.deleteGrinder(currentGrinder)
-                    grinderToDelete = null
                 },
-                onDismiss = { grinderToDelete = null }
+                onDismiss = { }
             )
         }
     }

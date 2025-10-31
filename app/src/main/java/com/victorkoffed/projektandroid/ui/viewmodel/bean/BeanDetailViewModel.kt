@@ -191,8 +191,7 @@ class BeanDetailViewModel @Inject constructor(
      * @param onSuccess Callback som körs vid lyckad arkivering.
      */
     fun archiveBean(onSuccess: () -> Unit = {}) {
-        val beanToArchive = _beanDetailState.value.bean
-        if (beanToArchive == null) return
+        val beanToArchive = _beanDetailState.value.bean ?: return
 
         // Viktkontrollen görs nu explicit i UI innan denna anropas (både manuellt och automatiskt)
 

@@ -186,7 +186,6 @@ fun LiveBrewGraph(
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
         val xAxisY = size.height - xLabelPadding
-        val yAxisX = yLabelPaddingPx
         drawContext.canvas.nativeCanvas.apply {
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
@@ -194,7 +193,7 @@ fun LiveBrewGraph(
                 val y = xAxisY - (currentMassGrid / maxMass) * graphHeight
                 drawLine(
                     color = gridLineColor,
-                    start = Offset(yAxisX, y),
+                    start = Offset(yLabelPaddingPx, y),
                     end = Offset(size.width, y),
                     strokeWidth = gridLinePaint.width,
                     pathEffect = gridLinePaint.pathEffect
@@ -205,7 +204,7 @@ fun LiveBrewGraph(
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
-                val x = yAxisX + (currentTimeGrid / maxTime) * graphWidth
+                val x = yLabelPaddingPx + (currentTimeGrid / maxTime) * graphWidth
                 drawLine(
                     color = gridLineColor,
                     start = Offset(x, axisPadding),
@@ -217,7 +216,8 @@ fun LiveBrewGraph(
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
-            drawText("Time", yAxisX + graphWidth / 2, size.height + axisLabelPaint.textSize / 2, axisLabelPaint)
+            drawText("Time",
+                yLabelPaddingPx + graphWidth / 2, size.height + axisLabelPaint.textSize / 2, axisLabelPaint)
             withSave {
                 rotate(-90f)
                 drawText(
@@ -228,15 +228,15 @@ fun LiveBrewGraph(
                 )
             }
         }
-        drawLine(axisColor, Offset(yAxisX, axisPadding), Offset(yAxisX, xAxisY))
-        drawLine(axisColor, Offset(yAxisX, xAxisY), Offset(size.width, xAxisY))
+        drawLine(axisColor, Offset(yLabelPaddingPx, axisPadding), Offset(yLabelPaddingPx, xAxisY))
+        drawLine(axisColor, Offset(yLabelPaddingPx, xAxisY), Offset(size.width, xAxisY))
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
-                val x = yAxisX + (sample.timeMillis.toFloat() / maxTime) * graphWidth
+                val x = yLabelPaddingPx + (sample.timeMillis.toFloat() / maxTime) * graphWidth
                 val mass = sample.massGrams.toFloat()
                 val y = xAxisY - (mass / maxMass) * graphHeight
-                val clampedX = x.coerceIn(yAxisX, size.width)
+                val clampedX = x.coerceIn(yLabelPaddingPx, size.width)
                 val clampedY = y.coerceIn(axisPadding, xAxisY)
                 if (index == 0) {
                     path.moveTo(clampedX, clampedY)

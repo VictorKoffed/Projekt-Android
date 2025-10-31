@@ -43,12 +43,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
@@ -63,8 +63,9 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScaleConnectScreen(
-    vm: ScaleViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+    vm: ScaleViewModel = hiltViewModel()
 ) {
     // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
@@ -77,8 +78,7 @@ fun ScaleConnectScreen(
 
 
     // --- Snackbar state för felmeddelanden ---
-    val snackbarHostState = remember { SnackbarHostState() }
-    // OBS: Ingen 'rememberCoroutineScope()' behövs längre då LaunchedEffect är suspenderande.
+    // val snackbarHostState = remember { SnackbarHostState() } // Tas bort
 
     // Effekt för att visa (skanning/sparande) felmeddelanden i en Snackbar
     LaunchedEffect(error) {
@@ -94,6 +94,8 @@ fun ScaleConnectScreen(
     }
 
     // Effekt för att visa anslutningsfel i en Snackbar
+    // Tas bort - hanteras nu globalt i MainActivity
+    /*
     LaunchedEffect(connectionState) {
         (connectionState as? BleConnectionState.Error)?.let {
             snackbarHostState.showSnackbar(
@@ -102,6 +104,7 @@ fun ScaleConnectScreen(
             )
         }
     }
+    */
 
 
     Scaffold(

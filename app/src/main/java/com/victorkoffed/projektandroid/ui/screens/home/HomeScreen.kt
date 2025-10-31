@@ -37,13 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.victorkoffed.projektandroid.data.db.Bean
-import com.victorkoffed.projektandroid.data.db.Method
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.screens.home.composable.InfoGrid
 import com.victorkoffed.projektandroid.ui.screens.home.composable.NoBrewsTextWithIcon
 import com.victorkoffed.projektandroid.ui.screens.home.composable.RecentBrewCard
 import com.victorkoffed.projektandroid.ui.screens.home.composable.formatTimeSince
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -54,28 +54,23 @@ import kotlinx.coroutines.launch
 /**
  * Huvudskärmen för appen. Visar statistik, senaste bryggningar och anslutningsstatus.
  *
- * @param homeVm ViewModel för hemskärmens data.
- * @param coffeeImageVm ViewModel för hantering av den slumpmässiga kaffebilden.
- * @param scaleVm ViewModel för anslutningsstatus till vågen.
  * @param snackbarHostState Globalt state för att visa felmeddelanden.
  * @param onNavigateToBrewSetup Callback för att starta en ny bryggning.
  * @param onBrewClick Callback för att visa bryggdetaljer.
- * @param availableBeans Lista över tillgängliga bönor (för att validera setup).
- * @param availableMethods Lista över tillgängliga metoder (för att validera setup).
  * @param onMenuClick Callback för att öppna navigationslådan.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    homeVm: HomeViewModel,
-    coffeeImageVm: CoffeeImageViewModel,
-    scaleVm: ScaleViewModel,
     snackbarHostState: SnackbarHostState,
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
-    availableBeans: List<Bean>,
-    availableMethods: List<Method>,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    // Hämta ViewModels lokalt med hiltViewModel
+    homeVm: HomeViewModel = hiltViewModel(),
+    coffeeImageVm: CoffeeImageViewModel = hiltViewModel(),
+    scaleVm: ScaleViewModel = hiltViewModel(),
+    brewVm: BrewViewModel = hiltViewModel() // Behövs för validering
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -95,6 +90,10 @@ fun HomeScreen(
     )
     val rememberedScaleAddress by scaleVm.rememberedScaleAddress.collectAsState()
 
+    // Hämta states från brewVm för validering
+    val availableBeans by brewVm.availableBeans.collectAsState()
+    val availableMethods by brewVm.availableMethods.collectAsState()
+
     var showSetupWarningDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -105,6 +104,7 @@ fun HomeScreen(
     // Definierar den villkorliga åtgärden för att starta bryggning
     val startBrewAction = {
         if (isBrewSetupEnabled) {
+            brewVm.clearBrewResults() // Nollställ brewVm innan navigering
             onNavigateToBrewSetup()
         } else {
             showSetupWarningDialog = true // Visa varning om setup saknas
@@ -234,11 +234,11 @@ fun HomeScreen(
     // Dialogruta som visas om användaren försöker starta en bryggning utan nödvändig setup
     if (showSetupWarningDialog) {
         AlertDialog(
-            onDismissRequest = { showSetupWarningDialog = false },
+            onDismissRequest = { },
             title = { Text("Cannot start brew") },
             text = { Text("You must first add at least one bean (under 'Bean') and one brewing method (under 'Method') before you can start a new brew") },
             confirmButton = {
-                TextButton(onClick = { showSetupWarningDialog = false }) {
+                TextButton(onClick = { }) {
                     Text("Understood")
                 }
             }

@@ -54,7 +54,7 @@ object BookooDataParser {
             flow = rawFlow.toFloat() / 100.0f
 
             // Batteri (1 byte, Index 13)
-            val battery: Int? = data[13].toInt() and 0xFF
+            val battery: Int = data[13].toInt() and 0xFF
 
             return ScaleMeasurement(grams, flow, scaleTimeMillis, battery)
 

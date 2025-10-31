@@ -151,11 +151,10 @@ fun BeanScreen(
         // Dialog för att lägga till ny böna
         if (showAddDialog) {
             AddBeanDialog(
-                onDismiss = { showAddDialog = false },
+                onDismiss = { },
                 onAddBean = { name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes ->
                     // Anropar ViewModel för att spara den nya bönan
                     vm.addBean(name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes)
-                    showAddDialog = false
                 }
             )
         }

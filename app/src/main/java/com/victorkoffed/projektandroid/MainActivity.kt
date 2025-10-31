@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
@@ -56,8 +55,6 @@ import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.navigation.AppNavigationGraph
 import com.victorkoffed.projektandroid.ui.navigation.Screen
 import com.victorkoffed.projektandroid.ui.theme.ProjektAndroidTheme
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -93,9 +90,8 @@ class MainActivity : ComponentActivity() {
 
                 // Hämta ViewModels som behövs globalt eller skickas till AppNavigationGraph
                 val homeVm: HomeViewModel = hiltViewModel()
-                val brewVm: BrewViewModel = hiltViewModel()
                 val scaleVm: ScaleViewModel = hiltViewModel()
-                val coffeeImageVm: CoffeeImageViewModel = hiltViewModel()
+                // brewVm och coffeeImageVm tas bort - de hämtas nu i sina egna skärmar
 
                 // Observera states som behövs i MainActivity (för Drawer eller global Snackbar)
                 val isDarkModeManual by homeVm.isDarkMode.collectAsState()
@@ -184,13 +180,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         AppNavigationGraph(
                             navController = navController,
-                            homeVm = homeVm,
-                            brewVm = brewVm,
-                            scaleVm = scaleVm,
-                            coffeeImageVm = coffeeImageVm,
-                            snackbarHostState = snackbarHostState,
-                            coroutineScope = scope,
-                            lifecycleScope = lifecycleScope, // Skicka Activity's lifecycleScope
+                            snackbarHostState = snackbarHostState, // Skicka vidare den globala
                             innerPadding = innerPadding,
                             startDrawerOpen = { // Skicka en lambda för att öppna lådan
                                 scope.launch { drawerState.open() }

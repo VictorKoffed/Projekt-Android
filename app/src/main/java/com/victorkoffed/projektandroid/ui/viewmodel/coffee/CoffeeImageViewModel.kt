@@ -51,10 +51,4 @@ class CoffeeImageViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Nollställer felmeddelandet i state:t efter att det har presenterats för användaren.
-     */
-    fun clearError() {
-        error.value = null
-    }
 }
