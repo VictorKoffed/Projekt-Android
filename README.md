@@ -67,7 +67,7 @@ com.victorkoffed.projektandroid/
 ### Steg
 1. Klona repot.
 2. Öppna i Android Studio.
-3. Synkronisera Gradle (Gradle 8.13).
+3. Synkronisera Gradle (Gradle 8.14.3).
 4. Välj målenhet och tryck **Run (Ctrl+F5)**.
 
 ---
@@ -120,12 +120,15 @@ graph TD
 | Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                             |
 | CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                      |
 | Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion. |
+| Jetpack Navigation    | `SavedStateHandle`                                    | Hanterar komplext tillstånd (som captured_image_uri från kameran)  |
+                                                                                | och bevarar navigeringsargument mellan processer och rotationer..  |
 
 ---
 
 ## 🧪 Testning
 
-- **Enhetstester:** `app/src/test` – platshållare (ExampleUnitTest.kt)
+- **Enhetstester:** `app/src/test` – Inkluderar logik för att validera parsning av råa BLE-data.
+- BookooDataParserTest.kt: Validerar parsning av vikt, flöde och tid från råa Bluetooth-paket.
 - **Instrumenterade tester:** `app/src/androidTest` – platshållare (ExampleInstrumentedTest.kt)
 
 Kör tester:
@@ -152,7 +155,7 @@ Kör tester:
 <details><summary><strong>Gradle/Konfiguration</strong></summary>
 
 - `gradle/libs.versions.toml` – Central hantering av beroenden
-- `app/build.gradle.kts` – Konfigurerar Android/Compose/Hilt/KSP
+- `app/build..kts` – Konfigurerar Android/Compose/Hilt/KSP
 - `AndroidManifest.xml` – BLE- och kameratillstånd
 
 </details>
