@@ -22,7 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -151,9 +150,13 @@ class BookooBleClient(private val context: Context) {
     }
 
     /** Initierar anslutning till en enhet med den givna BLE-adressen. */
+    /** Initierar anslutning till en enhet med den givna BLE-adressen. */
     fun connect(address: String) {
         val currentState = connectionState.value
+        // Förhindra anslutning om vi redan är anslutna eller håller på att ansluta
         if ((currentState is BleConnectionState.Connected && currentState.deviceAddress == address) || currentState is BleConnectionState.Connecting) return
+
+        // 1. Städa upp gamla resurser innan vi fortsätter.
         handleGattCleanup(gatt)
 
         val adapter = btAdapter
@@ -166,40 +169,41 @@ class BookooBleClient(private val context: Context) {
             return
         }
 
-        mainHandler.post { if (connectionState.value !is BleConnectionState.Connecting) connectionState.value = BleConnectionState.Connecting }
-
-        scope.launch {
+        // KÖRS ALLTID PÅ HUVUDTRÅDEN FÖR GATT-SÄKERHET
+        mainHandler.post {
             try {
-                val device = adapter.getRemoteDevice(address)
-                delay(500L)
+                // Sätt state till Connecting (Måste ske på Main Thread)
+                if (connectionState.value !is BleConnectionState.Connecting) {
+                    connectionState.value = BleConnectionState.Connecting
+                }
 
+                val device = adapter.getRemoteDevice(address)
+
+                // 2. Anropa connectGatt. (Måste ske på Main Thread/med Looper)
                 val newGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 
-                mainHandler.post {
-                    if (connectionState.value is BleConnectionState.Connecting) {
-                        gatt = newGatt
-                        if (newGatt == null) {
-                            Log.e(TAG, "connectGatt returned null.")
-                            connectionState.value = BleConnectionState.Error("Connect failed (gatt null)")
-                        } else {
-                            Log.d(TAG, "connectGatt successful, waiting for callbacks...")
-                        }
-                    } else {
-                        Log.w(TAG, "State changed during connect, closing new gatt.")
-                        handleGattCleanup(newGatt)
-                    }
+                // 3. TILLDELA GATT OMEDELBART PÅ SAMMA TRÅD
+                gatt = newGatt // <-- FIX: Assignment is now immediate and before any callbacks on this thread
+
+                if (newGatt == null) {
+                    Log.e(TAG, "connectGatt returned null.")
+                    connectionState.value = BleConnectionState.Error("Connect failed (gatt null)")
+                } else {
+                    Log.d(TAG, "connectGatt successful, waiting for callbacks...")
                 }
+
             } catch (e: SecurityException) {
                 Log.e(TAG, "Permission error or unstable BT state during connect (SecurityException)", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Permission missing for connect, or connection failed due to security/BT state.") }
-                handleGattCleanup(gatt)
+                connectionState.value = BleConnectionState.Error("Permission missing for connect, or connection failed due to security/BT state.")
+                handleGattCleanup(null)
             } catch (e: IllegalArgumentException) {
                 Log.e(TAG, "Invalid address: $address (IllegalArgumentException)", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Invalid address") }
-                handleGattCleanup(gatt)
+                connectionState.value = BleConnectionState.Error("Invalid address")
+                handleGattCleanup(null)
             } catch (e: Exception) {
                 Log.e(TAG, "Connect exception (General Exception)", e)
-                mainHandler.post { connectionState.value = BleConnectionState.Error("Connection error: ${e.message}") }; handleGattCleanup(gatt)
+                connectionState.value = BleConnectionState.Error("Connection error: ${e.message}")
+                handleGattCleanup(null)
             }
         }
     }
