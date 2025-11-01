@@ -12,14 +12,23 @@ import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.scan
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * Implementation av [ScaleRepository] som använder [BookooBleClient] för BLE-kommunikation.
+ * Denna klass hanterar nu även tareringslogiken.
  */
 @Singleton
 class BookooScaleRepositoryImpl @Inject constructor(
@@ -27,6 +36,31 @@ class BookooScaleRepositoryImpl @Inject constructor(
 ) : ScaleRepository {
 
     private val client: BookooBleClient by lazy { BookooBleClient(context) }
+    private val scope = CoroutineScope(Dispatchers.IO + Job())
+
+    // --- State för Tarering ---
+    private val _rawMeasurement = MutableStateFlow(ScaleMeasurement(0.0f, 0.0f))
+    private val _tareOffset = MutableStateFlow(0.0f)
+
+    /** Kombinerat Flöde för aktuell vikt och flöde (justerat för tarering). */
+    private val _adjustedMeasurement: StateFlow<ScaleMeasurement> =
+        combine(_rawMeasurement, _tareOffset) { raw, offset ->
+            ScaleMeasurement(
+                weightGrams = raw.weightGrams - offset,
+                flowRateGramsPerSecond = raw.flowRateGramsPerSecond,
+                timeMillis = raw.timeMillis,
+                batteryPercent = raw.batteryPercent
+            )
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f, 0.0f))
+
+    init {
+        // Starta insamling av rådata från klienten
+        scope.launch {
+            client.measurements.collect { rawData ->
+                _rawMeasurement.value = rawData
+            }
+        }
+    }
 
     override fun startScanDevices(): Flow<List<DiscoveredDevice>> {
         // 1. KONTROLL: Behörigheter
@@ -39,11 +73,10 @@ class BookooScaleRepositoryImpl @Inject constructor(
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
         if (adapter == null || !adapter.isEnabled) {
             // Returnerar ett flow som kastar ett fel om adaptern är null eller avstängd.
-            // Detta fångas i ViewModel och översätts till ett användarvänligt felmeddelande.
             return flow { throw IllegalStateException("Bluetooth is turned off or unavailable.") }
         }
 
-        // 3. Starta skanning via BLE-klienten (som nu är skyddad av 2. KONTROLL)
+        // 3. Starta skanning via BLE-klienten
         return client.startScan()
             .map { result ->
                 DiscoveredDevice(
@@ -60,32 +93,44 @@ class BookooScaleRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun connect(address: String) = client.connect(address)
-    override fun disconnect() = client.disconnect()
-    override fun observeMeasurements(): Flow<ScaleMeasurement> = client.measurements
+    override fun connect(address: String) {
+        // Nollställ offset vid ny anslutning
+        _tareOffset.value = 0.0f
+        client.connect(address)
+    }
+
+    override fun disconnect() {
+        client.disconnect()
+        // Nollställ offset vid frånkoppling
+        _tareOffset.value = 0.0f
+    }
+
+    /** Exponerar den FÄRDIGJUSTERADE mätdataflödet. */
+    override fun observeMeasurements(): StateFlow<ScaleMeasurement> = _adjustedMeasurement
+
     override fun observeConnectionState(): StateFlow<BleConnectionState> = client.connectionState
 
-    /** Skickar tare/nollställningskommandot (0x01). */
+    /** Skickar tare-kommandot och justerar den lokala offseten. */
     override fun tareScale() {
+        _tareOffset.value = _rawMeasurement.value.weightGrams
         client.sendTareCommand()
     }
 
-    /** Skickar tare OCH start timer-kommandot (0x07). */
+    /** Skickar tare/start-kommandot och justerar den lokala offseten. */
     override fun tareScaleAndStartTimer() {
+        _tareOffset.value = _rawMeasurement.value.weightGrams
         client.sendTareAndStartTimerCommand()
     }
 
-    /** Skickar stopp-timer kommandot (0x05). */
+    // --- Pass-through-kommandon ---
     override fun stopTimer() {
         client.sendStopTimerCommand()
     }
 
-    /** Skickar reset-timer kommandot (0x06). */
     override fun resetTimer() {
         client.sendResetTimerCommand()
     }
 
-    /** Skickar start-timer kommandot (0x04). */
     override fun startTimer() {
         client.sendStartTimerCommand()
     }

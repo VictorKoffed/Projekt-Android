@@ -1,6 +1,6 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
-import android.util.Log // NY IMPORT
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
@@ -10,18 +10,24 @@ import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.ScaleRepository
+import com.victorkoffed.projektandroid.domain.model.BleConnectionState
+import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,7 +60,8 @@ private const val TAG = "BrewViewModel_DEBUG"
 
 @HiltViewModel
 class BrewViewModel @Inject constructor(
-    private val repository: CoffeeRepository
+    private val repository: CoffeeRepository,
+    private val scaleRepo: ScaleRepository // <-- NY INJEKTION
 ) : ViewModel() {
 
     private val decimalRegex = Regex("^\\d*\\.?\\d*$")
@@ -86,6 +93,87 @@ class BrewViewModel @Inject constructor(
     val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+
+    // --- NYTT: State för inspelning (flyttat från ScaleViewModel) ---
+    private val _isRecording = MutableStateFlow(false)
+    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
+
+    private val _isRecordingWhileDisconnected = MutableStateFlow(false)
+    val isRecordingWhileDisconnected: StateFlow<Boolean> = _isRecordingWhileDisconnected.asStateFlow()
+
+    private val _recordedSamplesFlow = MutableStateFlow<List<BrewSample>>(emptyList())
+    val recordedSamplesFlow: StateFlow<List<BrewSample>> = _recordedSamplesFlow.asStateFlow()
+
+    private val _recordingTimeMillis = MutableStateFlow(0L)
+    val recordingTimeMillis: StateFlow<Long> = _recordingTimeMillis.asStateFlow()
+
+    private val _weightAtPause = MutableStateFlow<Float?>(null)
+    val weightAtPause: StateFlow<Float?> = _weightAtPause.asStateFlow()
+
+    private val _countdown = MutableStateFlow<Int?>(null)
+    val countdown: StateFlow<Int?> = _countdown.asStateFlow()
+
+    private var manualTimerJob: Job? = null // Används för att simulera tid vid disconnect
+
+    init {
+        // Lyssna på justerade mätdata från repon för inspelning
+        viewModelScope.launch {
+            scaleRepo.observeMeasurements()
+                // .catch { ... } // <-- BORTTAGEN: Har ingen effekt på StateFlow
+                .collect { measurementData ->
+                    // ★★★ FIX: Hantera fel i collectorn ★★★
+                    try {
+                        handleScaleTimer()
+                        if (_isRecording.value && !_isPaused.value) {
+                            addSamplePoint(measurementData)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing measurement data", e)
+                    }
+                }
+        }
+
+        // Lyssna på anslutningsstatus för att hantera frånkopplingar
+        viewModelScope.launch {
+            scaleRepo.observeConnectionState()
+                .collect { state ->
+                    // Hämta det senaste justerade mätvärdet från repon
+                    val latestMeasurement = scaleRepo.observeMeasurements().value
+                    handleConnectionStateChange(state, latestMeasurement)
+                }
+        }
+    }
+
+    /** Hanterar anslutningsändringar MEDAN en session pågår. */
+    private fun handleConnectionStateChange(state: BleConnectionState, latestMeasurement: ScaleMeasurement) {
+        if ((state is BleConnectionState.Disconnected || state is BleConnectionState.Error)) {
+            // Om vi kopplas från under inspelning (ej pausad)
+            if (_isRecording.value && !_isPaused.value) {
+                _isRecordingWhileDisconnected.value = true
+                _weightAtPause.value = latestMeasurement.weightGrams
+                Log.w(TAG, "Recording... DISCONNECTED. Data collection paused, Timer continues.")
+            }
+            // Om vi kopplas från under manuell paus
+            else if (_isRecording.value && _isPaused.value) {
+                _isRecordingWhileDisconnected.value = true
+                Log.w(TAG, "Manually Paused AND Disconnected.")
+            }
+        }
+        // Om vi återansluter
+        else if (state is BleConnectionState.Connected) {
+            if (_isRecordingWhileDisconnected.value) {
+                _isRecordingWhileDisconnected.value = false
+                Log.d(TAG, "Reconnected while recording. Data collection resumes.")
+                // Timern (manualTimerJob) har fortsatt att ticka, så ingen åtgärd behövs där.
+                // Repositoryt har redan nollställt tare-offset vid anslutning,
+                // ScaleViewModel kommer att justera offseten vid återanslutning.
+            }
+        }
+    }
 
 
     // --- Funktioner för att uppdatera inställningar ---
@@ -217,6 +305,171 @@ class BrewViewModel @Inject constructor(
         }
     }
 
+    // --- NYTT: Inspelningsfunktioner (flyttade från ScaleViewModel) ---
+
+    private fun handleScaleTimer() {
+        if (_isRecording.value && !_isPaused.value && manualTimerJob == null) {
+            startManualTimer()
+        }
+        else if (!_isRecording.value && !_isPaused.value && _recordingTimeMillis.value != 0L) {
+            manualTimerJob?.cancel()
+            manualTimerJob = null
+            _recordingTimeMillis.value = 0L
+        }
+    }
+
+    private fun startManualTimer() {
+        manualTimerJob?.cancel()
+        manualTimerJob = viewModelScope.launch {
+            Log.d(TAG, "Starting manual timer.")
+            while (isActive && _isRecording.value && !_isPaused.value) {
+                delay(100L)
+                if (isActive && _isRecording.value && !_isPaused.value) {
+                    _recordingTimeMillis.update { it + 100L }
+                }
+            }
+            Log.d(TAG, "Manual timer loop stopped (paused or stopped).")
+        }
+    }
+
+    fun tareScale() {
+        if (scaleRepo.observeConnectionState().value !is BleConnectionState.Connected) {
+            _error.value = "Scale not connected."; return
+        }
+        scaleRepo.tareScale()
+        if (_isRecording.value && !_isPaused.value) {
+            addSamplePoint(scaleRepo.observeMeasurements().value)
+        }
+    }
+
+    fun startRecording() {
+        if (_isRecording.value || _isPaused.value || _countdown.value != null) return
+        if (scaleRepo.observeConnectionState().value !is BleConnectionState.Connected) {
+            _error.value = "Scale not connected."; return
+        }
+
+        viewModelScope.launch {
+            try {
+                _countdown.value = 3; delay(1000L)
+                _countdown.value = 2; delay(1000L)
+                _countdown.value = 1; delay(1000L)
+
+                // Anropa repon för att tarera OCH starta timer
+                scaleRepo.tareScaleAndStartTimer()
+                delay(150L) // Ge vågen tid att reagera
+                _countdown.value = null
+                internalStartRecording()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting recording", e)
+                _countdown.value = null; _error.value = "Could not start."
+                if (scaleRepo.observeConnectionState().value is BleConnectionState.Connected) scaleRepo.resetTimer()
+            }
+        }
+    }
+
+    private fun internalStartRecording() {
+        manualTimerJob?.cancel()
+        manualTimerJob = null
+        _recordedSamplesFlow.value = emptyList()
+        _recordingTimeMillis.value = 0L
+        _isPaused.value = false
+        _isRecordingWhileDisconnected.value = false
+        _weightAtPause.value = null
+
+        _isRecording.value = true
+        startManualTimer()
+        Log.d(TAG, "Internal recording state started. Manual timer initiated.")
+    }
+
+    fun pauseRecording() {
+        if (!_isRecording.value || _isPaused.value) return
+
+        manualTimerJob?.cancel()
+        manualTimerJob = null
+
+        _isPaused.value = true
+        _isRecordingWhileDisconnected.value = false
+        _weightAtPause.value = scaleRepo.observeMeasurements().value.weightGrams
+
+        if (scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
+            scaleRepo.stopTimer()
+        }
+        Log.d(TAG, "Manually paused. Manual timer stopped.")
+    }
+
+    fun resumeRecording() {
+        if (!_isRecording.value || !_isPaused.value) return
+
+        _isPaused.value = false
+        _isRecordingWhileDisconnected.value = false
+        _weightAtPause.value = null
+
+        if (scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
+            scaleRepo.startTimer()
+            Log.d(TAG, "Resumed. Sent Start Timer (manual pause).")
+        } else {
+            Log.w(TAG, "Resumed but scale disconnected.")
+            _isRecordingWhileDisconnected.value = true
+        }
+
+        startManualTimer()
+    }
+
+    fun stopRecording() {
+        if (!_isRecording.value && !_isPaused.value && _countdown.value == null) return
+
+        val wasRecordingOrPaused = _isRecording.value || _isPaused.value
+
+        manualTimerJob?.cancel()
+        manualTimerJob = null
+
+        _countdown.value = null
+        _isRecording.value = false
+        _isPaused.value = false
+        _isRecordingWhileDisconnected.value = false
+        _weightAtPause.value = null
+        _recordedSamplesFlow.value = emptyList()
+        _recordingTimeMillis.value = 0L
+
+        if (wasRecordingOrPaused && scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
+            scaleRepo.resetTimer()
+            Log.d(TAG, "Recording stopped/reset. Sent Reset Timer.")
+        } else {
+            Log.d(TAG, "Recording stopped/reset. (No Reset Timer sent)")
+        }
+    }
+
+    private fun addSamplePoint(measurementData: ScaleMeasurement) {
+        val sampleTimeMillis = _recordingTimeMillis.value
+        if (sampleTimeMillis < 0) return
+
+        val weightGramsDouble = String.format(Locale.US, "%.1f", measurementData.weightGrams).toDouble()
+        val flowRateDouble = measurementData.formatFlowRateToDouble()
+
+        val newSample = BrewSample(
+            brewId = 0,
+            timeMillis = sampleTimeMillis,
+            massGrams = weightGramsDouble,
+            flowRateGramsPerSecond = flowRateDouble
+        )
+
+        _recordedSamplesFlow.update { list ->
+            if (list.lastOrNull()?.timeMillis == newSample.timeMillis && list.isNotEmpty()) {
+                list
+            } else {
+                list + newSample
+            }
+        }
+    }
+
+    private fun ScaleMeasurement.formatFlowRateToDouble(): Double {
+        return flowRateGramsPerSecond.let { flow ->
+            String.format(Locale.US, "%.1f", flow).toDouble()
+        }
+    }
+
+    // --- Slut på flyttade funktioner ---
+
     // --- Funktion: Spara bryggning utan grafer ---
     suspend fun saveBrewWithoutSamples(): Long? {
         if (!isSetupValid()) {
@@ -252,8 +505,8 @@ class BrewViewModel @Inject constructor(
      */
     suspend fun saveLiveBrew(
         setupState: BrewSetupState,
-        finalSamples: List<BrewSample>,
-        finalTimeMillis: Long,
+        finalSamples: List<BrewSample>, // Får nu detta från sig själv
+        finalTimeMillis: Long, // Får nu detta från sig själv
         scaleDeviceName: String?
     ): SaveBrewResult {
         // [LOG 1: Start av funktionen]
@@ -342,5 +595,11 @@ class BrewViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Stoppa eventuella timers om denna VM förstörs
+        manualTimerJob?.cancel()
     }
 }

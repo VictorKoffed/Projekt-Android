@@ -20,8 +20,10 @@ interface ScaleRepository {
     /** Stänger den nuvarande BLE-anslutningen. */
     fun disconnect()
 
-    /** Ger en Flow med kontinuerliga mätvärden (vikt/flöde/tid) från den anslutna vågen. */
-    fun observeMeasurements(): Flow<ScaleMeasurement>
+    /** * Ger en Flow med kontinuerliga, TARER-JUSTERADE mätvärden (vikt/flöde/tid)
+     * från den anslutna vågen.
+     */
+    fun observeMeasurements(): StateFlow<ScaleMeasurement> // Ändrad till StateFlow
 
     /** Ger en StateFlow som reflekterar den aktuella anslutningsstatusen (Disconnected, Connecting, Connected, Error). */
     fun observeConnectionState(): StateFlow<BleConnectionState>
