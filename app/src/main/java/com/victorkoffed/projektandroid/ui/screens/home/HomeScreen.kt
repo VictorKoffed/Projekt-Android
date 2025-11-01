@@ -61,7 +61,7 @@ fun HomeScreen(
     scaleVm: ScaleViewModel,
     homeVm: HomeViewModel = hiltViewModel(),
     coffeeImageVm: CoffeeImageViewModel = hiltViewModel(),
-    brewVm: BrewSetupViewModel = hiltViewModel() // Uppdaterad till BrewSetupViewModel
+    brewVm: BrewSetupViewModel = hiltViewModel()
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()

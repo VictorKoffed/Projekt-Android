@@ -40,7 +40,6 @@ import kotlinx.coroutines.launch
 
 private const val BREW_DETAIL_FLOW_ROUTE = "brew_detail_flow/{brewId}?beanIdToArchivePrompt={beanIdToArchivePrompt}"
 
-// Nyckel för SavedStateHandle, måste matcha den i CameraViewModel
 private const val CAMERA_URI_KEY = "captured_image_uri"
 
 @Composable

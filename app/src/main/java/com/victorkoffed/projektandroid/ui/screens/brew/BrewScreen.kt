@@ -76,9 +76,6 @@ fun BrewScreen(
     var showConnectionAlert by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // Finns inte längre i BrewSetupViewModel,
-        // men formuläret bör vara tomt som standard.
-        // vm.clearBrewResults()
     }
 
     Scaffold(

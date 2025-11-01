@@ -94,19 +94,6 @@ fun BrewDetailScreen(
     // val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-
-    // ---------------------------------------------------------
-    // ---               ★★ KORRIGERING HÄR ★★               ---
-    // ---------------------------------------------------------
-    // Ta bort referensen till 'viewModel.capturedImageUri' eftersom den inte längre finns.
-    // Denna logik hanteras nu i AppNavigationGraph.
-    /*
-    // FIX 2a: Hämta StateFlow direkt från ViewModel (tidigare LiveData/observeAsState)
-    // Denna variabel används bara för att trigga LaunchedEffect, men behålls för att visa konsumtion.
-    val savedImageUri by viewModel.capturedImageUri.collectAsState()
-    */
-    // ---------------------------------------------------------
-
     // State för arkiveringsdialog
     val beanForPrompt = state.bean
     // Beräkna om snabbspara-knappen för anteckningar ska vara aktiv.
@@ -115,23 +102,6 @@ fun BrewDetailScreen(
     // --- Slut States ---
 
     // --- LaunchedEffects ---
-
-    // ---------------------------------------------------------
-    // ---               ★★ KORRIGERING HÄR ★★               ---
-    // ---------------------------------------------------------
-    // Ta bort denna LaunchedEffect eftersom 'savedImageUri' är borttagen.
-    /*
-    // FIX 2b: Denna LaunchedEffect behövs inte längre för att anropa viewModel.updateBrewImageUri,
-    // eftersom ViewModel nu själv hanterar StateFlow-uppdateringen och DB-sparandet i sin init-block.
-    // Den behålls tom för att hantera eventuell framtida logik som ska köras efter att bilden sparats.
-    LaunchedEffect(savedImageUri) {
-        @Suppress("ControlFlowWithEmptyBody")
-        if (savedImageUri != null) {
-            // Logik för att uppdatera DB är nu i ViewModel.
-        }
-    }
-    */
-    // ---------------------------------------------------------
 
     // Visa felmeddelanden från ViewModel i Snackbar
     LaunchedEffect(state.error) {
@@ -190,7 +160,7 @@ fun BrewDetailScreen(
         },
         snackbarHost = {
             // Använder den anpassade ThemedSnackbar
-            SnackbarHost(snackbarHostState) { snackbarData -> // <-- FIX: Använd den globala
+            SnackbarHost(snackbarHostState) { snackbarData ->
                 ThemedSnackbar(snackbarData)
             }
         }

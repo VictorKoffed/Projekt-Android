@@ -1,6 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.home.composable
 
-import android.annotation.SuppressLint // Importerad för formatWeight
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -201,7 +201,6 @@ fun InfoGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = beansExplored.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
 
-            // *** UPPDATERAD RAD ***
             // Använder den nya formateringsfunktionen för att visa vikten
             val formattedWeight = remember(availableWeight) { formatWeight(availableWeight) }
             InfoCard(title = formattedWeight, subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))

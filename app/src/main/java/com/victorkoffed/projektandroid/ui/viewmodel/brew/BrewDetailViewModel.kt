@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ... (Data class BrewDetailState är oförändrad) ...
 data class BrewDetailState(
     val brew: Brew? = null,
     val bean: Bean? = null,
@@ -48,14 +47,13 @@ data class BrewDetailState(
 
 @HiltViewModel
 class BrewDetailViewModel @Inject constructor(
-    private val brewRepository: BrewRepository, // <-- ÄNDRAD
-    private val beanRepository: BeanRepository, // <-- ÄNDRAD
-    private val grinderRepository: GrinderRepository, // <-- ÄNDRAD
-    private val methodRepository: MethodRepository, // <-- ÄNDRAD
+    private val brewRepository: BrewRepository,
+    private val beanRepository: BeanRepository,
+    private val grinderRepository: GrinderRepository,
+    private val methodRepository: MethodRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // ... (properties är oförändrade) ...
     private val logTag = "BrewDetailVM"
 
     private val brewId: Long = savedStateHandle.get<Long>("brewId") ?: throw IllegalArgumentException("brewId not found in SavedStateHandle")
@@ -70,7 +68,6 @@ class BrewDetailViewModel @Inject constructor(
         private set
     var isEditing by mutableStateOf(false)
         private set
-    // ... (resten av edit... properties är oförändrade) ...
     var editSelectedGrinder by mutableStateOf<Grinder?>(null)
         private set
     var editGrindSetting by mutableStateOf("")
@@ -84,9 +81,9 @@ class BrewDetailViewModel @Inject constructor(
     var editNotes by mutableStateOf("")
         private set
 
-    val availableGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders() // <-- ÄNDRAD
+    val availableGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val availableMethods: StateFlow<List<Method>> = methodRepository.getAllMethods() // <-- ÄNDRAD
+    val availableMethods: StateFlow<List<Method>> = methodRepository.getAllMethods()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -99,7 +96,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (checkForArchivePromptOnEntry är oförändrad) ...
     private fun checkForArchivePromptOnEntry() {
         val beanIdToPrompt: Long? = savedStateHandle.get<Long>("beanIdToArchivePrompt")
         if (beanIdToPrompt != null && beanIdToPrompt > 0) {
@@ -117,18 +113,18 @@ class BrewDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _brewDetailState.update { it.copy(isLoading = true, error = null) }
 
-            brewRepository.observeBrew(brewId) // <-- ÄNDRAD
+            brewRepository.observeBrew(brewId)
                 .flatMapLatest { brew ->
                     if (brew == null) {
                         flowOf(BrewDetailState(isLoading = false, error = "Brew not found or has been deleted"))
                     } else {
-                        val beanFlow = flow { emit(beanRepository.getBeanById(brew.beanId)) } // <-- ÄNDRAD
-                        val grinderFlow = brew.grinderId?.let { id -> flow { emit(grinderRepository.getGrinderById(id)) } } // <-- ÄNDRAD
+                        val beanFlow = flow { emit(beanRepository.getBeanById(brew.beanId)) }
+                        val grinderFlow = brew.grinderId?.let { id -> flow { emit(grinderRepository.getGrinderById(id)) } }
                             ?: flowOf<Grinder?>(null)
-                        val methodFlow = brew.methodId?.let { id -> flow { emit(methodRepository.getMethodById(id)) } } // <-- ÄNDRAD
+                        val methodFlow = brew.methodId?.let { id -> flow { emit(methodRepository.getMethodById(id)) } }
                             ?: flowOf<Method?>(null)
-                        val samplesFlow = brewRepository.getSamplesForBrew(brew.id) // <-- ÄNDRAD
-                        val metricsFlow = brewRepository.getBrewMetrics(brew.id) // <-- ÄNDRAD
+                        val samplesFlow = brewRepository.getSamplesForBrew(brew.id)
+                        val metricsFlow = brewRepository.getBrewMetrics(brew.id)
 
                         combine(beanFlow, grinderFlow, methodFlow, samplesFlow, metricsFlow) { bean, grinder, method, samples, metrics ->
                             BrewDetailState(
@@ -154,7 +150,6 @@ class BrewDetailViewModel @Inject constructor(
     }
 
     // --- Redigeringsfunktioner ---
-    // ... (startEditing, cancelEditing är oförändrade) ...
     fun startEditing() {
         resetEditFieldsToCurrentState()
         isEditing = true
@@ -169,7 +164,6 @@ class BrewDetailViewModel @Inject constructor(
         val currentBrew = _brewDetailState.value.brew ?: return
         viewModelScope.launch {
             try {
-                // ... (logik för updatedBrew är oförändrad) ...
                 val updatedBrew = currentBrew.copy(
                     grinderId = editSelectedGrinder?.id,
                     grindSetting = editGrindSetting.takeIf { it.isNotBlank() },
@@ -178,7 +172,7 @@ class BrewDetailViewModel @Inject constructor(
                     brewTempCelsius = editBrewTempCelsius.toDoubleOrNull(),
                     notes = editNotes.takeIf { it.isNotBlank() }
                 )
-                brewRepository.updateBrew(updatedBrew) // <-- ÄNDRAD
+                brewRepository.updateBrew(updatedBrew)
                 isEditing = false
             } catch (e: Exception) {
                 Log.e(logTag, "Failed to save changes: ${e.message}", e)
@@ -187,7 +181,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (alla onEdit... funktioner och resetEditFieldsToCurrentState är oförändrade) ...
     fun onEditGrinderSelected(grinder: Grinder?) { editSelectedGrinder = grinder }
     fun onEditGrindSettingChanged(value: String) { editGrindSetting = value }
     fun onEditGrindSpeedRpmChanged(value: String) { if (value.matches(Regex("^\\d*$"))) editGrindSpeedRpm = value }
@@ -206,7 +199,6 @@ class BrewDetailViewModel @Inject constructor(
     }
 
     // --- Snabbredigering av anteckningar ---
-    // ... (onQuickEditNotesChanged är oförändrad) ...
     fun onQuickEditNotesChanged(value: String) {
         quickEditNotes = value
     }
@@ -218,7 +210,7 @@ class BrewDetailViewModel @Inject constructor(
                 val notesToSave = quickEditNotes.takeIf { it.isNotBlank() }
                 if (notesToSave != currentBrew.notes) {
                     val updatedBrew = currentBrew.copy(notes = notesToSave)
-                    brewRepository.updateBrew(updatedBrew) // <-- ÄNDRAD
+                    brewRepository.updateBrew(updatedBrew)
                     quickEditNotes = updatedBrew.notes ?: ""
                 }
             } catch (e: Exception) {
@@ -230,7 +222,6 @@ class BrewDetailViewModel @Inject constructor(
 
     // --- Bildhantering ---
     fun updateBrewImageUri(uri: String?) {
-        // ... (logik oförändrad) ...
         Log.d(logTag, "updateBrewImageUri anropad med: $uri")
         val currentBrew = _brewDetailState.value.brew ?: run {
             Log.e(logTag, "updateBrewImageUri: Försökte spara URI, men currentBrew var null!")
@@ -242,7 +233,7 @@ class BrewDetailViewModel @Inject constructor(
                 Log.d(logTag, "Försöker spara URI till databasen för brewId: ${currentBrew.id}")
 
                 val updatedBrew = currentBrew.copy(imageUri = uri)
-                brewRepository.updateBrew(updatedBrew) // <-- ÄNDRAD
+                brewRepository.updateBrew(updatedBrew)
                 _brewDetailState.update { it.copy(brew = updatedBrew) }
             } catch (e: Exception) {
                 Log.e(logTag, "Kunde inte spara bild-URI till databasen:", e)
@@ -257,7 +248,7 @@ class BrewDetailViewModel @Inject constructor(
         if (brewToDelete != null) {
             viewModelScope.launch {
                 try {
-                    brewRepository.deleteBrewAndRestoreStock(brewToDelete) // <-- ÄNDRAD
+                    brewRepository.deleteBrewAndRestoreStock(brewToDelete)
                     onSuccess()
                 } catch (e: Exception) {
                     Log.e(logTag, "Failed to delete brew: ${e.message}", e)
@@ -273,7 +264,7 @@ class BrewDetailViewModel @Inject constructor(
     fun archiveBeanFromPrompt(beanId: Long) {
         viewModelScope.launch {
             try {
-                beanRepository.updateBeanArchivedStatus(beanId, true) // <-- ÄNDRAD
+                beanRepository.updateBeanArchivedStatus(beanId, true)
                 Log.d(logTag, "Bean $beanId archived successfully from prompt.")
                 if (beanId == _brewDetailState.value.bean?.id) {
                     _brewDetailState.update { currentState ->
@@ -294,7 +285,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (dismissArchivePromptOnEntry, clearError är oförändrade) ...
     fun dismissArchivePromptOnEntry() {
         _showArchivePromptOnEntry.value = null
     }

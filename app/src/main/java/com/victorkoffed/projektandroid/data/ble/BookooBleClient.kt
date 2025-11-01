@@ -43,7 +43,6 @@ class BookooBleClient(private val context: Context) {
     private val btAdapter by lazy { btManager.adapter }
     private val scanner by lazy { btAdapter?.bluetoothLeScanner }
 
-    // ÄNDRING 1: Använd AtomicReference för trådsäker hantering av GATT-instansen
     private val gatt = AtomicReference<BluetoothGatt?>(null)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.IO + Job())

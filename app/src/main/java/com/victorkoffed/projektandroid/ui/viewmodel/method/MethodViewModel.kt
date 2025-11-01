@@ -18,7 +18,6 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class MethodViewModel @Inject constructor(
-    // RÄTTNING: Byt från 'repository: CoffeeRepository' till 'methodRepository: MethodRepository'
     private val methodRepository: MethodRepository
 ) : ViewModel() {
 
@@ -28,7 +27,7 @@ class MethodViewModel @Inject constructor(
      * Använder `stateIn` för att konvertera flödet från databasen till en StateFlow,
      * vilket är optimalt för UI-bindning i Jetpack Compose/Views.
      */
-    val allMethods: StateFlow<List<Method>> = methodRepository.getAllMethods() // <-- RÄTTAD
+    val allMethods: StateFlow<List<Method>> = methodRepository.getAllMethods()
         .stateIn(
             scope = viewModelScope,
             // Håller flödet aktivt i 5 sekunder efter att den sista observatören försvinner.
@@ -42,7 +41,7 @@ class MethodViewModel @Inject constructor(
     fun addMethod(name: String) {
         if (name.isNotBlank()) {
             viewModelScope.launch {
-                methodRepository.addMethod(Method(name = name)) // <-- RÄTTAD
+                methodRepository.addMethod(Method(name = name))
             }
         }
     }
@@ -52,7 +51,7 @@ class MethodViewModel @Inject constructor(
      */
     fun updateMethod(method: Method) {
         viewModelScope.launch {
-            methodRepository.updateMethod(method) // <-- RÄTTAD
+            methodRepository.updateMethod(method)
         }
     }
 
@@ -61,7 +60,7 @@ class MethodViewModel @Inject constructor(
      */
     fun deleteMethod(method: Method) {
         viewModelScope.launch {
-            methodRepository.deleteMethod(method) // <-- RÄTTAD
+            methodRepository.deleteMethod(method)
         }
     }
 }

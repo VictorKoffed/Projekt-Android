@@ -49,7 +49,7 @@ fun LiveBrewScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (brewId: Long, beanIdToArchivePrompt: Long?) -> Unit,
     scaleVm: ScaleViewModel,
-    vm: LiveBrewViewModel // Uppdaterad till LiveBrewViewModel
+    vm: LiveBrewViewModel
 ) {
     // === Hämta sessions-state från LiveBrewViewModel ===
     val samples by vm.recordedSamplesFlow.collectAsState()
@@ -62,7 +62,6 @@ fun LiveBrewScreen(
     val error by vm.error.collectAsState()
 
     // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
-    // ★★ KORRIGERING: Byt namn på denna variabel för att undvika förvirring ★★
     val liveMeasurement by scaleVm.measurement.collectAsState()
     val connectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
@@ -138,8 +137,6 @@ fun LiveBrewScreen(
         }
     }
 
-
-    // --- ★★ NY LOGIK HÄR ★★ ---
     // Bestäm vad som faktiskt ska visas
     val displayMeasurement = remember(liveMeasurement, weightAtPause, isPaused, isRecordingWhileDisconnected, isRecording) {
         val lastKnownWeight = weightAtPause ?: 0f
@@ -161,8 +158,6 @@ fun LiveBrewScreen(
             }
         }
     }
-    // --- SLUT NY LOGIK ---
-
 
     Scaffold(
         topBar = {
@@ -193,7 +188,6 @@ fun LiveBrewScreen(
         ) {
             StatusDisplay(
                 currentTimeMillis = time,
-                // ★★ KORRIGERING: Skicka in det nya beräknade värdet istället ★★
                 currentMeasurement = displayMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,

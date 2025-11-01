@@ -26,7 +26,6 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-// ... (Data classes SaveBrewResult och ReceivedBrewSetup är oförändrade) ...
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
 private data class ReceivedBrewSetup(
@@ -43,13 +42,12 @@ private const val TAG = "LiveBrewViewModel_DEBUG"
 
 @HiltViewModel
 class LiveBrewViewModel @Inject constructor(
-    private val brewRepository: BrewRepository, // <-- ÄNDRAD
-    private val beanRepository: BeanRepository, // <-- ÄNDRAD
+    private val brewRepository: BrewRepository,
+    private val beanRepository: BeanRepository,
     private val scaleRepo: ScaleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // ... (alla properties och init-blocket är oförändrade, förutom anropen nedan) ...
     private var _setupState: ReceivedBrewSetup? = null
 
     private val _error = MutableStateFlow<String?>(null)
@@ -117,7 +115,6 @@ class LiveBrewViewModel @Inject constructor(
         }
     }
 
-    // ... (resten av funktionerna fram till saveLiveBrew är oförändrade) ...
     private fun handleConnectionStateChange(state: BleConnectionState, latestMeasurement: ScaleMeasurement) {
         if ((state is BleConnectionState.Disconnected || state is BleConnectionState.Error)) {
             if (_isRecording.value && !_isPaused.value) {
@@ -235,7 +232,6 @@ class LiveBrewViewModel @Inject constructor(
 
         _isPaused.value = false
         _isRecordingWhileDisconnected.value = false
-        // _weightAtPause.value = null // <-- ★★ KORRIGERING: Denna rad är borttagen ★★
 
         if (scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
             scaleRepo.startTimer()
@@ -276,7 +272,6 @@ class LiveBrewViewModel @Inject constructor(
         val sampleTimeMillis = _recordingTimeMillis.value
         if (sampleTimeMillis < 0) return
 
-        // --- ★★ NY LOGIK HÄR ★★ ---
         // Hämta det senast kända paus-värdet (t.ex. 200g)
         val lastKnownWeight = _weightAtPause.value ?: 0f
 
@@ -294,7 +289,6 @@ class LiveBrewViewModel @Inject constructor(
         if (liveWeight > lastKnownWeight) {
             _weightAtPause.value = null
         }
-        // --- SLUT NY LOGIK ---
 
         // Använd 'displayWeight' istället för 'measurementData.weightGrams'
         val weightGramsDouble = String.format(Locale.US, "%.1f", displayWeight).toDouble()
@@ -327,7 +321,6 @@ class LiveBrewViewModel @Inject constructor(
         finalTimeMillis: Long,
         scaleDeviceName: String?
     ): SaveBrewResult {
-        // ... (logik och validering oförändrad) ...
         Log.d(TAG, "saveLiveBrew: Start. Time: $finalTimeMillis ms, Samples size: ${finalSamples.size}")
 
         if (finalSamples.size < 2 || finalTimeMillis <= 0) {
@@ -343,7 +336,6 @@ class LiveBrewViewModel @Inject constructor(
             return SaveBrewResult(null)
         }
 
-        // ... (logik för att skapa newBrew är oförändrad) ...
         val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
         val scaleInfo = scaleDeviceName?.let { " via $it" } ?: ""
         val newBrew = Brew(
@@ -397,7 +389,6 @@ class LiveBrewViewModel @Inject constructor(
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
-    // ... (clearError, onCleared är oförändrade) ...
     fun clearError() {
         _error.value = null
     }

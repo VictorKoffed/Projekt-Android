@@ -3,7 +3,7 @@ package com.victorkoffed.projektandroid.ui.viewmodel.coffee
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.victorkoffed.projektandroid.data.repository.interfaces.CoffeeImageRepository // <-- KONTROLLERA DENNA IMPORT
+import com.victorkoffed.projektandroid.data.repository.interfaces.CoffeeImageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -13,7 +13,6 @@ class CoffeeImageViewModel @Inject constructor(
     private val imageRepository: CoffeeImageRepository
 ) : ViewModel() {
 
-    // ... (resten av filen är oförändrad) ...
     val imageUrl = mutableStateOf<String?>(null)
     val loading = mutableStateOf(false)
     val error = mutableStateOf<String?>(null)

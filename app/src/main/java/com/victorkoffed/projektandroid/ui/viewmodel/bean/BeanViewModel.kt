@@ -17,17 +17,17 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BeanViewModel @Inject constructor(
-    private val beanRepository: BeanRepository // <-- ÄNDRAD
+    private val beanRepository: BeanRepository
 ) : ViewModel() {
 
-    val allBeans: StateFlow<List<Bean>> = beanRepository.getAllBeans() // <-- ÄNDRAD
+    val allBeans: StateFlow<List<Bean>> = beanRepository.getAllBeans()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val archivedBeans: StateFlow<List<Bean>> = beanRepository.getArchivedBeans() // <-- ÄNDRAD
+    val archivedBeans: StateFlow<List<Bean>> = beanRepository.getArchivedBeans()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -64,7 +64,7 @@ class BeanViewModel @Inject constructor(
             isArchived = false
         )
         viewModelScope.launch {
-            beanRepository.addBean(newBean) // <-- ÄNDRAD
+            beanRepository.addBean(newBean)
         }
     }
 }

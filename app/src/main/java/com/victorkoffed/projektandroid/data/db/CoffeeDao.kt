@@ -55,7 +55,7 @@ interface CoffeeDao {
     """)
     fun getAllBrews(): Flow<List<Brew>>
 
-    // NY FUNKTION: Hämta ALLA brews, oavsett bönans arkivstatus, sorterade efter datum
+    // FUNKTION: Hämta ALLA brews, oavsett bönans arkivstatus, sorterade efter datum
     @Query("SELECT * FROM Brew ORDER BY started_at DESC")
     fun getAllBrewsIncludingArchived(): Flow<List<Brew>>
 

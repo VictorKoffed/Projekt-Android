@@ -168,7 +168,7 @@ fun BeanDetailScreen(
         },
         snackbarHost = {
             SnackbarHost(
-                hostState = snackbarHostState, // <-- FIX: Använd den globala
+                hostState = snackbarHostState,
                 snackbar = { snackbarData ->
                     ThemedSnackbar(snackbarData)
                 }

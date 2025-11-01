@@ -57,7 +57,6 @@ fun StatusDisplay(
     currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
-    // ★★★ FIX: Byt namn på parametern här ★★★
     isRecordingWhileDisconnected: Boolean,
     showFlow: Boolean,
     countdown: Int?
@@ -123,7 +122,6 @@ fun StatusDisplay(
                     }
                 }
 
-                // ★★★ FIX: Använd det nya parameternamnet här ★★★
                 if (isPaused || isRecordingWhileDisconnected) {
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -263,7 +261,6 @@ fun LiveBrewGraph(
 fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
-    // ★★★ FIX: Byt namn på parametern här i DEFINITIONEN ★★★
     isRecordingWhileDisconnected: Boolean,
     isConnected: Boolean,
     countdown: Int?,
@@ -315,7 +312,6 @@ fun BrewControls(
                 contentDescription = when {
                     isBusy -> "Starting..."
                     isPaused -> "Resume"
-                    // ★★★ FIX: Använd det nya parameternamnet här ★★★
                     isRecordingWhileDisconnected -> "Pause (Disconnected)"
                     isRecording -> "Pause"
                     else -> "Start"

@@ -64,7 +64,7 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 fun ScaleConnectScreen(
     onNavigateBack: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    vm: ScaleViewModel // MOTTAGARE: Ta emot vm (scaleVm)
+    vm: ScaleViewModel
 ) {
     // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)

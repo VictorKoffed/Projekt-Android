@@ -26,7 +26,6 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-// ... (Data class BeanDetailState är oförändrad) ...
 data class BeanDetailState(
     val bean: Bean? = null,
     val brews: List<Brew> = emptyList(),
@@ -36,12 +35,11 @@ data class BeanDetailState(
 
 @HiltViewModel
 class BeanDetailViewModel @Inject constructor(
-    private val beanRepository: BeanRepository, // <-- ÄNDRAD
-    private val brewRepository: BrewRepository, // <-- ÄNDRAD
+    private val beanRepository: BeanRepository,
+    private val brewRepository: BrewRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // ... (resten av properties är oförändrade) ...
     private val beanId: Long = savedStateHandle.get<Long>("beanId") ?: throw IllegalArgumentException("beanId not found in SavedStateHandle")
 
     private val _beanDetailState = MutableStateFlow(BeanDetailState())
@@ -74,11 +72,10 @@ class BeanDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _beanDetailState.update { it.copy(isLoading = true, error = null) }
             try {
-                val beanFlow = beanRepository.observeBean(beanId) // <-- ÄNDRAD
-                val brewsFlow = brewRepository.getBrewsForBean(beanId) // <-- ÄNDRAD
+                val beanFlow = beanRepository.observeBean(beanId)
+                val brewsFlow = brewRepository.getBrewsForBean(beanId)
 
                 combine(beanFlow, brewsFlow) { bean, brews ->
-                    // ... (logik oförändrad) ...
                     if (bean == null && !_beanDetailState.value.isLoading) {
                         BeanDetailState(isLoading = false, error = "Bean not found or deleted.")
                     } else {
@@ -105,7 +102,6 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (startEditing, cancelEditing, parseDateString är oförändrade) ...
     fun startEditing() {
         resetEditFieldsToCurrentState()
         isEditing = true
@@ -126,7 +122,6 @@ class BeanDetailViewModel @Inject constructor(
     }
 
     fun saveChanges() {
-        // ... (logik oförändrad) ...
         val currentBean = _beanDetailState.value.bean ?: return
         val remainingWeight = editRemainingWeightStr.toDoubleOrNull()
 
@@ -153,7 +148,7 @@ class BeanDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                beanRepository.updateBean(updatedBean) // <-- ÄNDRAD
+                beanRepository.updateBean(updatedBean)
                 isEditing = false
                 if (shouldPromptArchive) {
                     _showArchivePromptAfterSave.value = true
@@ -164,7 +159,6 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (confirmAndArchiveBean, dismissArchivePrompt är oförändrade) ...
     fun confirmAndArchiveBean() {
         archiveBean { }
         _showArchivePromptAfterSave.value = false
@@ -178,7 +172,7 @@ class BeanDetailViewModel @Inject constructor(
         val beanToArchive = _beanDetailState.value.bean ?: return
         viewModelScope.launch {
             try {
-                beanRepository.updateBeanArchivedStatus(beanToArchive.id, true) // <-- ÄNDRAD
+                beanRepository.updateBeanArchivedStatus(beanToArchive.id, true)
                 _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = true)) }
                 onSuccess()
             } catch (e: Exception) {
@@ -193,7 +187,7 @@ class BeanDetailViewModel @Inject constructor(
         if (beanToUnarchive != null) {
             viewModelScope.launch {
                 try {
-                    beanRepository.updateBeanArchivedStatus(beanToUnarchive.id, false) // <-- ÄNDRAD
+                    beanRepository.updateBeanArchivedStatus(beanToUnarchive.id, false)
                     _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = false), error = null) }
                 } catch (e: Exception) {
                     Log.e("BeanDetailVM", "Kunde inte av-arkivera böna", e)
@@ -209,7 +203,7 @@ class BeanDetailViewModel @Inject constructor(
             viewModelScope.launch {
                 try {
                     if (beanToDelete.isArchived) {
-                        beanRepository.deleteBean(beanToDelete) // <-- ÄNDRAD
+                        beanRepository.deleteBean(beanToDelete)
                         onSuccess()
                     } else {
                         _beanDetailState.update { it.copy(error = "Kan endast radera arkiverade bönor.") }
@@ -222,7 +216,6 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    // ... (resetEditFieldsToCurrentState, clearError är oförändrade) ...
     private fun resetEditFieldsToCurrentState() {
         val bean = _beanDetailState.value.bean
         editName = bean?.name ?: ""

@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
-// ... (Data classes NumericInput och BrewSetupState är oförändrade) ...
 data class NumericInput(
     val value: String = "",
     val error: String? = null
@@ -43,20 +42,20 @@ data class BrewSetupState(
 
 @HiltViewModel
 class BrewSetupViewModel @Inject constructor(
-    private val beanRepository: BeanRepository, // <-- ÄNDRAD
-    private val grinderRepository: GrinderRepository, // <-- ÄNDRAD
-    private val methodRepository: MethodRepository, // <-- ÄNDRAD
-    private val brewRepository: BrewRepository // <-- ÄNDRAD
+    private val beanRepository: BeanRepository,
+    private val grinderRepository: GrinderRepository,
+    private val methodRepository: MethodRepository,
+    private val brewRepository: BrewRepository
 ) : ViewModel() {
 
     private val decimalRegex = Regex("^\\d*\\.?\\d*$")
     private val integerRegex = Regex("^\\d*$")
 
-    val availableBeans: StateFlow<List<Bean>> = beanRepository.getAllBeans() // <-- ÄNDRAD
+    val availableBeans: StateFlow<List<Bean>> = beanRepository.getAllBeans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val availableGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders() // <-- ÄNDRAD
+    val availableGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val availableMethods: StateFlow<List<Method>> = methodRepository.getAllMethods() // <-- ÄNDRAD
+    val availableMethods: StateFlow<List<Method>> = methodRepository.getAllMethods()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _brewSetupState = MutableStateFlow(BrewSetupState())
@@ -65,11 +64,10 @@ class BrewSetupViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    val hasPreviousBrews: StateFlow<Boolean> = brewRepository.getAllBrews() // <-- ÄNDRAD
+    val hasPreviousBrews: StateFlow<Boolean> = brewRepository.getAllBrews()
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    // ... (alla on...Change och select... funktioner är oförändrade) ...
     fun selectBean(bean: Bean?) {
         _brewSetupState.update { it.copy(selectedBean = bean) }
     }
@@ -122,7 +120,6 @@ class BrewSetupViewModel @Inject constructor(
         }
     }
 
-    // ... (isSetupValid, getCurrentSetup, clearForm är oförändrade) ...
     fun isSetupValid(): Boolean {
         val currentState = _brewSetupState.value
 
@@ -147,12 +144,12 @@ class BrewSetupViewModel @Inject constructor(
 
     fun loadLatestBrewSettings() {
         viewModelScope.launch {
-            val latestBrew = brewRepository.getAllBrews().firstOrNull()?.firstOrNull() // <-- ÄNDRAD
+            val latestBrew = brewRepository.getAllBrews().firstOrNull()?.firstOrNull()
 
             if (latestBrew != null) {
-                val bean = beanRepository.getBeanById(latestBrew.beanId) // <-- ÄNDRAD
-                val grinder = latestBrew.grinderId?.let { grinderRepository.getGrinderById(it) } // <-- ÄNDRAD
-                val method = latestBrew.methodId?.let { methodRepository.getMethodById(it) } // <-- ÄNDRAD
+                val bean = beanRepository.getBeanById(latestBrew.beanId)
+                val grinder = latestBrew.grinderId?.let { grinderRepository.getGrinderById(it) }
+                val method = latestBrew.methodId?.let { methodRepository.getMethodById(it) }
 
                 _brewSetupState.update {
                     it.copy(
@@ -175,7 +172,6 @@ class BrewSetupViewModel @Inject constructor(
             return null
         }
         val currentSetup = _brewSetupState.value
-        // ... (logik för att skapa newBrew är oförändrad) ...
         val newBrew = Brew(
             beanId = currentSetup.selectedBean!!.id,
             doseGrams = currentSetup.doseGrams.value.toDouble(),
@@ -190,7 +186,7 @@ class BrewSetupViewModel @Inject constructor(
 
         return viewModelScope.async {
             try {
-                brewRepository.addBrew(newBrew) // <-- ÄNDRAD
+                brewRepository.addBrew(newBrew)
             } catch (e: Exception) {
                 _error.value = "Save failed: ${e.message}"
                 null
@@ -198,7 +194,6 @@ class BrewSetupViewModel @Inject constructor(
         }.await()
     }
 
-    // ... (clearError är oförändrad) ...
     fun clearError() {
         _error.value = null
     }

@@ -13,10 +13,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GrinderViewModel @Inject constructor(
-    private val grinderRepository: GrinderRepository // <-- ÄNDRAD
+    private val grinderRepository: GrinderRepository
 ) : ViewModel() {
 
-    val allGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders() // <-- ÄNDRAD
+    val allGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -26,7 +26,7 @@ class GrinderViewModel @Inject constructor(
     fun addGrinder(name: String, notes: String?) {
         viewModelScope.launch {
             if (name.isNotBlank()) {
-                grinderRepository.addGrinder( // <-- ÄNDRAD
+                grinderRepository.addGrinder(
                     Grinder(
                         name = name,
                         notes = notes
@@ -38,13 +38,13 @@ class GrinderViewModel @Inject constructor(
 
     fun updateGrinder(grinder: Grinder) {
         viewModelScope.launch {
-            grinderRepository.updateGrinder(grinder) // <-- ÄNDRAD
+            grinderRepository.updateGrinder(grinder)
         }
     }
 
     fun deleteGrinder(grinder: Grinder) {
         viewModelScope.launch {
-            grinderRepository.deleteGrinder(grinder) // <-- ÄNDRAD
+            grinderRepository.deleteGrinder(grinder)
         }
     }
 }

@@ -5,7 +5,7 @@ package com.victorkoffed.projektandroid.ui.screens.brew
 import android.Manifest
 import android.content.Context
 import android.net.Uri
-import android.util.Log // <-- LADE TILL DENNA IMPORT
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraControl

@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
-// ... (Data class RecentBrewItem är oförändrad) ...
 data class RecentBrewItem(
     val brew: Brew,
     val beanName: String?
@@ -26,14 +25,14 @@ data class RecentBrewItem(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val brewRepository: BrewRepository, // <-- ÄNDRAD
-    private val beanRepository: BeanRepository, // <-- ÄNDRAD
+    private val brewRepository: BrewRepository,
+    private val beanRepository: BeanRepository,
     private val themePreferenceManager: ThemePreferenceManager
 ) : ViewModel() {
 
-    val recentBrews: StateFlow<List<RecentBrewItem>> = brewRepository.getAllBrews() // <-- ÄNDRAD
+    val recentBrews: StateFlow<List<RecentBrewItem>> = brewRepository.getAllBrews()
         .map { brews -> brews.take(5) }
-        .combine(beanRepository.getAllBeans()) { brews, beans -> // <-- ÄNDRAD
+        .combine(beanRepository.getAllBeans()) { brews, beans ->
             brews.map { brew ->
                 val bean = beans.find { it.id == brew.beanId }
                 RecentBrewItem(brew = brew, beanName = bean?.name ?: "Unknown Bean")
@@ -45,21 +44,20 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val beansExploredCount: StateFlow<Int> = beanRepository.getTotalBeanCount() // <-- ÄNDRAD
+    val beansExploredCount: StateFlow<Int> = beanRepository.getTotalBeanCount()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0
         )
 
-    val totalBrewCount: StateFlow<Int> = brewRepository.getTotalBrewCount() // <-- ÄNDRAD
+    val totalBrewCount: StateFlow<Int> = brewRepository.getTotalBrewCount()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0
         )
 
-    // --- Dark Mode Hantering (oförändrad) ---
     val isDarkMode: StateFlow<Boolean> = themePreferenceManager.isDarkMode
         .stateIn(
             scope = viewModelScope,
@@ -73,11 +71,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    val totalAvailableBeanWeight: StateFlow<Double> = beanRepository.getAllBeans() // <-- ÄNDRAD
+    val totalAvailableBeanWeight: StateFlow<Double> = beanRepository.getAllBeans()
         .map { beans -> beans.sumOf { it.remainingWeightGrams } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val lastBrewTime: StateFlow<Date?> = brewRepository.getAllBrewsIncludingArchived() // <-- ÄNDRAD
+    val lastBrewTime: StateFlow<Date?> = brewRepository.getAllBrewsIncludingArchived()
         .map { brews -> brews.firstOrNull()?.startedAt }
         .stateIn(
             scope = viewModelScope,
