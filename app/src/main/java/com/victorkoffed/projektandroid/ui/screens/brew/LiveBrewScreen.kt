@@ -63,7 +63,7 @@ fun LiveBrewScreen(
     val time by scaleVm.recordingTimeMillis.collectAsState()
     val isRecording by scaleVm.isRecording.collectAsState()
     val isPaused by scaleVm.isPaused.collectAsState()
-    val isPausedDueToDisconnect by scaleVm.isPausedDueToDisconnect.collectAsState()
+    val isRecordingWhileDisconnected by scaleVm.isRecordingWhileDisconnected.collectAsState()
     val currentMeasurement by scaleVm.measurement.collectAsState()
     val weightAtPause by scaleVm.weightAtPause.collectAsState()
     val countdown by scaleVm.countdown.collectAsState()
@@ -78,30 +78,21 @@ fun LiveBrewScreen(
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
 
-    // Logik för att stoppa och spara, nu flyttad hit
+    // Logik för att stoppa och spara
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
-            // [LOG A: Före insamling av data]
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Klickade 'Done'. Försöker spara.")
-
-            // 1. Hämta setup-datan från BrewViewModel
             val currentSetup = brewVm.getCurrentSetup()
-
-            // 2. Hämta de slutgiltiga inspelade värdena (KORRIGERAD ORDNING: LÄS FÖRST)
             val finalSamples = scaleVm.recordedSamplesFlow.value
             val finalTime = scaleVm.recordingTimeMillis.value
 
-            // 3. Stoppa inspelningen på vågen (NU Nollställs samples/time i VM)
+            // Stoppa inspelningen
             scaleVm.stopRecording()
 
-            // [LOG B: Kontroll av insamlade data]
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Setup BeanId: ${currentSetup.selectedBean?.id}, Dose: ${currentSetup.doseGrams.value}")
-            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms. Första t_ms: ${finalSamples.firstOrNull()?.timeMillis ?: -1L}")
+            Log.d("LiveB rewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms. Första t_ms: ${finalSamples.firstOrNull()?.timeMillis ?: -1L}")
 
-            // 4. Hämta vågens namn (om ansluten) för anteckningar
             val scaleName = (connectionState as? BleConnectionState.Connected)?.deviceName
-
-            // 5. Anropa den *nya* spara-funktionen på BrewViewModel
             val saveResult = brewVm.saveLiveBrew(
                 setupState = currentSetup,
                 finalSamples = finalSamples,
@@ -109,15 +100,12 @@ fun LiveBrewScreen(
                 scaleDeviceName = scaleName
             )
 
-            // [LOG C: Resultat från ViewModel]
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Resultat mottaget. BrewId: ${saveResult.brewId}, BeanIdReachedZero: ${saveResult.beanIdReachedZero}")
 
             if (saveResult.brewId != null) {
-                // SUCCESS: Använd nav-callback
                 Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Spar LYCKADES. Navigerar till detaljvy.")
                 onNavigateToDetail(saveResult.brewId, saveResult.beanIdReachedZero)
             } else {
-                // FAILURE FIX: Återgå till Brew Setup om sparandet misslyckas.
                 Log.w("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Spar MISSLYCKADES. Återgår till setup.")
                 onNavigateBack()
             }
@@ -125,20 +113,21 @@ fun LiveBrewScreen(
     }
 
     // Logik: Hantera dialog vid oväntad frånkoppling under inspelning/paus
-    LaunchedEffect(connectionState, isRecording, isPaused, isPausedDueToDisconnect) {
+    LaunchedEffect(connectionState, isRecording, isPaused, isRecordingWhileDisconnected) {
         if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
-            (isRecording || isPaused) &&
-            !isPausedDueToDisconnect && // Se till att den inte redan är pausad pga disconnect
-            !isPaused // Se till att den inte redan är manuellt pausad
+            (isRecording) &&
+            !isPaused &&
+            isRecordingWhileDisconnected
         ) {
             alertTitle = if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost"
             alertMessage = if (connectionState is BleConnectionState.Error) {
-                (connectionState as BleConnectionState.Error).message + " Recording paused."
+                (connectionState as BleConnectionState.Error).message + " Recording continues..."
             } else {
-                "The connection to the scale was lost. Recording paused."
+                "The connection to the scale was lost. Recording continues..."
             }
             showDisconnectedAlert = true
-        } else if (connectionState is BleConnectionState.Connected && isPausedDueToDisconnect) {
+        } else if (connectionState is BleConnectionState.Connected && !isRecordingWhileDisconnected) {
+            // Dölj dialogen om vi återansluter
             showDisconnectedAlert = false
         }
     }
@@ -154,7 +143,7 @@ fun LiveBrewScreen(
                 },
                 actions = {
                     TextButton(
-                        onClick = onStopAndSaveClick, // Använd den lokalt definierade logiken
+                        onClick = onStopAndSaveClick,
                         enabled = isRecording || isPaused || countdown != null
                     ) {
                         Text("Done")
@@ -172,10 +161,12 @@ fun LiveBrewScreen(
         ) {
             StatusDisplay(
                 currentTimeMillis = time,
-                currentMeasurement = if (isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
+                // ★★★ FIX: Lägg till "|| isPaused" här ★★★
+                // Visa den sparade vikten om vi antingen är frånkopplade ELLER manuellt pausade.
+                currentMeasurement = if (isRecordingWhileDisconnected || isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
-                isPausedDueToDisconnect = isPausedDueToDisconnect,
+                isRecordingWhileDisconnected = isRecordingWhileDisconnected,
                 showFlow = showFlowInfo,
                 countdown = countdown
             )
@@ -188,7 +179,6 @@ fun LiveBrewScreen(
                     .padding(vertical = 8.dp)
             )
             Spacer(Modifier.height(8.dp))
-            // Filterchip för Flow (behålls här)
             FilterChip(
                 selected = showFlowInfo,
                 onClick = { showFlowInfo = !showFlowInfo },
@@ -209,18 +199,17 @@ fun LiveBrewScreen(
             BrewControls(
                 isRecording = isRecording,
                 isPaused = isPaused,
-                isPausedDueToDisconnect = isPausedDueToDisconnect,
+                isRecordingWhileDisconnected = isRecordingWhileDisconnected,
                 isConnected = connectionState is BleConnectionState.Connected,
                 countdown = countdown,
                 onStartClick = { scaleVm.startRecording() },
                 onPauseClick = { scaleVm.pauseRecording() },
                 onResumeClick = { scaleVm.resumeRecording() },
                 onTareClick = { scaleVm.tareScale() },
-                onResetClick = { scaleVm.stopRecording() } // Skickar vidare anropet
+                onResetClick = { scaleVm.stopRecording() }
             )
         }
 
-        // Dialog vid anslutningsfel under pågående inspelning/paus
         if (showDisconnectedAlert) {
             AlertDialog(
                 onDismissRequest = { /* Låt den vara kvar */ },
@@ -228,13 +217,14 @@ fun LiveBrewScreen(
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
+                        showDisconnectedAlert = false
                     }) {
                         Text("OK")
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        // Stäng dialogen och spara
+                        showDisconnectedAlert = false
                         onStopAndSaveClick()
                     }) {
                         Text("Stop & Save As Is")

@@ -57,7 +57,8 @@ fun StatusDisplay(
     currentMeasurement: ScaleMeasurement,
     isRecording: Boolean,
     isPaused: Boolean,
-    isPausedDueToDisconnect: Boolean,
+    // ★★★ FIX: Byt namn på parametern här ★★★
+    isRecordingWhileDisconnected: Boolean,
     showFlow: Boolean,
     countdown: Int?
 ) {
@@ -68,13 +69,16 @@ fun StatusDisplay(
     }
     val weightString = remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
     val flowString = remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
+
     val containerColor = when {
         countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-        isPausedDueToDisconnect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
-        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        isRecording -> MaterialTheme.colorScheme.tertiaryContainer
+        // ★★★ FIX: Använd det nya parameternamnet här ★★★
+        isRecordingWhileDisconnected -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) // Röd vid frånkoppling
+        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Grå vid manuell paus
+        isRecording -> MaterialTheme.colorScheme.tertiaryContainer // Normal inspelningsfärg
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor)
@@ -118,16 +122,23 @@ fun StatusDisplay(
                         }
                     }
                 }
-                if (isPaused) {
+
+                // ★★★ FIX: Använd det nya parameternamnet här ★★★
+                if (isPaused || isRecordingWhileDisconnected) {
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isPausedDueToDisconnect) {
+                        if (isRecordingWhileDisconnected) {
                             Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.size(4.dp))
                             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onErrorContainer) {
-                                Text("Paused - Reconnecting...", fontSize = 14.sp)
+                                if(isPaused) {
+                                    Text("Paused - Reconnecting...", fontSize = 14.sp)
+                                } else {
+                                    Text("Recording (Data Paused) - Reconnecting...", fontSize = 14.sp)
+                                }
                             }
                         } else {
+                            // Endast manuellt pausad
                             Text("Paused", fontSize = 14.sp)
                         }
                     }
@@ -169,7 +180,6 @@ fun LiveBrewGraph(
         )
     }
 
-    // Variabler för justering
     val yLabelPadding = 32.dp
     val weightTitleOffsetDp = 0.dp
 
@@ -253,7 +263,8 @@ fun LiveBrewGraph(
 fun BrewControls(
     isRecording: Boolean,
     isPaused: Boolean,
-    isPausedDueToDisconnect: Boolean,
+    // ★★★ FIX: Byt namn på parametern här i DEFINITIONEN ★★★
+    isRecordingWhileDisconnected: Boolean,
     isConnected: Boolean,
     countdown: Int?,
     onStartClick: () -> Unit,
@@ -263,7 +274,8 @@ fun BrewControls(
     onResetClick: () -> Unit
 ) {
     val isBusy = countdown != null
-    val enableReset = (isRecording || isPaused) && !isBusy && !isPausedDueToDisconnect
+    val enableReset = (isRecording || isPaused) && !isBusy
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -289,19 +301,22 @@ fun BrewControls(
             },
             modifier = Modifier.size(72.dp),
             contentPadding = PaddingValues(0.dp),
-            enabled = !isBusy && (isConnected || isPausedDueToDisconnect)
+            enabled = !isBusy && (isConnected || isRecording)
         ) {
             Icon(
                 imageVector = when {
                     isBusy -> Icons.Default.Timer
                     isPaused -> Icons.Default.PlayArrow
+                    // ★★★ FIX: Använd det nya parameternamnet här ★★★
+                    isRecordingWhileDisconnected -> Icons.Default.Pause
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
                 },
                 contentDescription = when {
                     isBusy -> "Starting..."
-                    isPausedDueToDisconnect -> "Resume when connected"
                     isPaused -> "Resume"
+                    // ★★★ FIX: Använd det nya parameternamnet här ★★★
+                    isRecordingWhileDisconnected -> "Pause (Disconnected)"
                     isRecording -> "Pause"
                     else -> "Start"
                 },
