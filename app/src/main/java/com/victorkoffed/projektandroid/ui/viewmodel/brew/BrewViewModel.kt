@@ -1,8 +1,5 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
@@ -17,11 +14,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -65,9 +64,10 @@ class BrewViewModel @Inject constructor(
     val availableMethods: StateFlow<List<Method>> = repository.getAllMethods()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // --- State för användarinmatning ---
-    var brewSetupState by mutableStateOf(BrewSetupState())
-        private set
+    // --- State för användarinmatning (Ersätter mutableStateOf) ---
+    private val _brewSetupState = MutableStateFlow(BrewSetupState())
+    // Den här exponeras för UI och ska observeras med .collectAsState()
+    val brewSetupState: StateFlow<BrewSetupState> = _brewSetupState.asStateFlow()
 
     // --- State för felhantering vid sparande ---
     private val _error = MutableStateFlow<String?>(null)
@@ -84,58 +84,77 @@ class BrewViewModel @Inject constructor(
 
 
     // --- Funktioner för att uppdatera inställningar ---
-    fun selectBean(bean: Bean?) { brewSetupState = brewSetupState.copy(selectedBean = bean) }
+    fun selectBean(bean: Bean?) {
+        _brewSetupState.update { it.copy(selectedBean = bean) }
+    }
 
     fun onDoseChange(dose: String) {
         val isValid = dose.matches(decimalRegex)
-        brewSetupState = brewSetupState.copy(
-            doseGrams = brewSetupState.doseGrams.copy(
-                value = dose,
-                error = if (isValid || dose.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 20.5)"
+        _brewSetupState.update {
+            it.copy(
+                doseGrams = it.doseGrams.copy(
+                    value = dose,
+                    error = if (isValid || dose.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 20.5)"
+                )
             )
-        )
+        }
     }
 
-    fun selectGrinder(grinder: Grinder?) { brewSetupState = brewSetupState.copy(selectedGrinder = grinder) }
-    fun onGrindSettingChange(setting: String) { brewSetupState = brewSetupState.copy(grindSetting = setting) }
+    fun selectGrinder(grinder: Grinder?) {
+        _brewSetupState.update { it.copy(selectedGrinder = grinder) }
+    }
+
+    fun onGrindSettingChange(setting: String) {
+        _brewSetupState.update { it.copy(grindSetting = setting) }
+    }
 
     fun onGrindSpeedChange(rpm: String) {
         val isValid = rpm.matches(integerRegex)
-        brewSetupState = brewSetupState.copy(
-            grindSpeedRpm = brewSetupState.grindSpeedRpm.copy(
-                value = rpm,
-                error = if (isValid || rpm.isBlank()) null else "Måste vara ett heltal"
+        _brewSetupState.update {
+            it.copy(
+                grindSpeedRpm = it.grindSpeedRpm.copy(
+                    value = rpm,
+                    error = if (isValid || rpm.isBlank()) null else "Måste vara ett heltal"
+                )
             )
-        )
+        }
     }
 
-    fun selectMethod(method: Method?) { brewSetupState = brewSetupState.copy(selectedMethod = method) }
+    fun selectMethod(method: Method?) {
+        _brewSetupState.update { it.copy(selectedMethod = method) }
+    }
 
     fun onBrewTempChange(temp: String) {
         val isValid = temp.matches(decimalRegex)
-        brewSetupState = brewSetupState.copy(
-            brewTempCelsius = brewSetupState.brewTempCelsius.copy(
-                value = temp,
-                error = if (isValid || temp.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 94.5)"
+        _brewSetupState.update {
+            it.copy(
+                brewTempCelsius = it.brewTempCelsius.copy(
+                    value = temp,
+                    error = if (isValid || temp.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 94.5)"
+                )
             )
-        )
+        }
     }
 
     fun isSetupValid(): Boolean {
-        val doseValue = brewSetupState.doseGrams.value.toDoubleOrNull()
+        // Läs det aktuella state-värdet
+        val currentState = _brewSetupState.value
+
+        val doseValue = currentState.doseGrams.value.toDoubleOrNull()
         val doseValid = doseValue?.let { it > 0 } == true
 
-        val noInputErrors = brewSetupState.doseGrams.error == null &&
-                brewSetupState.grindSpeedRpm.error == null &&
-                brewSetupState.brewTempCelsius.error == null
+        val noInputErrors = currentState.doseGrams.error == null &&
+                currentState.grindSpeedRpm.error == null &&
+                currentState.brewTempCelsius.error == null
 
-        return brewSetupState.selectedBean != null &&
-                brewSetupState.selectedMethod != null &&
+        return currentState.selectedBean != null &&
+                currentState.selectedMethod != null &&
                 doseValid &&
                 noInputErrors
     }
 
-    fun getCurrentSetup(): BrewSetupState { return brewSetupState }
+    // Returnerar det aktuella StateFlow-värdet (värdet i StateFlow)
+    fun getCurrentSetup(): BrewSetupState { return _brewSetupState.value }
 
     // --- Funktioner för resultat ---
     fun loadBrewResults(brewId: Long?) {
@@ -176,16 +195,19 @@ class BrewViewModel @Inject constructor(
                 val grinder = latestBrew.grinderId?.let { repository.getGrinderById(it) }
                 val method = latestBrew.methodId?.let { repository.getMethodById(it) }
 
-                brewSetupState = brewSetupState.copy(
-                    selectedBean = bean,
-                    doseGrams = NumericInput(latestBrew.doseGrams.toString()),
-                    selectedGrinder = grinder,
-                    grindSetting = latestBrew.grindSetting ?: "",
-                    grindSpeedRpm = NumericInput(latestBrew.grindSpeedRpm?.toInt()?.toString() ?: ""),
-                    selectedMethod = method,
-                    brewTempCelsius = NumericInput(latestBrew.brewTempCelsius?.toString() ?: ""),
-                    notes = ""
-                )
+                // Uppdatera StateFlow-värdet
+                _brewSetupState.update {
+                    it.copy(
+                        selectedBean = bean,
+                        doseGrams = NumericInput(latestBrew.doseGrams.toString()),
+                        selectedGrinder = grinder,
+                        grindSetting = latestBrew.grindSetting ?: "",
+                        grindSpeedRpm = NumericInput(latestBrew.grindSpeedRpm?.toInt()?.toString() ?: ""),
+                        selectedMethod = method,
+                        brewTempCelsius = NumericInput(latestBrew.brewTempCelsius?.toString() ?: ""),
+                        notes = ""
+                    )
+                }
             }
         }
     }
@@ -196,7 +218,8 @@ class BrewViewModel @Inject constructor(
             return null
         }
 
-        val currentSetup = brewSetupState
+        // Hämta det aktuella state-värdet för sparande
+        val currentSetup = _brewSetupState.value
 
         val newBrew = Brew(
             beanId = currentSetup.selectedBean!!.id,
