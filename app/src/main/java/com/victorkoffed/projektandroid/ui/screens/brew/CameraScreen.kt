@@ -5,7 +5,7 @@ package com.victorkoffed.projektandroid.ui.screens.brew
 import android.Manifest
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import android.util.Log // <-- LADE TILL DENNA IMPORT
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraControl
@@ -220,9 +220,19 @@ private fun takePhoto(
     imageCapture.takePicture(outputOptions, executor, object : ImageCapture.OnImageSavedCallback {
         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
             val savedUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
+
+            // --- NY LOGGNING HÄR ---
+            Log.d("CameraScreen", "Foto sparat lokalt. URI: $savedUri")
+            // --- SLUT NY LOGGNING ---
+
             onImageCaptured(savedUri)
         }
-        override fun onError(exception: ImageCaptureException) { onError(exception) }
+        override fun onError(exception: ImageCaptureException) {
+            // --- NY LOGGNING HÄR ---
+            Log.e("CameraScreen", "Misslyckades med att spara foto lokalt.", exception)
+            // --- SLUT NY LOGGNING ---
+            onError(exception)
+        }
     })
 }
 

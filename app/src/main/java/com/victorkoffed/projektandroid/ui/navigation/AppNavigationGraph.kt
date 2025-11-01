@@ -16,6 +16,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.victorkoffed.projektandroid.ui.screens.bean.BeanDetailScreen
 import com.victorkoffed.projektandroid.ui.screens.bean.BeanScreen
@@ -36,27 +37,23 @@ import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Composable som definierar navigationsgrafen för appen.
- * Hanterar alla skärmar och deras argument.
- *
- * @param navController Navigationskontrollern för att hantera byten mellan skärmar.
- * @param snackbarHostState State för att visa globala Snackbars.
- * @param innerPadding Padding som ska appliceras från Scaffold.
- * @param startDrawerOpen Funktion för att öppna navigeringslådan.
- */
+private const val BREW_DETAIL_FLOW_ROUTE = "brew_detail_flow/{brewId}?beanIdToArchivePrompt={beanIdToArchivePrompt}"
+
+// Nyckel för SavedStateHandle, måste matcha den i CameraViewModel
+private const val CAMERA_URI_KEY = "captured_image_uri"
+
 @Composable
 fun AppNavigationGraph(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
     innerPadding: PaddingValues,
     startDrawerOpen: () -> Unit,
-    scaleVm: ScaleViewModel // TA EMOT DEN SCOPADE INSTANSEN
+    scaleVm: ScaleViewModel
 ) {
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
-        modifier = Modifier.padding(innerPadding) // Apply padding from Scaffold
+        modifier = Modifier.padding(innerPadding)
     ) {
 
         // --- Home ---
@@ -69,9 +66,8 @@ fun AppNavigationGraph(
                 onBrewClick = { brewId ->
                     navController.navigate(Screen.BrewDetail.createRoute(brewId))
                 },
-                onMenuClick = startDrawerOpen, // Use the callback
-                scaleVm = scaleVm // SKICKA TILL HOMESCREEN
-                // homeVm, coffeeImageVm, brewVm hämtas nu lokalt i HomeScreen
+                onMenuClick = startDrawerOpen,
+                scaleVm = scaleVm
             )
         }
 
@@ -82,47 +78,43 @@ fun AppNavigationGraph(
                 onBeanClick = { beanId ->
                     navController.navigate(Screen.BeanDetail.createRoute(beanId))
                 },
-                onMenuClick = startDrawerOpen // Use the callback
+                onMenuClick = startDrawerOpen
             )
         }
         composable(Screen.GrinderList.route) {
             GrinderScreen(
                 vm = hiltViewModel<GrinderViewModel>(),
-                onMenuClick = startDrawerOpen // Use the callback
+                onMenuClick = startDrawerOpen
             )
         }
         composable(Screen.MethodList.route) {
             MethodScreen(
                 vm = hiltViewModel<MethodViewModel>(),
-                onMenuClick = startDrawerOpen // Use the callback
+                onMenuClick = startDrawerOpen
             )
         }
 
         // --- Våg ---
         composable(Screen.ScaleConnect.route) {
             ScaleConnectScreen(
-                snackbarHostState = snackbarHostState, // Skicka vidare globala
+                snackbarHostState = snackbarHostState,
                 onNavigateBack = { navController.popBackStack() },
-                vm = scaleVm // SKICKA TILL SCALECONNECTSCREEN (som nu heter 'vm')
+                vm = scaleVm
             )
         }
 
         // --- Flöde för ny bryggning (Setup) ---
-        composable(Screen.BrewSetup.route) { backStackEntry -> // <-- ANVÄND backStackEntry HÄR
-            val scope = rememberCoroutineScope() // Lokalt scope för snackbar
-
-            // 1. INSTANSIERA OCH SCOPA BrewViewModel TILL DENNA ENTRY
+        composable(Screen.BrewSetup.route) { backStackEntry ->
+            val scope = rememberCoroutineScope()
             val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = backStackEntry)
 
             BrewScreen(
-                // vm, scaleConnectionState tas bort. Skärmen hämtar dem själv.
                 onStartBrewClick = {
                     navController.navigate(Screen.LiveBrew.route)
                 },
-                onSaveWithoutGraph = { newBrewId -> // Uppdaterad callback
+                onSaveWithoutGraph = { newBrewId ->
                     if (newBrewId != null) {
                         navController.navigate(Screen.BrewDetail.createRoute(newBrewId)) {
-                            // Pop BrewSetup off the stack
                             popUpTo(Screen.BrewSetup.route) { inclusive = true }
                         }
                     } else {
@@ -136,21 +128,16 @@ fun AppNavigationGraph(
                 },
                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
                 onNavigateBack = { navController.popBackStack() },
-                vm = brewVm, // <-- SKICKA IN SCOPAD BrewViewModel
+                vm = brewVm,
                 scaleVm = scaleVm
             )
         }
 
         // --- Flöde för ny bryggning (Live) ---
         composable(Screen.LiveBrew.route) {
-            // 2. Hämta backstack-entry för BrewSetup-rutten
             val brewSetupEntry = remember(it) {
-                // Detta KAN krascha om BrewSetup inte är på stacken.
-                // Det är kritiskt att BrewSetup ALDRIG tas bort från stacken innan LiveBrew.
                 navController.getBackStackEntry(Screen.BrewSetup.route)
             }
-
-            // 3. Hämta den DELADE BrewViewModel-instansen med hjälp av BrewSetup-entryt
             val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = brewSetupEntry)
 
             LiveBrewScreen(
@@ -161,69 +148,103 @@ fun AppNavigationGraph(
                         beanIdToArchivePrompt = beanIdToArchivePrompt
                     )
                     navController.navigate(route) {
-                        // Pop everything up to and including BrewSetup
                         popUpTo(Screen.BrewSetup.route) { inclusive = true }
-                        launchSingleTop = true // Avoid multiple instances
+                        launchSingleTop = true
                     }
                 },
-                scaleVm = scaleVm, // SKICKA TILL LIVEBREWSCREEN
-                brewVm = brewVm // <-- SKICKA IN DELAD BrewViewModel
+                scaleVm = scaleVm,
+                brewVm = brewVm
             )
         }
 
 
-        // --- Detalj-skärmar (med argument) ---
-        composable(
-            route = Screen.BrewDetail.route,
-            arguments = Screen.BrewDetail.arguments
-        ) { backStackEntry ->
-            // Use HiltViewModel with a key to scope it to this specific brewId instance
-            val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(key = "brewDetail_${backStackEntry.arguments?.getLong("brewId")}")
-
-            BrewDetailScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToCamera = { navController.navigate(Screen.Camera.route) },
-                onNavigateToImageFullscreen = { uri ->
-                    val encodedUri = Uri.encode(uri)
-                    navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
-                },
-                viewModel = brewDetailViewModel,
-                snackbarHostState = snackbarHostState // Skicka vidare globala
-            )
-        }
-
-
+        // --- Detalj-skärmar (Bean) ---
         composable(
             route = Screen.BeanDetail.route,
             arguments = listOf(navArgument("beanId") { type = NavType.LongType })
         ) { backStackEntry ->
             val beanIdArg = backStackEntry.arguments?.getLong("beanId")
             if (beanIdArg != null && beanIdArg > 0) {
-                // BeanDetailScreen gets its own ViewModel via hiltViewModel() internally
                 BeanDetailScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onBrewClick = { brewId ->
                         navController.navigate(Screen.BrewDetail.createRoute(brewId))
                     },
-                    snackbarHostState = snackbarHostState // Skicka vidare globala
+                    snackbarHostState = snackbarHostState
                 )
             } else {
                 Log.e("AppNavigationGraph", "Bean ID missing or invalid for BeanDetail.")
-                // Use LaunchedEffect to pop back safely after composition
                 LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
 
-        // --- Kamera ---
-        composable(Screen.Camera.route) {
-            // CameraScreen uses hiltViewModel() internally
-            CameraScreen(
-                onNavigateBack = { navController.popBackStack() },
-                navController = navController
-            )
+        // --- Nestad graf för BrewDetail och Camera ---
+        navigation(
+            route = BREW_DETAIL_FLOW_ROUTE, // "brew_detail_flow/{brewId}?..."
+            startDestination = Screen.BrewDetail.route, // "brew_detail/{brewId}?..."
+            arguments = Screen.BrewDetail.arguments // Dela argumenten
+        ) {
+
+            // --- Brew Detail (inuti det nya flödet) ---
+            composable(
+                route = Screen.BrewDetail.route,
+                arguments = Screen.BrewDetail.arguments
+            ) { backStackEntry ->
+
+                // Hämta förälderns backStackEntry (den som äger flödet)
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(BREW_DETAIL_FLOW_ROUTE)
+                }
+
+                // Hämta ViewModel:en bunden till FÖRÄLDERN (så den överlever)
+                val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(parentEntry)
+
+                // ---------------------------------------------------------
+                // ---               ★★ KORRIGERING HÄR ★★               ---
+                // ---------------------------------------------------------
+                // Lyssna efter resultatet från kameran HÄR istället för i ViewModel.
+                // `backStackEntry` är `BrewDetailScreen`s *egna* backStackEntry.
+                // Det är denna som `CameraViewModel` skriver till (`previousBackStackEntry`).
+
+                val imageUri = backStackEntry.savedStateHandle.get<String>(CAMERA_URI_KEY)
+                LaunchedEffect(imageUri) {
+                    if (imageUri != null) {
+                        Log.d("AppNavigationGraph", "Mottog URI från kameran: $imageUri")
+                        // Skicka URI:n till den DELADE ViewModel:en
+                        brewDetailViewModel.updateBrewImageUri(imageUri)
+
+                        // Rensa värdet så det inte återanvänds
+                        backStackEntry.savedStateHandle.remove<String>(CAMERA_URI_KEY)
+                    }
+                }
+                // ---------------------------------------------------------
+                // ---                 SLUT PÅ KORRIGERING                 ---
+                // ---------------------------------------------------------
+
+                BrewDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToCamera = {
+                        navController.navigate(Screen.Camera.route)
+                    },
+                    onNavigateToImageFullscreen = { uri ->
+                        val encodedUri = Uri.encode(uri)
+                        navController.navigate(Screen.ImageFullscreen.createRoute(encodedUri))
+                    },
+                    viewModel = brewDetailViewModel,
+                    snackbarHostState = snackbarHostState
+                )
+            }
+
+            // --- Kamera (inuti det nya flödet) ---
+            composable(Screen.Camera.route) {
+                CameraScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    navController = navController
+                )
+            }
         }
 
-        // --- Helskärmsvy för bild ---
+        // --- Helskärmsvy för bild (kan ligga kvar på rotnivå) ---
         composable(
             route = Screen.ImageFullscreen.route,
             arguments = listOf(navArgument("uri") { type = NavType.StringType })
@@ -238,7 +259,6 @@ fun AppNavigationGraph(
                 )
             } else {
                 Log.e("AppNavigationGraph", "URI argument missing or invalid for FullscreenImageScreen.")
-                // Use LaunchedEffect to pop back safely after composition
                 LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }

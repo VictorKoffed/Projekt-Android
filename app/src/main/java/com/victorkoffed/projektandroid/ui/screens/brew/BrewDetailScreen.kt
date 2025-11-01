@@ -94,9 +94,18 @@ fun BrewDetailScreen(
     // val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+
+    // ---------------------------------------------------------
+    // ---               ★★ KORRIGERING HÄR ★★               ---
+    // ---------------------------------------------------------
+    // Ta bort referensen till 'viewModel.capturedImageUri' eftersom den inte längre finns.
+    // Denna logik hanteras nu i AppNavigationGraph.
+    /*
     // FIX 2a: Hämta StateFlow direkt från ViewModel (tidigare LiveData/observeAsState)
     // Denna variabel används bara för att trigga LaunchedEffect, men behålls för att visa konsumtion.
     val savedImageUri by viewModel.capturedImageUri.collectAsState()
+    */
+    // ---------------------------------------------------------
 
     // State för arkiveringsdialog
     val beanForPrompt = state.bean
@@ -106,6 +115,12 @@ fun BrewDetailScreen(
     // --- Slut States ---
 
     // --- LaunchedEffects ---
+
+    // ---------------------------------------------------------
+    // ---               ★★ KORRIGERING HÄR ★★               ---
+    // ---------------------------------------------------------
+    // Ta bort denna LaunchedEffect eftersom 'savedImageUri' är borttagen.
+    /*
     // FIX 2b: Denna LaunchedEffect behövs inte längre för att anropa viewModel.updateBrewImageUri,
     // eftersom ViewModel nu själv hanterar StateFlow-uppdateringen och DB-sparandet i sin init-block.
     // Den behålls tom för att hantera eventuell framtida logik som ska köras efter att bilden sparats.
@@ -115,6 +130,8 @@ fun BrewDetailScreen(
             // Logik för att uppdatera DB är nu i ViewModel.
         }
     }
+    */
+    // ---------------------------------------------------------
 
     // Visa felmeddelanden från ViewModel i Snackbar
     LaunchedEffect(state.error) {
@@ -163,7 +180,7 @@ fun BrewDetailScreen(
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, "Edit")
                         }
-                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
+                        IconButton(onClick = { }, enabled = state.brew != null) {
                             Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -294,7 +311,7 @@ fun BrewDetailScreen(
                     // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
-                            onDismissRequest = { showDeleteConfirmDialog = false },
+                            onDismissRequest = { },
                             title = { Text("Delete brew?") },
                             text = { Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.") },
                             confirmButton = {
@@ -303,12 +320,11 @@ fun BrewDetailScreen(
                                         viewModel.deleteCurrentBrew {
                                             onNavigateBack() // Gå tillbaka efter lyckad radering
                                         }
-                                        showDeleteConfirmDialog = false
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
                             },
-                            dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
+                            dismissButton = { TextButton(onClick = { }) { Text("Cancel") } }
                         )
                     }
 
