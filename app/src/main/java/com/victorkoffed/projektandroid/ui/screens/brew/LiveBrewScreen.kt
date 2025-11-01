@@ -62,7 +62,8 @@ fun LiveBrewScreen(
     val error by vm.error.collectAsState()
 
     // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
-    val currentMeasurement by scaleVm.measurement.collectAsState()
+    // ★★ KORRIGERING: Byt namn på denna variabel för att undvika förvirring ★★
+    val liveMeasurement by scaleVm.measurement.collectAsState()
     val connectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
     )
@@ -137,6 +138,32 @@ fun LiveBrewScreen(
         }
     }
 
+
+    // --- ★★ NY LOGIK HÄR ★★ ---
+    // Bestäm vad som faktiskt ska visas
+    val displayMeasurement = remember(liveMeasurement, weightAtPause, isPaused, isRecordingWhileDisconnected, isRecording) {
+        val lastKnownWeight = weightAtPause ?: 0f
+
+        when {
+            // 1. Om vi är pausade eller frånkopplade, visa den frysta vikten.
+            isRecordingWhileDisconnected || isPaused -> {
+                ScaleMeasurement(lastKnownWeight, 0f)
+            }
+            // 2. Om vi precis återupptagit inspelningen (isRecording=true) OCH
+            //    den nya live-vikten (0g) är LÄGRE än den pausade (200g),
+            //    fortsätt visa den pausade vikten (200g) tills vågen rapporterar ett högre värde.
+            isRecording && liveMeasurement.weightGrams < lastKnownWeight -> {
+                ScaleMeasurement(lastKnownWeight, liveMeasurement.flowRateGramsPerSecond)
+            }
+            // 3. Annars (t.ex. live-vikten är > 200g), visa den nya live-vikten.
+            else -> {
+                liveMeasurement
+            }
+        }
+    }
+    // --- SLUT NY LOGIK ---
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -166,7 +193,8 @@ fun LiveBrewScreen(
         ) {
             StatusDisplay(
                 currentTimeMillis = time,
-                currentMeasurement = if (isRecordingWhileDisconnected || isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
+                // ★★ KORRIGERING: Skicka in det nya beräknade värdet istället ★★
+                currentMeasurement = displayMeasurement,
                 isRecording = isRecording,
                 isPaused = isPaused,
                 isRecordingWhileDisconnected = isRecordingWhileDisconnected,
