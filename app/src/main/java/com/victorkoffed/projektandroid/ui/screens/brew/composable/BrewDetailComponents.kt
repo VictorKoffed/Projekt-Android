@@ -429,7 +429,7 @@ fun <T> EditDropdownSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { },
+        onExpandedChange = { expanded = !expanded },
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
