@@ -14,7 +14,6 @@ sealed class Screen(val route: String) {
     object MethodList : Screen("method_list")
     object ScaleConnect : Screen("scale_connect")
     object BrewSetup : Screen("brew_setup")
-    object LiveBrew : Screen("live_brew")
     object Camera : Screen("camera")
 
     /**
@@ -25,6 +24,52 @@ sealed class Screen(val route: String) {
         /** Bygger den fullständiga rutten med den specifika URI:n. */
         fun createRoute(uri: String) = "image_fullscreen/$uri"
     }
+
+    /**
+     * Navigeringsväg för live-bryggning. Kräver setup-data som argument.
+     * Obligatoriska: beanId, doseGrams, methodId
+     * Valfria: grinderId, grindSetting, grindSpeedRpm, brewTempCelsius
+     */
+    object LiveBrew : Screen(
+        route = "live_brew/{beanId}/{doseGrams}/{methodId}?" +
+                "grinderId={grinderId}&" +
+                "grindSetting={grindSetting}&" +
+                "grindSpeedRpm={grindSpeedRpm}&" +
+                "brewTempCelsius={brewTempCelsius}"
+    ) {
+        val arguments = listOf(
+            // Obligatoriska
+            navArgument("beanId") { type = NavType.LongType },
+            navArgument("doseGrams") { type = NavType.StringType }, // Skickas som sträng
+            navArgument("methodId") { type = NavType.LongType },
+            // Valfria (med standardvärden)
+            navArgument("grinderId") { type = NavType.LongType; defaultValue = -1L },
+            navArgument("grindSetting") { type = NavType.StringType; defaultValue = "null" }, // Skickas som "null"
+            navArgument("grindSpeedRpm") { type = NavType.StringType; defaultValue = "null" },
+            navArgument("brewTempCelsius") { type = NavType.StringType; defaultValue = "null" }
+        )
+
+        /** Bygger den fullständiga rutten med all setup-data. */
+        fun createRoute(
+            beanId: Long,
+            doseGrams: String,
+            methodId: Long,
+            grinderId: Long?,
+            grindSetting: String?,
+            grindSpeedRpm: String?,
+            brewTempCelsius: String?
+        ): String {
+            val baseRoute = "live_brew/$beanId/$doseGrams/$methodId"
+            // Lägg till valfria parametrar.
+            // Vi använder "null" som sträng-placeholder för null-värden.
+            return "$baseRoute?" +
+                    "grinderId=${grinderId ?: -1L}&" +
+                    "grindSetting=${grindSetting ?: "null"}&" +
+                    "grindSpeedRpm=${grindSpeedRpm ?: "null"}&" +
+                    "brewTempCelsius=${brewTempCelsius ?: "null"}"
+        }
+    }
+
 
     /**
      * Navigeringsväg för att visa detaljer för en bryggning. Kräver ID:t för bryggningen.

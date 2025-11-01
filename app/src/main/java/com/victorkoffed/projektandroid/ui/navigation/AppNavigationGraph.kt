@@ -31,7 +31,8 @@ import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.LiveBrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -67,7 +68,8 @@ fun AppNavigationGraph(
                     navController.navigate(Screen.BrewDetail.createRoute(brewId))
                 },
                 onMenuClick = startDrawerOpen,
-                scaleVm = scaleVm
+                scaleVm = scaleVm,
+                brewVm = hiltViewModel<BrewSetupViewModel>() // Uppdaterad VM
             )
         }
 
@@ -104,13 +106,24 @@ fun AppNavigationGraph(
         }
 
         // --- Flöde för ny bryggning (Setup) ---
-        composable(Screen.BrewSetup.route) { backStackEntry ->
+        composable(Screen.BrewSetup.route) {
             val scope = rememberCoroutineScope()
-            val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = backStackEntry)
+            // BrewSetupViewModel är nu bunden till denna skärms livscykel
+            val brewSetupVm: BrewSetupViewModel = hiltViewModel()
 
             BrewScreen(
-                onStartBrewClick = {
-                    navController.navigate(Screen.LiveBrew.route)
+                onStartBrewClick = { setupState ->
+                    // Validerad data tas emot, bygg route och navigera
+                    val route = Screen.LiveBrew.createRoute(
+                        beanId = setupState.selectedBean!!.id,
+                        doseGrams = setupState.doseGrams.value,
+                        methodId = setupState.selectedMethod!!.id,
+                        grinderId = setupState.selectedGrinder?.id,
+                        grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
+                        grindSpeedRpm = setupState.grindSpeedRpm.value.takeIf { it.isNotBlank() },
+                        brewTempCelsius = setupState.brewTempCelsius.value.takeIf { it.isNotBlank() }
+                    )
+                    navController.navigate(route)
                 },
                 onSaveWithoutGraph = { newBrewId ->
                     if (newBrewId != null) {
@@ -128,17 +141,19 @@ fun AppNavigationGraph(
                 },
                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
                 onNavigateBack = { navController.popBackStack() },
-                vm = brewVm,
+                vm = brewSetupVm, // Skicka den nya VM:n
                 scaleVm = scaleVm
             )
         }
 
         // --- Flöde för ny bryggning (Live) ---
-        composable(Screen.LiveBrew.route) {
-            val brewSetupEntry = remember(it) {
-                navController.getBackStackEntry(Screen.BrewSetup.route)
-            }
-            val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = brewSetupEntry)
+        composable(
+            route = Screen.LiveBrew.route,
+            arguments = Screen.LiveBrew.arguments // Använd argumenten från Screen.kt
+        ) {
+            // LiveBrewViewModel är nu bunden till denna skärms livscykel
+            // och tar emot argumenten via SavedStateHandle
+            val liveBrewVm: LiveBrewViewModel = hiltViewModel()
 
             LiveBrewScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -153,7 +168,7 @@ fun AppNavigationGraph(
                     }
                 },
                 scaleVm = scaleVm,
-                brewVm = brewVm
+                vm = liveBrewVm // Skicka den nya VM:n
             )
         }
 
@@ -191,35 +206,19 @@ fun AppNavigationGraph(
                 arguments = Screen.BrewDetail.arguments
             ) { backStackEntry ->
 
-                // Hämta förälderns backStackEntry (den som äger flödet)
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(BREW_DETAIL_FLOW_ROUTE)
                 }
-
-                // Hämta ViewModel:en bunden till FÖRÄLDERN (så den överlever)
                 val brewDetailViewModel: BrewDetailViewModel = hiltViewModel(parentEntry)
-
-                // ---------------------------------------------------------
-                // ---               ★★ KORRIGERING HÄR ★★               ---
-                // ---------------------------------------------------------
-                // Lyssna efter resultatet från kameran HÄR istället för i ViewModel.
-                // `backStackEntry` är `BrewDetailScreen`s *egna* backStackEntry.
-                // Det är denna som `CameraViewModel` skriver till (`previousBackStackEntry`).
 
                 val imageUri = backStackEntry.savedStateHandle.get<String>(CAMERA_URI_KEY)
                 LaunchedEffect(imageUri) {
                     if (imageUri != null) {
                         Log.d("AppNavigationGraph", "Mottog URI från kameran: $imageUri")
-                        // Skicka URI:n till den DELADE ViewModel:en
                         brewDetailViewModel.updateBrewImageUri(imageUri)
-
-                        // Rensa värdet så det inte återanvänds
                         backStackEntry.savedStateHandle.remove<String>(CAMERA_URI_KEY)
                     }
                 }
-                // ---------------------------------------------------------
-                // ---                 SLUT PÅ KORRIGERING                 ---
-                // ---------------------------------------------------------
 
                 BrewDetailScreen(
                     onNavigateBack = { navController.popBackStack() },

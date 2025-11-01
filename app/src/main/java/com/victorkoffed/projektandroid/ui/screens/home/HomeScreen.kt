@@ -43,7 +43,7 @@ import com.victorkoffed.projektandroid.ui.screens.home.composable.InfoGrid
 import com.victorkoffed.projektandroid.ui.screens.home.composable.NoBrewsTextWithIcon
 import com.victorkoffed.projektandroid.ui.screens.home.composable.RecentBrewCard
 import com.victorkoffed.projektandroid.ui.screens.home.composable.formatTimeSince
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.coffee.CoffeeImageViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.home.HomeViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -51,14 +51,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-/**
- * Huvudskärmen för appen. Visar statistik, senaste bryggningar och anslutningsstatus.
- *
- * @param snackbarHostState Globalt state för att visa felmeddelanden.
- * @param onNavigateToBrewSetup Callback för att starta en ny bryggning.
- * @param onBrewClick Callback för att visa bryggdetaljer.
- * @param onMenuClick Callback för att öppna navigationslådan.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -66,12 +58,10 @@ fun HomeScreen(
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
     onMenuClick: () -> Unit,
-    // MOTTAGARE: Ta emot scaleVm
     scaleVm: ScaleViewModel,
-    // Hämta ViewModels lokalt med hiltViewModel
     homeVm: HomeViewModel = hiltViewModel(),
     coffeeImageVm: CoffeeImageViewModel = hiltViewModel(),
-    brewVm: BrewViewModel = hiltViewModel() // Behövs för validering
+    brewVm: BrewSetupViewModel = hiltViewModel() // Uppdaterad till BrewSetupViewModel
 ) {
     // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
@@ -105,32 +95,28 @@ fun HomeScreen(
     // Definierar den villkorliga åtgärden för att starta bryggning
     val startBrewAction = {
         if (isBrewSetupEnabled) {
-            brewVm.clearBrewResults() // Nollställ brewVm innan navigering
+            brewVm.clearForm() // Byt namn från clearBrewResults
             onNavigateToBrewSetup()
         } else {
-            showSetupWarningDialog = true // Visa varning om setup saknas
+            showSetupWarningDialog = true
         }
     }
 
     // --- Launched Effects (Sid-effekter) ---
 
-    // 1. Ladda slumpmässig bild vid första laddning
     LaunchedEffect(Unit) {
         if (imageUrl == null) {
             coffeeImageVm.loadRandomCoffeeImage()
         }
     }
 
-    // 2. Uppdatera "tid sedan" strängen varje minut
     LaunchedEffect(lastBrewTime) {
         while (true) {
-            // Använd den utbrutna hjälpfunktionen
             timeSinceLastCoffee = formatTimeSince(lastBrewTime)
-            delay(60000) // Vänta en minut (60 sekunder)
+            delay(60000)
         }
     }
 
-    // 3. Visa Snackbar vid bildfel
     LaunchedEffect(imageError) {
         if (imageError != null) {
             scope.launch {
@@ -152,7 +138,6 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // Knapp för att starta ny bryggning
                     Surface(
                         modifier = Modifier
                             .padding(end = 8.dp)
@@ -187,7 +172,6 @@ fun HomeScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
         ) {
             item {
-                // ANROP TILL UTBRUTEN KOMPONENT: Statistikrutnätet
                 InfoGrid(
                     totalBrews = totalBrews,
                     beansExplored = beansExplored,
@@ -209,10 +193,8 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
-            // Villkorlig rendering: Visa listan eller en placeholder
             if (recentBrews.isEmpty()) {
                 item {
-                    // ANROP TILL UTBRUTEN KOMPONENT: Placeholder
                     NoBrewsTextWithIcon(
                         modifier = Modifier.padding(vertical = 16.dp),
                         onStartBrewClick = startBrewAction
@@ -220,9 +202,7 @@ fun HomeScreen(
                 }
             }
             else {
-                // Lista över de senaste bryggningarna
                 items(recentBrews) { brewItem ->
-                    // ANROP TILL UTBRUTEN KOMPONENT: Kort för senaste bryggning
                     RecentBrewCard(
                         brewItem = brewItem,
                         onClick = { onBrewClick(brewItem.brew.id) }
@@ -232,14 +212,13 @@ fun HomeScreen(
         }
     }
 
-    // Dialogruta som visas om användaren försöker starta en bryggning utan nödvändig setup
     if (showSetupWarningDialog) {
         AlertDialog(
-            onDismissRequest = { /* Låt den vara kvar */ },
+            onDismissRequest = { showSetupWarningDialog = false }, // Tillåt att stänga
             title = { Text("Cannot start brew") },
             text = { Text("You must first add at least one bean (under 'Bean') and one brewing method (under 'Method') before you can start a new brew") },
             confirmButton = {
-                TextButton(onClick = { }) {
+                TextButton(onClick = { showSetupWarningDialog = false }) { // Stäng vid klick
                     Text("Understood")
                 }
             }

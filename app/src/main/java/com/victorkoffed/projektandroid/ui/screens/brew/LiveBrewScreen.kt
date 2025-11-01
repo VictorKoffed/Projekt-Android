@@ -38,34 +38,28 @@ import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.LiveBrewGraph
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.StatusDisplay
-import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.LiveBrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
 
-/**
- * Huvudskärmen för att hantera live-bryggning med realtidsdata från vågen.
- * Orkestrerar layouten genom att använda utbrutna Composables för statusdisplay, graf och kontroller.
- *
- * @param onNavigateBack Callback för att navigera tillbaka.
- * @param onNavigateToDetail Callback för att navigera till detaljskärmen efter sparande.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveBrewScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (brewId: Long, beanIdToArchivePrompt: Long?) -> Unit,
-    scaleVm: ScaleViewModel, // MOTTAGARE: Tar emot scaleVm
-    brewVm: BrewViewModel // <-- INGEN default hiltViewModel() HÄR
+    scaleVm: ScaleViewModel,
+    vm: LiveBrewViewModel // Uppdaterad till LiveBrewViewModel
 ) {
-    // === Hämta sessions-state från BrewViewModel ===
-    val samples by brewVm.recordedSamplesFlow.collectAsState()
-    val time by brewVm.recordingTimeMillis.collectAsState()
-    val isRecording by brewVm.isRecording.collectAsState()
-    val isPaused by brewVm.isPaused.collectAsState()
-    val isRecordingWhileDisconnected by brewVm.isRecordingWhileDisconnected.collectAsState()
-    val weightAtPause by brewVm.weightAtPause.collectAsState()
-    val countdown by brewVm.countdown.collectAsState()
+    // === Hämta sessions-state från LiveBrewViewModel ===
+    val samples by vm.recordedSamplesFlow.collectAsState()
+    val time by vm.recordingTimeMillis.collectAsState()
+    val isRecording by vm.isRecording.collectAsState()
+    val isPaused by vm.isPaused.collectAsState()
+    val isRecordingWhileDisconnected by vm.isRecordingWhileDisconnected.collectAsState()
+    val weightAtPause by vm.weightAtPause.collectAsState()
+    val countdown by vm.countdown.collectAsState()
+    val error by vm.error.collectAsState()
 
     // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
     val currentMeasurement by scaleVm.measurement.collectAsState()
@@ -80,24 +74,33 @@ fun LiveBrewScreen(
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
 
+    // Visa fel från ViewModel (t.ex. om setup-data saknas)
+    LaunchedEffect(error) {
+        if (error != null) {
+            alertTitle = "Error"
+            alertMessage = error!!
+            showDisconnectedAlert = true // Återanvänder dialogen för fel
+            vm.clearError()
+        }
+    }
+
+
     // Logik för att stoppa och spara
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Klickade 'Done'. Försöker spara.")
-            val currentSetup = brewVm.getCurrentSetup()
-            // Hämta data från brewVm
-            val finalSamples = brewVm.recordedSamplesFlow.value
-            val finalTime = brewVm.recordingTimeMillis.value
 
-            // Stoppa inspelningen (via brewVm)
-            brewVm.stopRecording()
+            // Hämta data från vm
+            val finalSamples = vm.recordedSamplesFlow.value
+            val finalTime = vm.recordingTimeMillis.value
 
-            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Setup BeanId: ${currentSetup.selectedBean?.id}, Dose: ${currentSetup.doseGrams.value}")
-            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms. Första t_ms: ${finalSamples.firstOrNull()?.timeMillis ?: -1L}")
+            // Stoppa inspelningen
+            vm.stopRecording()
+
+            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms.")
 
             val scaleName = (connectionState as? BleConnectionState.Connected)?.deviceName
-            val saveResult = brewVm.saveLiveBrew(
-                setupState = currentSetup,
+            val saveResult = vm.saveLiveBrew(
                 finalSamples = finalSamples,
                 finalTimeMillis = finalTime,
                 scaleDeviceName = scaleName
@@ -115,8 +118,7 @@ fun LiveBrewScreen(
         }
     }
 
-    // Logik: Hantera dialog vid oväntad frånkoppling under inspelning/paus
-    // Denna logik är densamma, men den använder nu states från brewVm och scaleVm
+    // Logik: Hantera dialog vid oväntad frånkoppling
     LaunchedEffect(connectionState, isRecording, isPaused, isRecordingWhileDisconnected) {
         if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
             (isRecording) &&
@@ -131,7 +133,6 @@ fun LiveBrewScreen(
             }
             showDisconnectedAlert = true
         } else if (connectionState is BleConnectionState.Connected && !isRecordingWhileDisconnected) {
-            // Dölj dialogen om vi återansluter
             showDisconnectedAlert = false
         }
     }
@@ -148,7 +149,7 @@ fun LiveBrewScreen(
                 actions = {
                     TextButton(
                         onClick = onStopAndSaveClick,
-                        enabled = isRecording || isPaused || countdown != null // Använder brewVm states
+                        enabled = (isRecording || isPaused || countdown != null) && error == null
                     ) {
                         Text("Done")
                     }
@@ -164,18 +165,17 @@ fun LiveBrewScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             StatusDisplay(
-                currentTimeMillis = time, // från brewVm
-                // Använder currentMeasurement från scaleVm
+                currentTimeMillis = time,
                 currentMeasurement = if (isRecordingWhileDisconnected || isPaused) ScaleMeasurement(weightAtPause ?: 0f, 0f) else currentMeasurement,
-                isRecording = isRecording, // från brewVm
-                isPaused = isPaused, // från brewVm
-                isRecordingWhileDisconnected = isRecordingWhileDisconnected, // från brewVm
+                isRecording = isRecording,
+                isPaused = isPaused,
+                isRecordingWhileDisconnected = isRecordingWhileDisconnected,
                 showFlow = showFlowInfo,
-                countdown = countdown // från brewVm
+                countdown = countdown
             )
             Spacer(Modifier.height(16.dp))
             LiveBrewGraph(
-                samples = samples, // från brewVm
+                samples = samples,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -200,16 +200,16 @@ fun LiveBrewScreen(
             )
             Spacer(Modifier.height(16.dp))
             BrewControls(
-                isRecording = isRecording, // från brewVm
-                isPaused = isPaused, // från brewVm
-                isRecordingWhileDisconnected = isRecordingWhileDisconnected, // från brewVm
-                isConnected = connectionState is BleConnectionState.Connected, // från scaleVm
-                countdown = countdown, // från brewVm
-                onStartClick = { brewVm.startRecording() },
-                onPauseClick = { brewVm.pauseRecording() },
-                onResumeClick = { brewVm.resumeRecording() },
-                onTareClick = { brewVm.tareScale() }, // Anropar brewVm
-                onResetClick = { brewVm.stopRecording() }
+                isRecording = isRecording,
+                isPaused = isPaused,
+                isRecordingWhileDisconnected = isRecordingWhileDisconnected,
+                isConnected = connectionState is BleConnectionState.Connected,
+                countdown = countdown,
+                onStartClick = { vm.startRecording() },
+                onPauseClick = { vm.pauseRecording() },
+                onResumeClick = { vm.resumeRecording() },
+                onTareClick = { vm.tareScale() },
+                onResetClick = { vm.stopRecording() }
             )
         }
 
@@ -221,16 +221,23 @@ fun LiveBrewScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
+                        // Om felet var pga setup-data, navigera tillbaka
+                        if (error != null && error!!.contains("setup")) {
+                            onNavigateBack()
+                        }
                     }) {
                         Text("OK")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        showDisconnectedAlert = false
-                        onStopAndSaveClick()
-                    }) {
-                        Text("Stop & Save As Is")
+                    // Visa bara "Stop & Save" om det inte är ett setup-fel
+                    if (error == null) {
+                        TextButton(onClick = {
+                            showDisconnectedAlert = false
+                            onStopAndSaveClick()
+                        }) {
+                            Text("Stop & Save As Is")
+                        }
                     }
                 }
             )
