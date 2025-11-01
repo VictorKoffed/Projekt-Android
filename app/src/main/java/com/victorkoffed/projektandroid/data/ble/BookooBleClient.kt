@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference // NY IMPORT FÖR TRÅDSÄKERHET
+import java.util.concurrent.atomic.AtomicReference
 
 private const val GATT_SUCCESS_COMPAT = 0
 private const val GATT_UNKNOWN_ERROR_COMPAT = -1
@@ -120,6 +120,7 @@ class BookooBleClient(private val context: Context) {
         val adapter = btAdapter
         val currentScanner = scanner
 
+        // Kontroller i callbackFlow är sista utvägen i datalagret för att hantera Bluetooth-tillstånd
         if (adapter == null) {
             close(IllegalStateException("Bluetooth hardware not available."))
         } else if (!adapter.isEnabled) {
@@ -150,6 +151,7 @@ class BookooBleClient(private val context: Context) {
     }
 
     /** Initierar anslutning till en enhet med den givna BLE-adressen. */
+    /** Initierar anslutning till en enhet med den givna BLE-adressen. */
     fun connect(address: String) {
         val currentState = connectionState.value
         // Förhindra anslutning om vi redan är anslutna eller håller på att ansluta
@@ -171,14 +173,14 @@ class BookooBleClient(private val context: Context) {
         // KÖRS ALLTID PÅ HUVUDTRÅDEN FÖR GATT-SÄKERHET
         mainHandler.post {
             try {
-                // Sätt state till Connecting
+                // Sätt state till Connecting (Måste ske på Main Thread)
                 if (connectionState.value !is BleConnectionState.Connecting) {
                     connectionState.value = BleConnectionState.Connecting
                 }
 
                 val device = adapter.getRemoteDevice(address)
 
-                // 2. Anropa connectGatt.
+                // 2. Anropa connectGatt. (Måste ske på Main Thread/med Looper)
                 val newGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 
                 // 3. TILLDELA GATT OMEDELBART OCH TRÅDSÄKERT PÅ SAMMA TRÅD

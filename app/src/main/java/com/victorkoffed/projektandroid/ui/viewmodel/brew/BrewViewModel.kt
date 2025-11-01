@@ -76,6 +76,7 @@ class BrewViewModel @Inject constructor(
     // --- State för att visa resultat ---
     private val _completedBrewMetrics = MutableStateFlow<BrewMetrics?>(null)
     private val _completedBrewSamples = MutableStateFlow<List<BrewSample>>(emptyList())
+    // Denna variabel behövs inte för att visas, den fanns kvar av misstag.
 
     // --- State för att veta om det finns tidigare bryggningar ---
     val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()

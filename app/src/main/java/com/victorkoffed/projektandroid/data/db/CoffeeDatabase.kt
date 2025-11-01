@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
@@ -44,9 +45,11 @@ abstract class CoffeeDatabase : RoomDatabase() {
                     "coffee_journal.db"
                 )
                     .addCallback(DatabaseCallback)
-                    // Tillåter destruktiv migrering. Detta raderar befintlig data vid versionsökning,
-                    // vilket är vanligt i utveckling men bör bytas ut mot riktiga migrationsstrategier i produktion.
-                    .fallbackToDestructiveMigration(false)
+                    // För att undvika krasch i produktion MÅSTE man lägga till en Migration
+                    // för varje versionshopp (t.ex. 4 till 5, 5 till 6, etc.)
+                    .addMigrations(
+                        Migrations.MIGRATION_4_5
+                    )
                     .build()
                 INSTANCE = instance
                 instance
@@ -65,6 +68,20 @@ abstract class CoffeeDatabase : RoomDatabase() {
                 db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
                 db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');")
             }
+        }
+    }
+}
+
+// --- Migrations-klass för att demonstrera/förbereda ---
+// För framtida versioner: Implementera en Migration för varje versionshopp.
+object Migrations {
+    /**
+     * Exempel på en migration från version 4 till version 5.
+     * Denna MÅSTE implementeras med faktisk SQL om du ändrar schemat.
+     */
+    val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // db.execSQL("ALTER TABLE 'Bean' ADD COLUMN 'new_column' INTEGER NOT NULL DEFAULT 0")
         }
     }
 }

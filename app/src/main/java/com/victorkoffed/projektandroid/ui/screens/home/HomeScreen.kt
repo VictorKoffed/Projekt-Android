@@ -66,10 +66,11 @@ fun HomeScreen(
     onNavigateToBrewSetup: () -> Unit,
     onBrewClick: (Long) -> Unit,
     onMenuClick: () -> Unit,
+    // MOTTAGARE: Ta emot scaleVm
+    scaleVm: ScaleViewModel,
     // Hämta ViewModels lokalt med hiltViewModel
     homeVm: HomeViewModel = hiltViewModel(),
     coffeeImageVm: CoffeeImageViewModel = hiltViewModel(),
-    scaleVm: ScaleViewModel = hiltViewModel(),
     brewVm: BrewViewModel = hiltViewModel() // Behövs för validering
 ) {
     // --- Data från ViewModels (State Collection) ---
@@ -234,7 +235,7 @@ fun HomeScreen(
     // Dialogruta som visas om användaren försöker starta en bryggning utan nödvändig setup
     if (showSetupWarningDialog) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = { /* Låt den vara kvar */ },
             title = { Text("Cannot start brew") },
             text = { Text("You must first add at least one bean (under 'Bean') and one brewing method (under 'Method') before you can start a new brew") },
             confirmButton = {

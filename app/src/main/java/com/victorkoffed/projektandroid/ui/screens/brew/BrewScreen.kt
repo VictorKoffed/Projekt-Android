@@ -57,12 +57,16 @@ fun BrewScreen(
     onNavigateToScale: () -> Unit,
     onNavigateBack: () -> Unit,
     vm: BrewViewModel = hiltViewModel(),
-    scaleVm: ScaleViewModel = hiltViewModel()
+    scaleVm: ScaleViewModel // MOTTAGARE: Ta emot scaleVm
 ) {
     val availableBeans by vm.availableBeans.collectAsState()
     val availableGrinders by vm.availableGrinders.collectAsState()
     val availableMethods by vm.availableMethods.collectAsState()
-    val setupState = vm.brewSetupState
+
+    // KORRIGERING: Använd 'val setupState by vm.brewSetupState.collectAsState()'
+    // Detta hämtar det oföränderliga BrewSetupState-objektet
+    val setupState by vm.brewSetupState.collectAsState()
+
     val hasPreviousBrews by vm.hasPreviousBrews.collectAsState()
     val scaleConnectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
@@ -137,13 +141,15 @@ fun BrewScreen(
 
                 // Textfält för dos (obligatorisk)
                 OutlinedTextField(
+                    // Använd setupState.doseGrams.value
                     value = setupState.doseGrams.value,
                     onValueChange = { vm.onDoseChange(it) },
                     label = { Text("Dose (g) *") },
                     isError = setupState.doseGrams.error != null,
                     supportingText = {
+                        // Använd setupState.doseGrams.error
                         if (setupState.doseGrams.error != null) {
-                            Text(text = setupState.doseGrams.error)
+                            Text(text = setupState.doseGrams.error!!)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -171,13 +177,15 @@ fun BrewScreen(
 
                 // Textfält för kvarnhastighet
                 OutlinedTextField(
+                    // Använd setupState.grindSpeedRpm.value
                     value = setupState.grindSpeedRpm.value,
                     onValueChange = { vm.onGrindSpeedChange(it) },
                     label = { Text("Grind Speed (RPM)") },
                     isError = setupState.grindSpeedRpm.error != null,
                     supportingText = {
+                        // Använd setupState.grindSpeedRpm.error
                         if (setupState.grindSpeedRpm.error != null) {
-                            Text(text = setupState.grindSpeedRpm.error)
+                            Text(text = setupState.grindSpeedRpm.error!!)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -197,13 +205,15 @@ fun BrewScreen(
 
                 // Textfält för vattentemperatur
                 OutlinedTextField(
+                    // Använd setupState.brewTempCelsius.value
                     value = setupState.brewTempCelsius.value,
                     onValueChange = { vm.onBrewTempChange(it) },
                     label = { Text("Brew Temperature (°C)") },
                     isError = setupState.brewTempCelsius.error != null,
                     supportingText = {
+                        // Använd setupState.brewTempCelsius.error
                         if (setupState.brewTempCelsius.error != null) {
-                            Text(text = setupState.brewTempCelsius.error)
+                            Text(text = setupState.brewTempCelsius.error!!)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -245,7 +255,7 @@ fun BrewScreen(
     // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = { /* Låt den vara kvar */ },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
@@ -266,6 +276,7 @@ fun BrewScreen(
                     scope.launch {
                         val newBrewId = vm.saveBrewWithoutSamples()
                         onSaveWithoutGraph(newBrewId)
+                        // Stäng alerten efter spara
                     }
                 }) {
                     Text("Save without Graph")
@@ -289,7 +300,7 @@ fun <T> DropdownSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { },
+        onExpandedChange = { !expanded },
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
@@ -310,6 +321,16 @@ fun <T> DropdownSelector(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
+            // Lägg till "None" för valfria fält
+            if (label != "Bean *" && label != "Method *") {
+                DropdownMenuItem(
+                    text = { Text("None") },
+                    onClick = {
+                        onOptionSelected(null)
+                        expanded = false
+                    }
+                )
+            }
             // Itererar över tillgängliga objekt för att skapa menyval
             options.forEach { option ->
                 DropdownMenuItem(

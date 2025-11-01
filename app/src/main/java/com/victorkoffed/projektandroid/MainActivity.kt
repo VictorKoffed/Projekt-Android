@@ -88,10 +88,9 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-                // Hämta ViewModels som behövs globalt eller skickas till AppNavigationGraph
+                // SCOPA OM: Hämta ScaleViewModel HÄR så den lever lika länge som MainActivity
                 val homeVm: HomeViewModel = hiltViewModel()
-                val scaleVm: ScaleViewModel = hiltViewModel()
-                // brewVm och coffeeImageVm tas bort - de hämtas nu i sina egna skärmar
+                val scaleVm: ScaleViewModel = hiltViewModel() // SCOPED HÄR
 
                 // Observera states som behövs i MainActivity (för Drawer eller global Snackbar)
                 val isDarkModeManual by homeVm.isDarkMode.collectAsState()
@@ -184,7 +183,8 @@ class MainActivity : ComponentActivity() {
                             innerPadding = innerPadding,
                             startDrawerOpen = { // Skicka en lambda för att öppna lådan
                                 scope.launch { drawerState.open() }
-                            }
+                            },
+                            scaleVm = scaleVm // SKICKA DEN SCOPADE INSTANSEN
                         )
                     } // Slut Scaffold Content Scope
                 } // Slut ModalNavigationDrawer Content Scope

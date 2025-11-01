@@ -48,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
@@ -65,7 +64,7 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 fun ScaleConnectScreen(
     onNavigateBack: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    vm: ScaleViewModel = hiltViewModel()
+    vm: ScaleViewModel // MOTTAGARE: Ta emot vm (scaleVm)
 ) {
     // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)

@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 fun LiveBrewScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (brewId: Long, beanIdToArchivePrompt: Long?) -> Unit,
-    scaleVm: ScaleViewModel = hiltViewModel(),
+    scaleVm: ScaleViewModel, // MOTTAGARE: Ta emot scaleVm
     brewVm: BrewViewModel = hiltViewModel()
 ) {
     // Hämta alla nödvändiga states från ScaleViewModel lokalt
@@ -213,7 +213,7 @@ fun LiveBrewScreen(
         // Dialog vid anslutningsfel under pågående inspelning/paus
         if (showDisconnectedAlert) {
             AlertDialog(
-                onDismissRequest = { }, // Tillåt att stänga
+                onDismissRequest = { /* Låt den vara kvar */ },
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
@@ -223,8 +223,9 @@ fun LiveBrewScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        // Stäng dialogen
+                        // Stäng dialogen och spara
                         onStopAndSaveClick()
+                        // Stäng alerten
                     }) {
                         Text("Stop & Save As Is")
                     }

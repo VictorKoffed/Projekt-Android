@@ -31,6 +31,7 @@ import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -47,7 +48,8 @@ fun AppNavigationGraph(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
     innerPadding: PaddingValues,
-    startDrawerOpen: () -> Unit
+    startDrawerOpen: () -> Unit,
+    scaleVm: ScaleViewModel // TA EMOT DEN SCOPADE INSTANSEN
 ) {
     NavHost(
         navController = navController,
@@ -65,8 +67,9 @@ fun AppNavigationGraph(
                 onBrewClick = { brewId ->
                     navController.navigate(Screen.BrewDetail.createRoute(brewId))
                 },
-                onMenuClick = startDrawerOpen // Use the callback
-                // homeVm, coffeeImageVm, scaleVm, brewVm hämtas nu lokalt i HomeScreen
+                onMenuClick = startDrawerOpen, // Use the callback
+                scaleVm = scaleVm // SKICKA TILL HOMESCREEN
+                // homeVm, coffeeImageVm, brewVm hämtas nu lokalt i HomeScreen
             )
         }
 
@@ -97,8 +100,8 @@ fun AppNavigationGraph(
         composable(Screen.ScaleConnect.route) {
             ScaleConnectScreen(
                 snackbarHostState = snackbarHostState, // Skicka vidare globala
-                onNavigateBack = { navController.popBackStack() }
-                // scaleVm hämtas lokalt
+                onNavigateBack = { navController.popBackStack() },
+                vm = scaleVm // SKICKA TILL SCALECONNECTSCREEN (som nu heter 'vm')
             )
         }
 
@@ -126,7 +129,8 @@ fun AppNavigationGraph(
                     }
                 },
                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                scaleVm = scaleVm // SKICKA TILL BREWSCREEN
             )
         }
 
@@ -145,8 +149,9 @@ fun AppNavigationGraph(
                         popUpTo(Screen.BrewSetup.route) { inclusive = true }
                         launchSingleTop = true // Avoid multiple instances
                     }
-                }
-                // scaleVm och brewVm hämtas nu lokalt i LiveBrewScreen
+                },
+                scaleVm = scaleVm // SKICKA TILL LIVEBREWSCREEN
+                // brewVm hämtas nu lokalt i LiveBrewScreen
             )
         }
 
