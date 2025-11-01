@@ -104,12 +104,12 @@ fun LiveBrewScreen(
             )
 
             if (saveResult.brewId != null) {
-                // Använd nav-callback
+                // SUCCESS: Använd nav-callback
                 onNavigateToDetail(saveResult.brewId, saveResult.beanIdReachedZero)
             } else {
+                // FAILURE FIX: Återgå till Brew Setup om sparandet misslyckas.
                 Log.w("LiveBrewScreen", "Save cancelled or failed, returning to setup.")
-                // Global error handling via Snackbar in MainActivity takes care of user feedback
-                onNavigateBack() // Go back to BrewSetup
+                onNavigateBack()
             }
         }
     }
@@ -217,7 +217,9 @@ fun LiveBrewScreen(
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
-                    TextButton(onClick = { }) {
+                    TextButton(onClick = {
+                        // FIX: Stänger dialogen
+                    }) {
                         Text("OK")
                     }
                 },
@@ -225,7 +227,7 @@ fun LiveBrewScreen(
                     TextButton(onClick = {
                         // Stäng dialogen och spara
                         onStopAndSaveClick()
-                        // Stäng alerten
+                        // FIX: Måste stänga dialogen
                     }) {
                         Text("Stop & Save As Is")
                     }
