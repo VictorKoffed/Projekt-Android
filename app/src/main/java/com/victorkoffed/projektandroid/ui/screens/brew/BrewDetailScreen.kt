@@ -180,7 +180,7 @@ fun BrewDetailScreen(
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, "Edit")
                         }
-                        IconButton(onClick = { }, enabled = state.brew != null) {
+                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) { // <--- KORRIGERING
                             Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
