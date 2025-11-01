@@ -108,7 +108,7 @@ fun GrinderScreen(
         // Lägg till dialog
         if (showAddDialog) {
             AddGrinderDialog(
-                onDismiss = { },
+                onDismiss = { showAddDialog = false },
                 onAddGrinder = { name, notes ->
                     vm.addGrinder(name, notes)
                 }
@@ -119,9 +119,10 @@ fun GrinderScreen(
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
-                onDismiss = { },
+                onDismiss = { grinderToEdit = null },
                 onSaveGrinder = { updatedGrinder ->
                     vm.updateGrinder(updatedGrinder)
+                    grinderToEdit = null
                 }
             )
         }
@@ -132,8 +133,9 @@ fun GrinderScreen(
                 grinderName = currentGrinder.name,
                 onConfirm = {
                     vm.deleteGrinder(currentGrinder)
+                    grinderToDelete = null
                 },
-                onDismiss = { }
+                onDismiss = { grinderToDelete = null }
             )
         }
     }
@@ -201,7 +203,12 @@ fun AddGrinderDialog(
         confirmButton = {
             Button(
                 // Kontrollerar att namnet inte är tomt före tillägg
-                onClick = { if (name.isNotBlank()) onAddGrinder(name, notes.takeIf { it.isNotBlank() }) },
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onAddGrinder(name, notes.takeIf { it.isNotBlank() })
+                        onDismiss()
+                    }
+                },
                 enabled = name.isNotBlank()
             ) { Text("Add") }
         },
@@ -244,6 +251,7 @@ fun EditGrinderDialog(
                             notes = notes.takeIf { it.isNotBlank() }
                         )
                         onSaveGrinder(updatedGrinder)
+                        onDismiss()
                     }
                 },
                 enabled = name.isNotBlank()
@@ -269,7 +277,10 @@ fun DeleteGrinderConfirmationDialog(
         text = { Text("Are you sure you want to delete '$grinderName'? Brews that used this grinder will lose the connection.") },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
                 // Använd error-färg för att markera en destruktiv handling
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }

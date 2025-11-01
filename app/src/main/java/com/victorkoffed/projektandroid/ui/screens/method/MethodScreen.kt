@@ -107,7 +107,7 @@ fun MethodScreen(
         // Lägg till dialog
         if (showAddDialog) {
             AddMethodDialog(
-                onDismiss = { },
+                onDismiss = { showAddDialog = false },
                 onAddMethod = { name ->
                     vm.addMethod(name)
                 }
@@ -118,9 +118,10 @@ fun MethodScreen(
         methodToEdit?.let { currentMethod ->
             EditMethodDialog(
                 method = currentMethod,
-                onDismiss = { },
+                onDismiss = { methodToEdit = null },
                 onSaveMethod = { updatedMethod ->
                     vm.updateMethod(updatedMethod) // Uppdatera ViewModel
+                    methodToEdit = null
                 }
             )
         }
@@ -131,8 +132,9 @@ fun MethodScreen(
                 methodName = currentMethod.name,
                 onConfirm = {
                     vm.deleteMethod(currentMethod) // Radera via ViewModel
+                    methodToDelete = null
                 },
-                onDismiss = { }
+                onDismiss = { methodToDelete = null }
             )
         }
     }
@@ -190,7 +192,7 @@ fun AddMethodDialog(
         text = {
             OutlinedTextField(
                 value = name,
-                onValueChange = { },
+                onValueChange = { name = it },
                 label = { Text("Method Name *") },
                 singleLine = true
             )
@@ -198,7 +200,12 @@ fun AddMethodDialog(
         confirmButton = {
             Button(
                 // Knappen är endast aktiv om namnfältet inte är tomt
-                onClick = { if (name.isNotBlank()) onAddMethod(name) },
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onAddMethod(name)
+                        onDismiss()
+                    }
+                },
                 enabled = name.isNotBlank()
             ) { Text("Add") }
         },
@@ -225,7 +232,7 @@ fun EditMethodDialog(
         text = {
             OutlinedTextField(
                 value = name,
-                onValueChange = { },
+                onValueChange = { name = it },
                 label = { Text("Method Name *") },
                 singleLine = true
             )
@@ -237,6 +244,7 @@ fun EditMethodDialog(
                         // Skapa en kopia av det ursprungliga Method-objektet med det nya namnet.
                         // Detta säkerställer att ID:t och andra fält (om de fanns) bevaras.
                         onSaveMethod(method.copy(name = name))
+                        onDismiss()
                     }
                 },
                 enabled = name.isNotBlank()
@@ -262,7 +270,10 @@ fun DeleteMethodConfirmationDialog(
         text = { Text("Are you sure you want to delete '$methodName'? Brews that used this method will lose the connection.") },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
                 // Använd error-färg för att markera en destruktiv handling
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }

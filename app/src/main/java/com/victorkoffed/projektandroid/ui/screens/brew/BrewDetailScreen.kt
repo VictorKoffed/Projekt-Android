@@ -163,7 +163,7 @@ fun BrewDetailScreen(
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, "Edit")
                         }
-                        IconButton(onClick = { }, enabled = state.brew != null) {
+                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
                             Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -294,7 +294,7 @@ fun BrewDetailScreen(
                     // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
-                            onDismissRequest = { },
+                            onDismissRequest = { showDeleteConfirmDialog = false },
                             title = { Text("Delete brew?") },
                             text = { Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.") },
                             confirmButton = {
@@ -303,12 +303,12 @@ fun BrewDetailScreen(
                                         viewModel.deleteCurrentBrew {
                                             onNavigateBack() // Gå tillbaka efter lyckad radering
                                         }
-                                        // Stäng dialogen
+                                        showDeleteConfirmDialog = false
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
                             },
-                            dismissButton = { TextButton(onClick = { }) { Text("Cancel") } }
+                            dismissButton = { TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") } }
                         )
                     }
 

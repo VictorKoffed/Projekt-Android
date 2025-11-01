@@ -151,10 +151,11 @@ fun BeanScreen(
         // Dialog för att lägga till ny böna
         if (showAddDialog) {
             AddBeanDialog(
-                onDismiss = { },
+                onDismiss = { showAddDialog = false },
                 onAddBean = { name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes ->
                     // Anropar ViewModel för att spara den nya bönan
                     vm.addBean(name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes)
+                    showAddDialog = false
                 }
             )
         }
@@ -319,6 +320,7 @@ fun AddBeanDialog(
                             remainingWeight,
                             notes.takeIf { it.isNotBlank() }
                         )
+                        onDismiss()
                     }
                 },
                 // Aktivera endast om obligatoriska fält är ifyllda och giltiga

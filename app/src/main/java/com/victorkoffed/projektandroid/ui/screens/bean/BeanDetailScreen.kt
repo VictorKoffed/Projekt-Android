@@ -141,7 +141,7 @@ fun BeanDetailScreen(
                                     Icon(Icons.Default.Unarchive, contentDescription = "Unarchive Bean", tint = MaterialTheme.colorScheme.primary)
                                 }
                                 // Permanent Radera-knapp
-                                IconButton(onClick = { }, enabled = !state.isLoading) {
+                                IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = !state.isLoading) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Bean permanently", tint = MaterialTheme.colorScheme.error)
                                 }
                             } else {
@@ -153,6 +153,7 @@ fun BeanDetailScreen(
                                             viewModel.archiveBean { /* Stannar kvar på sidan */ }
                                         } else {
                                             // Visa varning om vikt > 0
+                                            showArchiveWeightWarningDialog = true
                                         }
                                     },
                                     enabled = !state.isLoading
@@ -254,11 +255,11 @@ fun BeanDetailScreen(
         // Varningsdialog vid försök att arkivera med vikt > 0
         if (showArchiveWeightWarningDialog) {
             AlertDialog(
-                onDismissRequest = { },
+                onDismissRequest = { showArchiveWeightWarningDialog = false },
                 title = { Text("Cannot archive bean") },
                 text = { Text("The remaining weight for this bean must be zero (0.0 g) before it can be archived. Archiving hides the bean from the main list.") },
                 confirmButton = {
-                    TextButton(onClick = { }) {
+                    TextButton(onClick = { showArchiveWeightWarningDialog = false }) {
                         Text("OK")
                     }
                 }
@@ -276,9 +277,9 @@ fun BeanDetailScreen(
                     viewModel.deleteBean {
                         onNavigateBack() // Gå tillbaka endast vid lyckad radering
                     }
-                    // Dialogen stängs inte automatiskt om deleteBean sätter ett fel
+                    showDeleteConfirmDialog = false
                 },
-                onDismiss = { }
+                onDismiss = { showDeleteConfirmDialog = false }
             )
         }
     } // Slut Scaffold
@@ -429,7 +430,10 @@ fun EditBeanDialog(
         },
         confirmButton = {
             Button(
-                onClick = onSaveBean,
+                onClick = {
+                    onSaveBean()
+                    onDismiss()
+                },
                 enabled = editName.isNotBlank() && (editRemainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
             ) { Text("Save") }
         },

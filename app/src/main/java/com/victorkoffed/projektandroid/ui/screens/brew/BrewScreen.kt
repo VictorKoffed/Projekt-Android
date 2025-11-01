@@ -255,20 +255,21 @@ fun BrewScreen(
     // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { /* Låt den vara kvar */ },
+            onDismissRequest = { showConnectionAlert = false },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
                 // Alternativ 1: Navigera till anslutningsskärmen
                 TextButton(onClick = {
                     onNavigateToScale()
+                    showConnectionAlert = false
                 }) {
                     Text("Connect Scale")
                 }
             },
             dismissButton = {
                 // Alternativ 2: Avbryt
-                TextButton(onClick = { }) {
+                TextButton(onClick = { showConnectionAlert = false }) {
                     Text("Cancel")
                 }
                 // Alternativ 3: Fortsätt och spara utan realtidsdata
@@ -276,7 +277,7 @@ fun BrewScreen(
                     scope.launch {
                         val newBrewId = vm.saveBrewWithoutSamples()
                         onSaveWithoutGraph(newBrewId)
-                        // Stäng alerten efter spara
+                        showConnectionAlert = false
                     }
                 }) {
                     Text("Save without Graph")
@@ -300,7 +301,7 @@ fun <T> DropdownSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { !expanded },
+        onExpandedChange = { expanded = !expanded },
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
