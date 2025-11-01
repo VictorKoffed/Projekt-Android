@@ -1,5 +1,6 @@
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
+import android.util.Log // NY IMPORT
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
@@ -47,6 +48,9 @@ data class BrewSetupState(
 
 /** Data class som returneras efter att en bryggning har sparats. */
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
+
+// Lägg till en TAG konstant för Logcat-filtrering
+private const val TAG = "BrewViewModel_DEBUG"
 
 @HiltViewModel
 class BrewViewModel @Inject constructor(
@@ -252,16 +256,23 @@ class BrewViewModel @Inject constructor(
         finalTimeMillis: Long,
         scaleDeviceName: String?
     ): SaveBrewResult {
+        // [LOG 1: Start av funktionen]
+        Log.d(TAG, "saveLiveBrew: Start. Time: $finalTimeMillis ms, Samples size: ${finalSamples.size}")
+
         if (finalSamples.size < 2 || finalTimeMillis <= 0) {
             _error.value = "Not enough data recorded to save."
+            // [LOG 2: Fel vid otillräcklig data]
+            Log.e(TAG, "saveLiveBrew: FEL - Otillräcklig data. Samples: ${finalSamples.size}, Time: $finalTimeMillis ms")
             return SaveBrewResult(null)
         }
 
-        // Validera Setup (använder nu .value för att konvertera)
+        // Validera Setup
         val beanId = setupState.selectedBean?.id
         val doseGrams = setupState.doseGrams.value.toDoubleOrNull()
         if (beanId == null || doseGrams == null) {
             _error.value = "Missing bean/dose in setup."
+            // [LOG 3: Fel vid validering av setup]
+            Log.e(TAG, "saveLiveBrew: FEL - Setup ogiltig. BeanId: $beanId, Dose: $doseGrams")
             return SaveBrewResult(null)
         }
 
@@ -284,31 +295,48 @@ class BrewViewModel @Inject constructor(
                 ).format(Date())
             }"
         )
+        // [LOG 4: Kontroll av det skapade Brew-objektet]
+        Log.d(TAG, "saveLiveBrew: Brew-objekt skapat. BeanId: $beanId, Dose: $doseGrams, MethodId: ${newBrew.methodId}, GrindSetting: ${newBrew.grindSetting}, StartTid: ${newBrew.startedAt}")
+        Log.d(TAG, "saveLiveBrew: Första Sample: t=${finalSamples.firstOrNull()?.timeMillis}ms, mass=${finalSamples.firstOrNull()?.massGrams}g")
+
 
         // Spara Brew och Samples (med transaktion)
         val savedBrewId: Long? = viewModelScope.async {
             try {
+                // [LOG 5: Före databastransaktion]
+                Log.d(TAG, "saveLiveBrew: Startar repository-transaktion (addBrewWithSamples)...")
                 val id = repository.addBrewWithSamples(newBrew, finalSamples)
+                // [LOG 6: Efter framgångsrik databastransaktion]
+                Log.d(TAG, "saveLiveBrew: Repository-transaktion LYCKADES. Ny BrewId: $id")
                 clearError()
                 id
             } catch (e: Exception) {
+                // [LOG 7: Databasfel]
+                Log.e(TAG, "saveLiveBrew: Repository-transaktion MISSLYCKADES under spara!", e)
                 _error.value = "Save failed: ${e.message}"
                 null
             }
         }.await()
 
-        var beanIdReachedZero: Long? = null
-        if (savedBrewId != null) {
-            // Kontrollera om lagersaldot nu är noll efter att dosen dragits bort
-            try {
-                val bean = repository.getBeanById(beanId)
-                if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
-                    beanIdReachedZero = beanId
-                }
-            } catch (_: Exception) {
-                // Log.e(TAG, "Check bean stock failed after save", e) // Kan inte logga TAG här
-            }
+        // [LOG 8: Kontroll av resultatet efter await]
+        if (savedBrewId == null) {
+            Log.w(TAG, "saveLiveBrew: BrewId är null, sparandet misslyckades på DB-nivå. Returnerar null.")
+            return SaveBrewResult(null)
         }
+
+        var beanIdReachedZero: Long? = null
+        try {
+            val bean = repository.getBeanById(beanId)
+            if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
+                beanIdReachedZero = beanId
+            }
+        } catch (e: Exception) {
+            // Fånga eventuella fel vid kontroll av bönans saldo
+            Log.e(TAG, "saveLiveBrew: Fel vid kontroll av bönans saldo efter sparande", e)
+        }
+
+        // [LOG 9: Slut på funktionen]
+        Log.d(TAG, "saveLiveBrew: Slut. Återvänder BrewId: $savedBrewId, BeanIdReachedZero: $beanIdReachedZero")
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 

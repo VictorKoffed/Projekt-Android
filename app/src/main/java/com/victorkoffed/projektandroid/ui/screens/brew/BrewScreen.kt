@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -56,8 +55,8 @@ fun BrewScreen(
     onSaveWithoutGraph: (newBrewId: Long?) -> Unit,
     onNavigateToScale: () -> Unit,
     onNavigateBack: () -> Unit,
-    vm: BrewViewModel = hiltViewModel(),
-    scaleVm: ScaleViewModel // MOTTAGARE: Ta emot scaleVm
+    vm: BrewViewModel, // <-- INGEN default hiltViewModel() HÄR
+    scaleVm: ScaleViewModel
 ) {
     val availableBeans by vm.availableBeans.collectAsState()
     val availableGrinders by vm.availableGrinders.collectAsState()
@@ -255,21 +254,20 @@ fun BrewScreen(
     // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { showConnectionAlert = false },
+            onDismissRequest = { },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
                 // Alternativ 1: Navigera till anslutningsskärmen
                 TextButton(onClick = {
                     onNavigateToScale()
-                    showConnectionAlert = false
                 }) {
                     Text("Connect Scale")
                 }
             },
             dismissButton = {
                 // Alternativ 2: Avbryt
-                TextButton(onClick = { showConnectionAlert = false }) {
+                TextButton(onClick = { }) {
                     Text("Cancel")
                 }
                 // Alternativ 3: Fortsätt och spara utan realtidsdata
@@ -277,7 +275,6 @@ fun BrewScreen(
                     scope.launch {
                         val newBrewId = vm.saveBrewWithoutSamples()
                         onSaveWithoutGraph(newBrewId)
-                        showConnectionAlert = false
                     }
                 }) {
                     Text("Save without Graph")
@@ -301,7 +298,7 @@ fun <T> DropdownSelector(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { },
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(

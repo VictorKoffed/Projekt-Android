@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
@@ -57,7 +56,7 @@ fun LiveBrewScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetail: (brewId: Long, beanIdToArchivePrompt: Long?) -> Unit,
     scaleVm: ScaleViewModel, // MOTTAGARE: Ta emot scaleVm
-    brewVm: BrewViewModel = hiltViewModel()
+    brewVm: BrewViewModel // <-- INGEN default hiltViewModel() HÄR
 ) {
     // Hämta alla nödvändiga states från ScaleViewModel lokalt
     val samples by scaleVm.recordedSamplesFlow.collectAsState()
@@ -82,15 +81,22 @@ fun LiveBrewScreen(
     // Logik för att stoppa och spara, nu flyttad hit
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
+            // [LOG A: Före insamling av data]
+            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Klickade 'Done'. Försöker spara.")
+
             // 1. Hämta setup-datan från BrewViewModel
             val currentSetup = brewVm.getCurrentSetup()
 
-            // 2. Stoppa inspelningen på vågen (detta nollställer *inte* samples/time i VM)
-            scaleVm.stopRecording()
-
-            // 3. Hämta de slutgiltiga inspelade värdena
+            // 2. Hämta de slutgiltiga inspelade värdena (KORRIGERAD ORDNING: LÄS FÖRST)
             val finalSamples = scaleVm.recordedSamplesFlow.value
             val finalTime = scaleVm.recordingTimeMillis.value
+
+            // 3. Stoppa inspelningen på vågen (NU Nollställs samples/time i VM)
+            scaleVm.stopRecording()
+
+            // [LOG B: Kontroll av insamlade data]
+            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Setup BeanId: ${currentSetup.selectedBean?.id}, Dose: ${currentSetup.doseGrams.value}")
+            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms. Första t_ms: ${finalSamples.firstOrNull()?.timeMillis ?: -1L}")
 
             // 4. Hämta vågens namn (om ansluten) för anteckningar
             val scaleName = (connectionState as? BleConnectionState.Connected)?.deviceName
@@ -103,12 +109,16 @@ fun LiveBrewScreen(
                 scaleDeviceName = scaleName
             )
 
+            // [LOG C: Resultat från ViewModel]
+            Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Resultat mottaget. BrewId: ${saveResult.brewId}, BeanIdReachedZero: ${saveResult.beanIdReachedZero}")
+
             if (saveResult.brewId != null) {
                 // SUCCESS: Använd nav-callback
+                Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Spar LYCKADES. Navigerar till detaljvy.")
                 onNavigateToDetail(saveResult.brewId, saveResult.beanIdReachedZero)
             } else {
                 // FAILURE FIX: Återgå till Brew Setup om sparandet misslyckas.
-                Log.w("LiveBrewScreen", "Save cancelled or failed, returning to setup.")
+                Log.w("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Spar MISSLYCKADES. Återgår till setup.")
                 onNavigateBack()
             }
         }
@@ -218,7 +228,6 @@ fun LiveBrewScreen(
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
-                        // FIX: Stänger dialogen
                     }) {
                         Text("OK")
                     }
@@ -227,7 +236,6 @@ fun LiveBrewScreen(
                     TextButton(onClick = {
                         // Stäng dialogen och spara
                         onStopAndSaveClick()
-                        // FIX: Måste stänga dialogen
                     }) {
                         Text("Stop & Save As Is")
                     }

@@ -8,9 +8,10 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -29,6 +30,7 @@ import com.victorkoffed.projektandroid.ui.screens.method.MethodScreen
 import com.victorkoffed.projektandroid.ui.screens.scale.ScaleConnectScreen
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
@@ -106,8 +108,12 @@ fun AppNavigationGraph(
         }
 
         // --- Flöde för ny bryggning (Setup) ---
-        composable(Screen.BrewSetup.route) {
+        composable(Screen.BrewSetup.route) { backStackEntry -> // <-- ANVÄND backStackEntry HÄR
             val scope = rememberCoroutineScope() // Lokalt scope för snackbar
+
+            // 1. INSTANSIERA OCH SCOPA BrewViewModel TILL DENNA ENTRY
+            val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = backStackEntry)
+
             BrewScreen(
                 // vm, scaleConnectionState tas bort. Skärmen hämtar dem själv.
                 onStartBrewClick = {
@@ -130,13 +136,23 @@ fun AppNavigationGraph(
                 },
                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
                 onNavigateBack = { navController.popBackStack() },
-                scaleVm = scaleVm // SKICKA TILL BREWSCREEN
+                vm = brewVm, // <-- SKICKA IN SCOPAD BrewViewModel
+                scaleVm = scaleVm
             )
         }
 
         // --- Flöde för ny bryggning (Live) ---
         composable(Screen.LiveBrew.route) {
-            // Alla states tas bort. Skärmen hämtar dem själv.
+            // 2. Hämta backstack-entry för BrewSetup-rutten
+            val brewSetupEntry = remember(it) {
+                // Detta KAN krascha om BrewSetup inte är på stacken.
+                // Det är kritiskt att BrewSetup ALDRIG tas bort från stacken innan LiveBrew.
+                navController.getBackStackEntry(Screen.BrewSetup.route)
+            }
+
+            // 3. Hämta den DELADE BrewViewModel-instansen med hjälp av BrewSetup-entryt
+            val brewVm: BrewViewModel = hiltViewModel(viewModelStoreOwner = brewSetupEntry)
+
             LiveBrewScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDetail = { brewId, beanIdToArchivePrompt ->
@@ -150,8 +166,8 @@ fun AppNavigationGraph(
                         launchSingleTop = true // Avoid multiple instances
                     }
                 },
-                scaleVm = scaleVm // SKICKA TILL LIVEBREWSCREEN
-                // brewVm hämtas nu lokalt i LiveBrewScreen
+                scaleVm = scaleVm, // SKICKA TILL LIVEBREWSCREEN
+                brewVm = brewVm // <-- SKICKA IN DELAD BrewViewModel
             )
         }
 
