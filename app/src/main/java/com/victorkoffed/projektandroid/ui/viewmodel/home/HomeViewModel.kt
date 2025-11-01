@@ -1,9 +1,12 @@
+@file:Suppress("CanBeParameter")
+
 package com.victorkoffed.projektandroid.ui.viewmodel.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BeanRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BrewRepository
 import com.victorkoffed.projektandroid.data.themePref.ThemePreferenceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,29 +18,22 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
-// Data class för att förenkla visning av en bryggning i listan, inkluderar bönans namn.
+// ... (Data class RecentBrewItem är oförändrad) ...
 data class RecentBrewItem(
     val brew: Brew,
     val beanName: String?
 )
 
-/**
- * ViewModel för HomeScreen.
- * Hanterar logik för att hämta senaste bryggningar, räkna bönor och bryggningar,
- * och hantera inställningar som Dark Mode.
- */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    repository: CoffeeRepository,
+    private val brewRepository: BrewRepository, // <-- ÄNDRAD
+    private val beanRepository: BeanRepository, // <-- ÄNDRAD
     private val themePreferenceManager: ThemePreferenceManager
 ) : ViewModel() {
 
-    // Hämtar de 5 senaste bryggningarna (som inte är kopplade till arkiverade bönor)
-    // för visning på hemskärmen. Kombinerar med bönnamn.
-    // ANVÄNDER FORTFARANDE getAllBrews() FÖR DENNA LISTA
-    val recentBrews: StateFlow<List<RecentBrewItem>> = repository.getAllBrews()
+    val recentBrews: StateFlow<List<RecentBrewItem>> = brewRepository.getAllBrews() // <-- ÄNDRAD
         .map { brews -> brews.take(5) }
-        .combine(repository.getAllBeans()) { brews, beans ->
+        .combine(beanRepository.getAllBeans()) { brews, beans -> // <-- ÄNDRAD
             brews.map { brew ->
                 val bean = beans.find { it.id == brew.beanId }
                 RecentBrewItem(brew = brew, beanName = bean?.name ?: "Unknown Bean")
@@ -49,19 +45,21 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Hämtar det totala antalet bönor (aktiva + arkiverade)
-    val beansExploredCount: StateFlow<Int> = repository.getTotalBeanCount()
+    val beansExploredCount: StateFlow<Int> = beanRepository.getTotalBeanCount() // <-- ÄNDRAD
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0
         )
 
-    // StateFlow för det totala antalet genomförda bryggningar (ALLA)
-    val totalBrewCount: StateFlow<Int> = repository.getTotalBrewCount() // Använder den nya metoden
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val totalBrewCount: StateFlow<Int> = brewRepository.getTotalBrewCount() // <-- ÄNDRAD
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
 
-    // --- Dark Mode Hantering ---
+    // --- Dark Mode Hantering (oförändrad) ---
     val isDarkMode: StateFlow<Boolean> = themePreferenceManager.isDarkMode
         .stateIn(
             scope = viewModelScope,
@@ -75,14 +73,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // StateFlow för total kvarvarande vikt (i gram) av alla AKTIVA bönor.
-    val totalAvailableBeanWeight: StateFlow<Double> = repository.getAllBeans()
+    val totalAvailableBeanWeight: StateFlow<Double> = beanRepository.getAllBeans() // <-- ÄNDRAD
         .map { beans -> beans.sumOf { it.remainingWeightGrams } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // UPPDATERAD: StateFlow för tidpunkten då den *senaste* bryggningen (inklusive arkiverade) startade.
-    val lastBrewTime: StateFlow<Date?> = repository.getAllBrewsIncludingArchived() // ANVÄND NY FUNKTION
-        .map { brews -> brews.firstOrNull()?.startedAt } // Hämta den första (senaste) från den sorterade listan
+    val lastBrewTime: StateFlow<Date?> = brewRepository.getAllBrewsIncludingArchived() // <-- ÄNDRAD
+        .map { brews -> brews.firstOrNull()?.startedAt }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

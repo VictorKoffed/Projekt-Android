@@ -1,4 +1,4 @@
-package com.victorkoffed.projektandroid.data.repository
+package com.victorkoffed.projektandroid.data.repository.interfaces
 
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice

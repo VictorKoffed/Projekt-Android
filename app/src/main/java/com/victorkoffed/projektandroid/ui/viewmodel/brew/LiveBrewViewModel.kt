@@ -6,8 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.db.BrewSample
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
-import com.victorkoffed.projektandroid.data.repository.ScaleRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.ScaleRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BeanRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BrewRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,10 +26,9 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-/** Data class som returneras efter att en bryggning har sparats. */
+// ... (Data classes SaveBrewResult och ReceivedBrewSetup är oförändrade) ...
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
-// Håller den setup-data som tagits emot från navigation
 private data class ReceivedBrewSetup(
     val beanId: Long,
     val doseGrams: Double,
@@ -43,22 +43,21 @@ private const val TAG = "LiveBrewViewModel_DEBUG"
 
 @HiltViewModel
 class LiveBrewViewModel @Inject constructor(
-    private val repository: CoffeeRepository,
+    private val brewRepository: BrewRepository, // <-- ÄNDRAD
+    private val beanRepository: BeanRepository, // <-- ÄNDRAD
     private val scaleRepo: ScaleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // --- Mottagen Setup-data ---
+    // ... (alla properties och init-blocket är oförändrade, förutom anropen nedan) ...
     private var _setupState: ReceivedBrewSetup? = null
 
-    // --- State för felhantering ---
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // --- State för inspelning ---
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-
+    // ... (resten av states) ...
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
@@ -77,10 +76,9 @@ class LiveBrewViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown.asStateFlow()
 
-    private var manualTimerJob: Job? = null // Används för att simulera tid vid disconnect
+    private var manualTimerJob: Job? = null
 
     init {
-        // Hämta navigeringsargument
         try {
             _setupState = ReceivedBrewSetup(
                 beanId = savedStateHandle.get<Long>("beanId")!!,
@@ -96,8 +94,6 @@ class LiveBrewViewModel @Inject constructor(
             _error.value = "Could not load brew setup. Please go back."
         }
 
-
-        // Lyssna på justerade mätdata från repon för inspelning
         viewModelScope.launch {
             scaleRepo.observeMeasurements()
                 .collect { measurementData ->
@@ -112,7 +108,6 @@ class LiveBrewViewModel @Inject constructor(
                 }
         }
 
-        // Lyssna på anslutningsstatus för att hantera frånkopplingar
         viewModelScope.launch {
             scaleRepo.observeConnectionState()
                 .collect { state ->
@@ -122,7 +117,7 @@ class LiveBrewViewModel @Inject constructor(
         }
     }
 
-    /** Hanterar anslutningsändringar MEDAN en session pågår. */
+    // ... (resten av funktionerna fram till saveLiveBrew är oförändrade) ...
     private fun handleConnectionStateChange(state: BleConnectionState, latestMeasurement: ScaleMeasurement) {
         if ((state is BleConnectionState.Disconnected || state is BleConnectionState.Error)) {
             if (_isRecording.value && !_isPaused.value) {
@@ -142,8 +137,6 @@ class LiveBrewViewModel @Inject constructor(
             }
         }
     }
-
-    // --- Inspelningsfunktioner ---
 
     private fun handleScaleTimer() {
         if (_isRecording.value && !_isPaused.value && manualTimerJob == null) {
@@ -196,7 +189,7 @@ class LiveBrewViewModel @Inject constructor(
                 _countdown.value = 1; delay(1000L)
 
                 scaleRepo.tareScaleAndStartTimer()
-                delay(150L) // Ge vågen tid att reagera
+                delay(150L)
                 _countdown.value = null
                 internalStartRecording()
             } catch (e: Exception) {
@@ -308,14 +301,12 @@ class LiveBrewViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Sparar en live-bryggning. Använder setup-data som togs emot vid init.
-     */
     suspend fun saveLiveBrew(
         finalSamples: List<BrewSample>,
         finalTimeMillis: Long,
         scaleDeviceName: String?
     ): SaveBrewResult {
+        // ... (logik och validering oförändrad) ...
         Log.d(TAG, "saveLiveBrew: Start. Time: $finalTimeMillis ms, Samples size: ${finalSamples.size}")
 
         if (finalSamples.size < 2 || finalTimeMillis <= 0) {
@@ -324,7 +315,6 @@ class LiveBrewViewModel @Inject constructor(
             return SaveBrewResult(null)
         }
 
-        // Validera Setup (denna ska ha laddats i init)
         val setup = _setupState
         if (setup == null) {
             _error.value = "Setup data was missing. Cannot save."
@@ -332,7 +322,7 @@ class LiveBrewViewModel @Inject constructor(
             return SaveBrewResult(null)
         }
 
-        // Skapa Brew-objekt
+        // ... (logik för att skapa newBrew är oförändrad) ...
         val actualStartTimeMillis = System.currentTimeMillis() - finalTimeMillis
         val scaleInfo = scaleDeviceName?.let { " via $it" } ?: ""
         val newBrew = Brew(
@@ -353,11 +343,10 @@ class LiveBrewViewModel @Inject constructor(
         )
         Log.d(TAG, "saveLiveBrew: Brew-objekt skapat. BeanId: ${setup.beanId}, Dose: ${setup.doseGrams}, MethodId: ${setup.methodId}")
 
-        // Spara Brew och Samples (med transaktion)
         val savedBrewId: Long? = viewModelScope.async {
             try {
                 Log.d(TAG, "saveLiveBrew: Startar repository-transaktion (addBrewWithSamples)...")
-                val id = repository.addBrewWithSamples(newBrew, finalSamples)
+                val id = brewRepository.addBrewWithSamples(newBrew, finalSamples) // <-- ÄNDRAD
                 Log.d(TAG, "saveLiveBrew: Repository-transaktion LYCKADES. Ny BrewId: $id")
                 clearError()
                 id
@@ -375,7 +364,7 @@ class LiveBrewViewModel @Inject constructor(
 
         var beanIdReachedZero: Long? = null
         try {
-            val bean = repository.getBeanById(setup.beanId)
+            val bean = beanRepository.getBeanById(setup.beanId) // <-- ÄNDRAD
             if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
                 beanIdReachedZero = setup.beanId
             }
@@ -387,6 +376,7 @@ class LiveBrewViewModel @Inject constructor(
         return SaveBrewResult(brewId = savedBrewId, beanIdReachedZero = beanIdReachedZero)
     }
 
+    // ... (clearError, onCleared är oförändrade) ...
     fun clearError() {
         _error.value = null
     }

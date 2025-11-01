@@ -7,7 +7,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.repository.ScalePreferenceManager
-import com.victorkoffed.projektandroid.data.repository.ScaleRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement

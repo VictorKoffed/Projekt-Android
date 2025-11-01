@@ -1,4 +1,4 @@
-package com.victorkoffed.projektandroid.data.repository
+package com.victorkoffed.projektandroid.data.repository.implementation
 
 import android.Manifest
 import android.bluetooth.BluetoothManager
@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.victorkoffed.projektandroid.data.ble.BookooBleClient
+import com.victorkoffed.projektandroid.data.repository.interfaces.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement

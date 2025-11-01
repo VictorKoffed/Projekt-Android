@@ -1,25 +1,13 @@
-package com.victorkoffed.projektandroid.data.repository
+package com.victorkoffed.projektandroid.data.repository.implementation
 
 import android.util.Log
+import com.victorkoffed.projektandroid.data.repository.interfaces.CoffeeImageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/**
- * Repository för att hämta slumpmässiga kaffebilder från ett externt API.
- * Använder en modern Coroutine/blocking I/O-metod i stället för Volley.
- * Hilt injicerar denna klass som en Singleton.
- */
-interface CoffeeImageRepository {
-    /**
-     * Hämtar URL:en till en slumpmässig kaffebild.
-     * @return URL:en till bilden som String, eller null om anropet misslyckades.
-     */
-    suspend fun fetchRandomCoffeeImageUrl(): String?
-}
 
 @Singleton
 class CoffeeImageRepositoryImpl @Inject constructor() : CoffeeImageRepository {

@@ -6,7 +6,10 @@ import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.data.db.Method
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BeanRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BrewRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.GrinderRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.MethodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,13 +24,12 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
-/** Representerar inmatningsvärde och tillhörande fel. */
+// ... (Data classes NumericInput och BrewSetupState är oförändrade) ...
 data class NumericInput(
     val value: String = "",
     val error: String? = null
 )
 
-/** Representerar all användarinmatning för en ny bryggning innan den sparas. */
 data class BrewSetupState(
     val selectedBean: Bean? = null,
     val doseGrams: NumericInput = NumericInput(),
@@ -39,40 +41,35 @@ data class BrewSetupState(
     val notes: String = ""
 )
 
-/**
- * ViewModel för BrewScreen (setup-delen).
- * Hanterar formulärdata, validering och hämtning av listor.
- */
 @HiltViewModel
 class BrewSetupViewModel @Inject constructor(
-    private val repository: CoffeeRepository,
+    private val beanRepository: BeanRepository, // <-- ÄNDRAD
+    private val grinderRepository: GrinderRepository, // <-- ÄNDRAD
+    private val methodRepository: MethodRepository, // <-- ÄNDRAD
+    private val brewRepository: BrewRepository // <-- ÄNDRAD
 ) : ViewModel() {
 
     private val decimalRegex = Regex("^\\d*\\.?\\d*$")
     private val integerRegex = Regex("^\\d*$")
 
-    // --- State för dropdown-listor ---
-    val availableBeans: StateFlow<List<Bean>> = repository.getAllBeans()
+    val availableBeans: StateFlow<List<Bean>> = beanRepository.getAllBeans() // <-- ÄNDRAD
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val availableGrinders: StateFlow<List<Grinder>> = repository.getAllGrinders()
+    val availableGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders() // <-- ÄNDRAD
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val availableMethods: StateFlow<List<Method>> = repository.getAllMethods()
+    val availableMethods: StateFlow<List<Method>> = methodRepository.getAllMethods() // <-- ÄNDRAD
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // --- State för användarinmatning ---
     private val _brewSetupState = MutableStateFlow(BrewSetupState())
     val brewSetupState: StateFlow<BrewSetupState> = _brewSetupState.asStateFlow()
 
-    // --- State för felhantering vid sparande ---
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // --- State för att veta om det finns tidigare bryggningar ---
-    val hasPreviousBrews: StateFlow<Boolean> = repository.getAllBrews()
+    val hasPreviousBrews: StateFlow<Boolean> = brewRepository.getAllBrews() // <-- ÄNDRAD
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    // --- Funktioner för att uppdatera inställningar ---
+    // ... (alla on...Change och select... funktioner är oförändrade) ...
     fun selectBean(bean: Bean?) {
         _brewSetupState.update { it.copy(selectedBean = bean) }
     }
@@ -125,8 +122,8 @@ class BrewSetupViewModel @Inject constructor(
         }
     }
 
+    // ... (isSetupValid, getCurrentSetup, clearForm är oförändrade) ...
     fun isSetupValid(): Boolean {
-        // Läs det aktuella state-värdet
         val currentState = _brewSetupState.value
 
         val doseValue = currentState.doseGrams.value.toDoubleOrNull()
@@ -142,26 +139,21 @@ class BrewSetupViewModel @Inject constructor(
                 noInputErrors
     }
 
-    // Returnerar det aktuella StateFlow-värdet
     fun getCurrentSetup(): BrewSetupState { return _brewSetupState.value }
 
-    /** Nollställer formuläret. Används av HomeScreen. */
     fun clearForm() {
         _brewSetupState.value = BrewSetupState()
     }
 
-
-    // --- Funktion: Ladda inställningar från senaste bryggningen ---
     fun loadLatestBrewSettings() {
         viewModelScope.launch {
-            val latestBrew = repository.getAllBrews().firstOrNull()?.firstOrNull()
+            val latestBrew = brewRepository.getAllBrews().firstOrNull()?.firstOrNull() // <-- ÄNDRAD
 
             if (latestBrew != null) {
-                val bean = repository.getBeanById(latestBrew.beanId)
-                val grinder = latestBrew.grinderId?.let { repository.getGrinderById(it) }
-                val method = latestBrew.methodId?.let { repository.getMethodById(it) }
+                val bean = beanRepository.getBeanById(latestBrew.beanId) // <-- ÄNDRAD
+                val grinder = latestBrew.grinderId?.let { grinderRepository.getGrinderById(it) } // <-- ÄNDRAD
+                val method = latestBrew.methodId?.let { methodRepository.getMethodById(it) } // <-- ÄNDRAD
 
-                // Uppdatera StateFlow-värdet
                 _brewSetupState.update {
                     it.copy(
                         selectedBean = bean,
@@ -178,15 +170,12 @@ class BrewSetupViewModel @Inject constructor(
         }
     }
 
-    // --- Funktion: Spara bryggning utan grafer ---
     suspend fun saveBrewWithoutSamples(): Long? {
         if (!isSetupValid()) {
             return null
         }
-
-        // Hämta det aktuella state-värdet för sparande
         val currentSetup = _brewSetupState.value
-
+        // ... (logik för att skapa newBrew är oförändrad) ...
         val newBrew = Brew(
             beanId = currentSetup.selectedBean!!.id,
             doseGrams = currentSetup.doseGrams.value.toDouble(),
@@ -201,7 +190,7 @@ class BrewSetupViewModel @Inject constructor(
 
         return viewModelScope.async {
             try {
-                repository.addBrew(newBrew)
+                brewRepository.addBrew(newBrew) // <-- ÄNDRAD
             } catch (e: Exception) {
                 _error.value = "Save failed: ${e.message}"
                 null
@@ -209,6 +198,7 @@ class BrewSetupViewModel @Inject constructor(
         }.await()
     }
 
+    // ... (clearError är oförändrad) ...
     fun clearError() {
         _error.value = null
     }

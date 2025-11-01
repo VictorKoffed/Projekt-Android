@@ -3,7 +3,7 @@ package com.victorkoffed.projektandroid.ui.viewmodel.grinder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Grinder
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.GrinderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -11,59 +11,40 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * ViewModel för att hantera CRUD-operationer (Skapa, Läsa, Uppdatera, Radera)
- * relaterade till Grinders (kaffekvarnar).
- */
 @HiltViewModel
 class GrinderViewModel @Inject constructor(
-    private val repository: CoffeeRepository
+    private val grinderRepository: GrinderRepository // <-- ÄNDRAD
 ) : ViewModel() {
 
-    /**
-     * StateFlow som exponerar en lista av alla kaffekvarnar från databasen till UI:et.
-     */
-    val allGrinders: StateFlow<List<Grinder>> = repository.getAllGrinders()
+    val allGrinders: StateFlow<List<Grinder>> = grinderRepository.getAllGrinders() // <-- ÄNDRAD
         .stateIn(
             scope = viewModelScope,
-            // Håll flödet aktivt i 5 sekunder efter att den sista observatören försvinner.
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList() // Startar med en tom lista för att undvika null-state.
+            initialValue = emptyList()
         )
 
-    /**
-     * Lägger till en ny kvarn i databasen om namnet inte är tomt.
-     */
     fun addGrinder(name: String, notes: String?) {
         viewModelScope.launch {
             if (name.isNotBlank()) {
-                repository.addGrinder(
+                grinderRepository.addGrinder( // <-- ÄNDRAD
                     Grinder(
                         name = name,
-                        notes = notes // Anteckningar är valfria (nullable)
+                        notes = notes
                     )
                 )
             }
         }
     }
 
-    /**
-     * Uppdaterar en befintlig Grinder-entitet i databasen.
-     * Används vid redigering av en kvarn.
-     */
     fun updateGrinder(grinder: Grinder) {
         viewModelScope.launch {
-            repository.updateGrinder(grinder)
+            grinderRepository.updateGrinder(grinder) // <-- ÄNDRAD
         }
     }
 
-
-    /**
-     * Raderar en specifik kvarn från databasen.
-     */
     fun deleteGrinder(grinder: Grinder) {
         viewModelScope.launch {
-            repository.deleteGrinder(grinder)
+            grinderRepository.deleteGrinder(grinder) // <-- ÄNDRAD
         }
     }
 }

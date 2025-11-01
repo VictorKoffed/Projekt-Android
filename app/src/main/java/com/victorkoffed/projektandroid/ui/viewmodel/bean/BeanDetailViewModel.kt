@@ -9,7 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
-import com.victorkoffed.projektandroid.data.repository.CoffeeRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BeanRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.BrewRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,7 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
-
+// ... (Data class BeanDetailState är oförändrad) ...
 data class BeanDetailState(
     val bean: Bean? = null,
     val brews: List<Brew> = emptyList(),
@@ -35,20 +36,19 @@ data class BeanDetailState(
 
 @HiltViewModel
 class BeanDetailViewModel @Inject constructor(
-    private val repository: CoffeeRepository,
+    private val beanRepository: BeanRepository, // <-- ÄNDRAD
+    private val brewRepository: BrewRepository, // <-- ÄNDRAD
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // Hämta beanId från SavedStateHandle
+    // ... (resten av properties är oförändrade) ...
     private val beanId: Long = savedStateHandle.get<Long>("beanId") ?: throw IllegalArgumentException("beanId not found in SavedStateHandle")
 
     private val _beanDetailState = MutableStateFlow(BeanDetailState())
     val beanDetailState: StateFlow<BeanDetailState> = _beanDetailState.asStateFlow()
 
-    // State för att signalera att arkiveringsdialog ska visas efter sparande
     private val _showArchivePromptAfterSave = MutableStateFlow(false)
     val showArchivePromptAfterSave: StateFlow<Boolean> = _showArchivePromptAfterSave.asStateFlow()
-
 
     var isEditing by mutableStateOf(false)
         private set
@@ -74,14 +74,11 @@ class BeanDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _beanDetailState.update { it.copy(isLoading = true, error = null) }
             try {
-                // Använd repository.observeBean för att få reaktiva uppdateringar
-                // och hämta bönan oavsett arkivstatus.
-                val beanFlow = repository.observeBean(beanId)
-                // Hämta bryggningar för bönan
-                val brewsFlow = repository.getBrewsForBean(beanId)
+                val beanFlow = beanRepository.observeBean(beanId) // <-- ÄNDRAD
+                val brewsFlow = brewRepository.getBrewsForBean(beanId) // <-- ÄNDRAD
 
                 combine(beanFlow, brewsFlow) { bean, brews ->
-                    // Om bönan inte hittas (kan hända om den raderas medan vyn är öppen)
+                    // ... (logik oförändrad) ...
                     if (bean == null && !_beanDetailState.value.isLoading) {
                         BeanDetailState(isLoading = false, error = "Bean not found or deleted.")
                     } else {
@@ -96,8 +93,6 @@ class BeanDetailViewModel @Inject constructor(
                     _beanDetailState.update { it.copy(isLoading = false, error = e.message) }
                 }.collectLatest { state ->
                     _beanDetailState.value = state
-                    // Uppdatera redigeringsfälten endast om vi *inte* är i redigeringsläge
-                    // och om bönan faktiskt finns.
                     if (!isEditing && state.bean != null) {
                         resetEditFieldsToCurrentState()
                     }
@@ -110,14 +105,14 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
+    // ... (startEditing, cancelEditing, parseDateString är oförändrade) ...
     fun startEditing() {
-        resetEditFieldsToCurrentState() // Säkerställ att fälten är synkade innan redigering
+        resetEditFieldsToCurrentState()
         isEditing = true
     }
 
     fun cancelEditing() {
         isEditing = false
-        // Återställ eventuella osparade ändringar i redigeringsfälten
         resetEditFieldsToCurrentState()
     }
 
@@ -131,6 +126,7 @@ class BeanDetailViewModel @Inject constructor(
     }
 
     fun saveChanges() {
+        // ... (logik oförändrad) ...
         val currentBean = _beanDetailState.value.bean ?: return
         val remainingWeight = editRemainingWeightStr.toDoubleOrNull()
 
@@ -142,9 +138,7 @@ class BeanDetailViewModel @Inject constructor(
         val roastDate = parseDateString(editRoastDateStr)
         val initialWeight = editInitialWeightStr.toDoubleOrNull()
 
-        // Behåll arkivstatus om vikten redan var noll, annars sätt till false om vikten > 0
         val isArchivedOnSave = if (remainingWeight == 0.0) currentBean.isArchived else false
-        // Kolla om vikten *blev* noll i denna sparande operation och bönan inte redan är arkiverad
         val shouldPromptArchive = remainingWeight == 0.0 && !currentBean.isArchived
 
         val updatedBean = currentBean.copy(
@@ -159,10 +153,10 @@ class BeanDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                repository.updateBean(updatedBean)
-                isEditing = false // Avsluta redigeringsläget
+                beanRepository.updateBean(updatedBean) // <-- ÄNDRAD
+                isEditing = false
                 if (shouldPromptArchive) {
-                    _showArchivePromptAfterSave.value = true // Signalera till UI att visa dialogen
+                    _showArchivePromptAfterSave.value = true
                 }
             } catch (e: Exception) {
                 _beanDetailState.update { it.copy(error = "Failed to save: ${e.message}") }
@@ -170,35 +164,21 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    /**
-     * NYTT: Anropas från UI när användaren bekräftar arkivering från prompten.
-     */
+    // ... (confirmAndArchiveBean, dismissArchivePrompt är oförändrade) ...
     fun confirmAndArchiveBean() {
-        archiveBean { /* Inget behov av onSuccess här då vi redan är på detaljsidan */ }
-        _showArchivePromptAfterSave.value = false // Återställ flaggan
+        archiveBean { }
+        _showArchivePromptAfterSave.value = false
     }
 
-    /**
-     * NYTT: Anropas från UI när användaren avbryter arkivering från prompten.
-     */
     fun dismissArchivePrompt() {
-        _showArchivePromptAfterSave.value = false // Återställ flaggan
+        _showArchivePromptAfterSave.value = false
     }
 
-
-    /**
-     * Arkiverar bönan (sätter isArchived till true).
-     * @param onSuccess Callback som körs vid lyckad arkivering.
-     */
     fun archiveBean(onSuccess: () -> Unit = {}) {
         val beanToArchive = _beanDetailState.value.bean ?: return
-
-        // Viktkontrollen görs nu explicit i UI innan denna anropas (både manuellt och automatiskt)
-
         viewModelScope.launch {
             try {
-                repository.updateBeanArchivedStatus(beanToArchive.id, true)
-                // Uppdatera lokalt state direkt för snabbare UI-respons
+                beanRepository.updateBeanArchivedStatus(beanToArchive.id, true) // <-- ÄNDRAD
                 _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = true)) }
                 onSuccess()
             } catch (e: Exception) {
@@ -208,16 +188,12 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Av-arkiverar bönan genom att sätta isArchived till false.
-     */
     fun unarchiveBean() {
         val beanToUnarchive = _beanDetailState.value.bean
         if (beanToUnarchive != null) {
             viewModelScope.launch {
                 try {
-                    repository.updateBeanArchivedStatus(beanToUnarchive.id, false)
-                    // Uppdatera lokalt state direkt
+                    beanRepository.updateBeanArchivedStatus(beanToUnarchive.id, false) // <-- ÄNDRAD
                     _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = false), error = null) }
                 } catch (e: Exception) {
                     Log.e("BeanDetailVM", "Kunde inte av-arkivera böna", e)
@@ -227,16 +203,13 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Raderar en böna permanent. Endast tillåtet om bönan är markerad som arkiverad.
-     */
     fun deleteBean(onSuccess: () -> Unit) {
         val beanToDelete = _beanDetailState.value.bean
         if (beanToDelete != null) {
             viewModelScope.launch {
                 try {
                     if (beanToDelete.isArchived) {
-                        repository.deleteBean(beanToDelete)
+                        beanRepository.deleteBean(beanToDelete) // <-- ÄNDRAD
                         onSuccess()
                     } else {
                         _beanDetailState.update { it.copy(error = "Kan endast radera arkiverade bönor.") }
@@ -249,6 +222,7 @@ class BeanDetailViewModel @Inject constructor(
         }
     }
 
+    // ... (resetEditFieldsToCurrentState, clearError är oförändrade) ...
     private fun resetEditFieldsToCurrentState() {
         val bean = _beanDetailState.value.bean
         editName = bean?.name ?: ""
