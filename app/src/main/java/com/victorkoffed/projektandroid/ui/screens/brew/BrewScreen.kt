@@ -254,12 +254,13 @@ fun BrewScreen(
     // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { },
+            onDismissRequest = { /* Låt den vara kvar tills ett val görs */ },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
                 // Alternativ 1: Navigera till anslutningsskärmen
                 TextButton(onClick = {
+                    showConnectionAlert = false // Stäng dialogen
                     onNavigateToScale()
                 }) {
                     Text("Connect Scale")
@@ -267,11 +268,12 @@ fun BrewScreen(
             },
             dismissButton = {
                 // Alternativ 2: Avbryt
-                TextButton(onClick = { }) {
+                TextButton(onClick = { showConnectionAlert = false }) { // <-- ★★★ KORRIGERING HÄR ★★★
                     Text("Cancel")
                 }
                 // Alternativ 3: Fortsätt och spara utan realtidsdata
                 TextButton(onClick = {
+                    showConnectionAlert = false // Stäng dialogen
                     scope.launch {
                         val newBrewId = vm.saveBrewWithoutSamples()
                         onSaveWithoutGraph(newBrewId)
