@@ -1,5 +1,6 @@
 package com.victorkoffed.projektandroid.ui.screens.home.composable
 
+import android.annotation.SuppressLint // Importerad för formatWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -90,6 +91,33 @@ fun formatTimeSince(lastBrewTime: Date?): String? {
     }
 }
 
+// --- NY HJÄLPFUNKTION FÖR VIKT ---
+/**
+ * Formaterar en vikt i gram till en läsbar sträng (g, kg, eller t).
+ * @param weightGrams Vikten i gram.
+ * @return Formaterad sträng (t.ex. "250 g", "1.2 kg", "1.0 t").
+ */
+@SuppressLint("DefaultLocale")
+private fun formatWeight(weightGrams: Double): String {
+    return when {
+        // Över 1 ton (1,000,000 g)
+        weightGrams >= 1_000_000 -> {
+            val tonnes = weightGrams / 1_000_000
+            String.format("%.1f t", tonnes)
+        }
+        // Över 1 kg (1000 g)
+        weightGrams >= 1000 -> {
+            val kg = weightGrams / 1000
+            String.format("%.1f kg", kg)
+        }
+        // Gram (behåller ursprunglig formatering utan decimaler för gram)
+        else -> {
+            String.format("%.0f g", weightGrams)
+        }
+    }
+}
+
+
 // --- Komponenter ---
 
 /**
@@ -172,7 +200,11 @@ fun InfoGrid(
         // Tredje raden: Beans explored och Beans available
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = beansExplored.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
-            InfoCard(title = "%.0f g".format(availableWeight), subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))
+
+            // *** UPPDATERAD RAD ***
+            // Använder den nya formateringsfunktionen för att visa vikten
+            val formattedWeight = remember(availableWeight) { formatWeight(availableWeight) }
+            InfoCard(title = formattedWeight, subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
     }
 }
