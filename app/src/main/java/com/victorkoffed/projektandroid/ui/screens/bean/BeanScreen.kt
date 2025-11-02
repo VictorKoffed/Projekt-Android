@@ -294,12 +294,17 @@ fun AddBeanDialog(
                 )
                 // Numeriska fält med decimal-tangentbord
                 OutlinedTextField(
-                    value = initialWeightStr, onValueChange = { initialWeightStr = it },
+                    value = initialWeightStr,
+                    onValueChange = { newValue ->
+                        initialWeightStr = newValue
+                        remainingWeightStr = newValue
+                    },
                     label = { Text("Initial Weight (g)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
-                    value = remainingWeightStr, onValueChange = { remainingWeightStr = it },
+                    value = remainingWeightStr,
+                    onValueChange = { remainingWeightStr = it },
                     label = { Text("Current Weight (g) *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
