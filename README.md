@@ -120,8 +120,8 @@ graph TD
 | Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                             |
 | CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                      |
 | Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion. |
-| Jetpack Navigation    | `SavedStateHandle`                                    | Hanterar komplext tillstånd (som captured_image_uri från kameran)  |
-                                                                                | och bevarar navigeringsargument mellan processer och rotationer..  |
+| Jetpack Navigation    | `SavedStateHandle`                                    | Hanterar komplext tillstånd (som captured_image_uri från kameran) och bevarar navigeringsargument mellan processer och rotationer.  |
+                                                                                
 
 ---
 
