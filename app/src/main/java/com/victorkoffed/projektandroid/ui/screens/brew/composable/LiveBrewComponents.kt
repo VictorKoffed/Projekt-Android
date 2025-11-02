@@ -66,15 +66,16 @@ fun StatusDisplay(
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
         String.format("%02d:%02d", minutes, seconds)
     }
-    val weightString = remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
-    val flowString = remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
+    val weightString =
+        remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
+    val flowString =
+        remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
 
     val containerColor = when {
         countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-        // ★★★ FIX: Använd det nya parameternamnet här ★★★
-        isRecordingWhileDisconnected -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) // Röd vid frånkoppling
-        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) // Grå vid manuell paus
-        isRecording -> MaterialTheme.colorScheme.tertiaryContainer // Normal inspelningsfärg
+        isRecordingWhileDisconnected -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        isRecording -> MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     }
 
@@ -126,17 +127,20 @@ fun StatusDisplay(
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isRecordingWhileDisconnected) {
-                            Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.BluetoothSearching,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(Modifier.size(4.dp))
                             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onErrorContainer) {
-                                if(isPaused) {
+                                if (isPaused) {
                                     Text("Paused - Reconnecting...", fontSize = 14.sp)
                                 } else {
                                     Text("Recording (Data Paused) - Reconnecting...", fontSize = 14.sp)
                                 }
                             }
                         } else {
-                            // Endast manuellt pausad
                             Text("Paused", fontSize = 14.sp)
                         }
                     }
@@ -156,6 +160,7 @@ fun LiveBrewGraph(
     val textColor = MaterialTheme.colorScheme.onBackground.toArgb()
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridLineColor = Color.LightGray
+
     val textPaint = remember(textColor) {
         android.graphics.Paint().apply {
             color = textColor
@@ -181,20 +186,36 @@ fun LiveBrewGraph(
     val yLabelPadding = 32.dp
     val weightTitleOffsetDp = 0.dp
 
+    // ⬇️ Ny offset för X-axelns titel ("Time")
+    val timeTitleOffsetDp = 15.dp
+
     val yLabelPaddingPx = with(LocalDensity.current) { yLabelPadding.toPx() }
     val weightTitleOffsetPx = with(LocalDensity.current) { weightTitleOffsetDp.toPx() }
+    val timeTitleOffsetPx = with(LocalDensity.current) { timeTitleOffsetDp.toPx() }
 
-    Canvas(modifier = modifier.padding(start = 32.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)) {
+    // Öka bottom-padding så att den nedflyttade titeln inte klipps
+    Canvas(
+        modifier = modifier.padding(
+            start = 32.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = 32.dp + timeTitleOffsetDp
+        )
+    ) {
         val axisPadding = 0f
-        val xLabelPadding = 24.dp.toPx()
+        val xLabelPadding = 24.dp.toPx() // utrymme för siffrorna (tick labels)
         val graphWidth = size.width - yLabelPaddingPx - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
+
         val maxTime = max(60000f, samples.maxOfOrNull { it.timeMillis }?.toFloat() ?: 1f) * 1.05f
         val actualMaxMass = samples.maxOfOrNull { it.massGrams }?.toFloat() ?: 1f
         val maxMass = max(50f, ceil(actualMaxMass / 50f) * 50f) * 1.1f
+
         val xAxisY = size.height - xLabelPadding
+
         drawContext.canvas.nativeCanvas.apply {
+            // Horisontella gridlinjer + Y-etiketter (massa)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -209,6 +230,8 @@ fun LiveBrewGraph(
                 drawText("${currentMassGrid.toInt()}g", yLabelPaddingPx / 2, y + textPaint.textSize / 3, textPaint)
                 currentMassGrid += massGridInterval
             }
+
+            // Vertikala gridlinjer + X-etiketter (sekunder)
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
@@ -221,11 +244,20 @@ fun LiveBrewGraph(
                     pathEffect = gridLinePaint.pathEffect
                 )
                 val timeSec = (currentTimeGrid / 1000).toInt()
+                // ⬅️ Siffrorna ligger kvar på samma baslinje (oförändrat)
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
-            drawText("Time",
-                yLabelPaddingPx + graphWidth / 2, size.height + axisLabelPaint.textSize / 2, axisLabelPaint)
+
+            // ⬇️ Flytta bara titeln "Time" nedåt med timeTitleOffsetPx
+            drawText(
+                "Time",
+                yLabelPaddingPx + graphWidth / 2,
+                size.height + axisLabelPaint.textSize / 2 + timeTitleOffsetPx,
+                axisLabelPaint
+            )
+
+            // Y-titel (roterad)
             withSave {
                 rotate(-90f)
                 drawText(
@@ -236,8 +268,12 @@ fun LiveBrewGraph(
                 )
             }
         }
+
+        // Axlar
         drawLine(axisColor, Offset(yLabelPaddingPx, axisPadding), Offset(yLabelPaddingPx, xAxisY))
         drawLine(axisColor, Offset(yLabelPaddingPx, xAxisY), Offset(size.width, xAxisY))
+
+        // Kurvan
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
@@ -304,7 +340,6 @@ fun BrewControls(
                 imageVector = when {
                     isBusy -> Icons.Default.Timer
                     isPaused -> Icons.Default.PlayArrow
-                    // ★★★ FIX: Använd det nya parameternamnet här ★★★
                     isRecordingWhileDisconnected -> Icons.Default.Pause
                     isRecording -> Icons.Default.Pause
                     else -> Icons.Default.PlayArrow
