@@ -94,7 +94,7 @@ com.victorkoffed.projektandroid/
 ```mermaid
 graph TD
   UI["Compose Screens"] --> VM["Hilt ViewModels / StateFlow"]
-  VM --> Repo["Repositories: CoffeeRepository, ScaleRepository"]
+  VM --> Repo["Repositories (Brew, Bean, Scale, Image, etc.)"]
   Repo --> Data["Data Sources"]
   Data --> Room["Room/SQLite DB"]
   Data --> BLE["BookooBleClient / BLE"]
@@ -105,7 +105,7 @@ graph TD
 ```
 
 - **MVVM/MVI-inspirerad:** Compose Views observerar reaktiva `StateFlow` från ViewModels.
-- **Repository Pattern:** Abstraherar datakällor genom `CoffeeRepository` och `ScaleRepository`.
+- **Repository Pattern:** Abstraherar datakällor genom `BrewRepository` och `ScaleRepository`.
 - **Hilt/DI:** Automatisk beroendeinjektion av ViewModels, Repositories, Databas och BLE-klienter.
 
 ---
@@ -162,7 +162,7 @@ Kör tester:
 
 <details><summary><strong>Data & Arkitektur</strong></summary>
 
-- `data/repository/CoffeeRepository.kt` – Huvudkontrakt för databasåtkomst
+- `data/repository/interfaces/BrewRepository.kt` – Huvudkontrakt för brygg-data
 - `data/db/DatabaseEntities.kt` – Room-entiteter & BrewMetrics (View)
 - `data/ble/BookooBleClient.kt` – BLE-hantering
 - `di/DatabaseModule.kt` – Hilt-modul för databas & repository
