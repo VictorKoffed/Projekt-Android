@@ -1,4 +1,11 @@
+/*
+ * Referensnotering (AI-assistans): Implementeringen av kundanpassad graf-ritning
+ * med Compose Canvas (hantering av koordinatsystem, axlar, skalning och linjer)
+ * har utvecklats med AI-assistans. Se README.md för AI-verktyg.
+ */
+
 package com.victorkoffed.projektandroid.ui.screens.brew.composable
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.padding

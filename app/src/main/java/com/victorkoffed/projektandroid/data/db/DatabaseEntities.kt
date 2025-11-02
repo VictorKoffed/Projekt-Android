@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Definitionen av den komplexa @DatabaseView
+ * BrewMetrics (som beräknar ratio och waterUsedGrams med Room och SQL-subqueries)
+ * har strukturerats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.data.db
 
 import androidx.room.ColumnInfo

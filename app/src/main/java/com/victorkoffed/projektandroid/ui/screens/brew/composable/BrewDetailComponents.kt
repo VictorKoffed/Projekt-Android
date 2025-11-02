@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Implementationen av den återanvändbara
+ * Compose-komponenten EditDropdownSelector (som använder ExposedDropdownMenuBox
+ * med generiska typer) har implementerats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.ui.screens.brew.composable
 
 import android.annotation.SuppressLint

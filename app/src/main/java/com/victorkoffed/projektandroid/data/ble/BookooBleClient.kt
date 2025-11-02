@@ -1,3 +1,14 @@
+/*
+* EXTERNT PROTOKOLL: Hela BLE-protokollet (tjänster, karaktäristiker, byte-kommandon och svar)
+ * är baserat på det öppna protokollet för Bookoo-vågen.
+ * Källa: https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
+ *
+ * Referensnotering (AI-assistans): Kärnimplementeringen för BLE-kommunikation
+ * (BluetoothGattCallback, hantering av service discovery och notifikationer)
+ * har skapats och strukturerats med omfattande AI-assistans för att hantera
+ * plattformsspecifika utmaningar och trådsäkerhet. Se README.md för AI-verktyg.
+ */
+
 package com.victorkoffed.projektandroid.data.ble
 
 import android.annotation.SuppressLint

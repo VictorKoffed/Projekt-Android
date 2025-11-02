@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Hanteringen av auto-reconnect-logiken och
+ * BleErrorTranslator har utvecklats med AI-assistans för att skapa ett robust
+ * state-maskin. Se README.md för AI-verktyg.
+ */
+
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
 
 import android.app.Application

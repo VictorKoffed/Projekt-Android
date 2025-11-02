@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Den komplexa tillståndslogiken (hantering av
+ * _isRecordingWhileDisconnected, _weightAtPause, och den manuella timerns coroutine)
+ * har utvecklats med AI-assistans för att säkerställa robust inspelning. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
 import android.util.Log

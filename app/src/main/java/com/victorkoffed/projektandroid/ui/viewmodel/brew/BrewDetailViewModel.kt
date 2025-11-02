@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Flödeshanteringen (som använder combine och
+ * flatMapLatest för att aggregera data från flera repositories) är ett avancerat
+ * Coroutine Flow-mönster som implementerats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
 import android.util.Log

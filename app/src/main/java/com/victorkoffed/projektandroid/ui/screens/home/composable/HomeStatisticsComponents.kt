@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): De detaljerade formatteringsfunktionerna
+ * (t.ex. formatTimeSince och formatWeight) samt den tillståndsbaserade
+ * renderingen av ScaleStatusCard har utvecklats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.ui.screens.home.composable
 
 import android.annotation.SuppressLint

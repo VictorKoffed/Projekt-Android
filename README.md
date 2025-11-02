@@ -112,15 +112,15 @@ graph TD
 
 ## 🧩 Avancerade Kotlin/Android-koncept som används
 
-| Område                | Exempel i koden                                       | Förklaring                                                         |
-|:----------------------|:------------------------------------------------------|:-------------------------------------------------------------------|
-| Kotlin Flows          | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI.                          |
-| BLE-kommunikation     | `callbackFlow`, `BluetoothGatt`                       | Coroutines & Flows för asynkrona BLE-händelser.                    |
-| Room Data             | `@DatabaseView`, `ForeignKey.CASCADE`                 | Avancerad databasmodellering med vyer och constraints.             |
-| Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                             |
-| CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                      |
-| Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion. |
-| Jetpack Navigation    | `SavedStateHandle`                                    | Hanterar komplext tillstånd (som captured_image_uri från kameran) och bevarar navigeringsargument mellan processer och rotationer.  |
+| Område                | Exempel i koden                                       | Förklaring                                                                                                                         |
+|:----------------------|:------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------|
+| Kotlin Flows          | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Reaktivt dataflöde mellan DB, BLE och UI.                                                                                          |
+| BLE-kommunikation     | `callbackFlow`, `BluetoothGatt`                       | Coroutines & Flows för asynkrona BLE-händelser.                                                                                    |
+| Room Data             | `@DatabaseView`, `ForeignKey.CASCADE`                 | Avancerad databasmodellering med vyer och constraints.                                                                             |
+| Coroutines            | `viewModelScope`, `withTimeoutOrNull`                 | Hanterar asynkrona operationer säkert.                                                                                             |
+| CameraX               | `ImageCapture`, `ProcessCameraProvider`               | Enkel integration av foto i bryggningsflödet.                                                                                      |
+| Nätverkskommunikation | `CoffeeImageRepositoryImpl`, `URL().readText()`       | Block-safe I/O utförd på Dispatchers.IO inuti en suspend-funktion.                                                                 |
+| Jetpack Navigation    | `SavedStateHandle`                                    | Hanterar komplext tillstånd (som captured_image_uri från kameran) och bevarar navigeringsargument mellan processer och rotationer. |
                                                                                 
 
 ---

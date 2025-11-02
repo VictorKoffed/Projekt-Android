@@ -1,3 +1,12 @@
+/*
+ * EXTERNT PROTOKOLL: Denna repository implementerar affärslogik (t.ex. tarering och kommandon)
+ * baserat på Bookoo BLE Protocol.
+ * Källa: https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
+ *
+ * Referensnotering (AI-assistans): Implementationen av Coroutine Flows och StateFlows
+ * för att hantera vågdata har strukturerats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.data.repository.implementation
 
 import android.Manifest

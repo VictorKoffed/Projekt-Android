@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Implementationen av asynkron nätverks-I/O
+ * (med URL().readText() inuti withContext(Dispatchers.IO) och JSON-parsning)
+ * har strukturerats med AI-assistans. Se README.md.
+ */
+
 package com.victorkoffed.projektandroid.data.repository.implementation
 
 import android.util.Log

@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Upprättandet av CameraX-flödet (rättighetshantering,
+ * PreviewView, image capture och fokuslogik) bygger på standardiserad Android-boilerplate
+ * som implementerats med AI-assistans. Se README.md.
+ */
+
 @file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 
 package com.victorkoffed.projektandroid.ui.screens.brew

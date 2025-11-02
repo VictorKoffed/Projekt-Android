@@ -186,7 +186,6 @@ fun LiveBrewGraph(
     val yLabelPadding = 32.dp
     val weightTitleOffsetDp = 0.dp
 
-    // ⬇️ Ny offset för X-axelns titel ("Time")
     val timeTitleOffsetDp = 15.dp
 
     val yLabelPaddingPx = with(LocalDensity.current) { yLabelPadding.toPx() }

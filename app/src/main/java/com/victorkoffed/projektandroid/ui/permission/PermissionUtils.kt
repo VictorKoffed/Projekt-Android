@@ -1,3 +1,9 @@
+/*
+ * Referensnotering (AI-assistans): Logiken för att villkorligt hantera Bluetooth-behörigheter
+ * baserat på Android SDK-version (API 31+) har implementerats med AI-assistans.
+ * Se README.md för AI-verktyg.
+ */
+
 package com.victorkoffed.projektandroid.ui.permission
 
 import android.Manifest

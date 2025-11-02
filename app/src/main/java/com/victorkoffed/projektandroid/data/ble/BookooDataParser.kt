@@ -1,3 +1,13 @@
+/*
+* EXTERNT PROTOKOLL: Parsningslogiken för råa byte-paket baseras direkt på dataformatet
+ * definierat i Bookoo BLE Protocol.
+ * Källa: https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
+ *
+ * Referensnotering (AI-assistans): Logiken för att parsa råa byte-paket till
+ * numeriska värden (inkl. bit-shifting och sign-hantering) har utvecklats med
+ * AI-assistans baserat på Bookoo BLE Protocol. Se README.md för AI-verktyg.
+ */
+
 package com.victorkoffed.projektandroid.data.ble
 
 import android.util.Log
