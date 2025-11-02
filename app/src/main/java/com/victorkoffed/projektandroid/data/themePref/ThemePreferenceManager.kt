@@ -4,9 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +25,8 @@ class ThemePreferenceManager @Inject constructor(
 
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("theme_prefs", Context.MODE_PRIVATE)
+    // Skapa en privat scope för denna manager som kör på IO-tråden
+    private val managerScope = CoroutineScope(Dispatchers.IO + Job())
 
     companion object {
         // Nyckel för att lagra mörkt läge: True = Dark, False = Light.
@@ -29,20 +35,29 @@ class ThemePreferenceManager @Inject constructor(
         private const val DEFAULT_DARK_MODE = false
     }
 
-    // StateFlow som håller det aktuella läget. Värdet uppdateras vid ändringar och kan observeras av Compose.
-    private val _isDarkMode = MutableStateFlow(
-        sharedPreferences.getBoolean(MANUAL_DARK_MODE_KEY, DEFAULT_DARK_MODE)
-    )
+    // 1. Initiera med standardvärdet (icke-blockerande)
+    private val _isDarkMode = MutableStateFlow(DEFAULT_DARK_MODE)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    // 2. Ladda det riktiga värdet asynkront i bakgrunden
+    init {
+        managerScope.launch {
+            _isDarkMode.value = sharedPreferences.getBoolean(MANUAL_DARK_MODE_KEY, DEFAULT_DARK_MODE)
+        }
+    }
+
 
     /**
      * Sparar användarens manuella val och uppdaterar StateFlow.
      * @param isDark True för mörkt läge, False för ljust läge.
      */
     fun setManualDarkMode(isDark: Boolean) {
-        sharedPreferences.edit {
-            putBoolean(MANUAL_DARK_MODE_KEY, isDark)
+        // 3. Se till att även skrivningar sker på en bakgrundstråd
+        managerScope.launch {
+            sharedPreferences.edit {
+                putBoolean(MANUAL_DARK_MODE_KEY, isDark)
+            }
         }
-        _isDarkMode.value = isDark // Uppdatera flow omedelbart
+        _isDarkMode.value = isDark // Uppdatera flow omedelbart (detta är OK)
     }
 }

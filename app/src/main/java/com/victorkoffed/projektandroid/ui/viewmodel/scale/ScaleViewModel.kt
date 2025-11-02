@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Dispatchers // <-- Behåll denna import
 
 // --- Konstanter ---
 private const val TAG = "ScaleViewModel"
@@ -108,8 +109,24 @@ class ScaleViewModel @Inject constructor(
 
 
     init {
-        // Försök anslut till ihågkommen våg om inställningen är på
-        attemptAutoConnect()
+        // --- ★★★ STARTA ÄNDRING ★★★ ---
+        // Försök inte ansluta omedelbart i init-blocket.
+        // Detta blockerar UI-tråden under appstart.
+        // Låt oss lägga till en liten fördröjning.
+        viewModelScope.launch {
+            delay(1500L) // Vänta 1.5 sekunder efter att ViewModel har skapats
+
+            // Kontrollera om vi fortfarande ska ansluta (t.ex. om användaren
+            // manuellt har kopplat från under tiden)
+            val state = connectionState.value
+            if (state is BleConnectionState.Disconnected && !isManualDisconnect) {
+                Log.d(TAG, "Init: Fördröjd auto-anslutning startar.")
+                attemptAutoConnect()
+            } else {
+                Log.d(TAG, "Init: Skippar fördröjd auto-anslutning (State: $state, ManualDisconnect: $isManualDisconnect)")
+            }
+        }
+        // --- ★★★ SLUT ÄNDRING ★★★ ---
     }
 
     private fun isBluetoothAvailableAndEnabled(): Boolean {
@@ -163,7 +180,10 @@ class ScaleViewModel @Inject constructor(
         isManualDisconnect = false
         reconnectAttempted = false
         clearError()
-        scaleRepo.connect(device.address)
+        // (Behåll denna på IO-tråden, som vi fixade tidigare)
+        viewModelScope.launch(Dispatchers.IO) {
+            scaleRepo.connect(device.address)
+        }
     }
 
     fun disconnect() {
@@ -291,7 +311,10 @@ class ScaleViewModel @Inject constructor(
 
             isManualDisconnect = false
             clearError()
-            scaleRepo.connect(addr)
+            // (Behåll denna på IO-tråden, som vi fixade tidigare)
+            viewModelScope.launch(Dispatchers.IO) {
+                scaleRepo.connect(addr)
+            }
         } else {
             reconnectAttempted = false
         }
@@ -310,7 +333,10 @@ class ScaleViewModel @Inject constructor(
             val state = connectionState.value
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return
             isManualDisconnect = false
-            scaleRepo.connect(addr)
+            // (Behåll denna på IO-tråden, som vi fixade tidigare)
+            viewModelScope.launch(Dispatchers.IO) {
+                scaleRepo.connect(addr)
+            }
         } else {
             _error.value = "No scale remembered."
         }
