@@ -166,14 +166,6 @@ fun BeanDetailScreen(
                 }
             )
         },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { snackbarData ->
-                    ThemedSnackbar(snackbarData)
-                }
-            )
-        }
     ) { paddingValues ->
         when {
             state.isLoading -> {

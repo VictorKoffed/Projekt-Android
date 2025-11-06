@@ -102,15 +102,6 @@ fun ScaleConnectScreen(
                 }
             )
         },
-        // Använder en anpassad Snackbar-komponent för tematisk design
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { snackbarData ->
-                    ThemedSnackbar(snackbarData)
-                }
-            )
-        }
     ) { padding ->
         // Använder AnimatedContent för en smidig övergång mellan anslutna/frånkopplade vyer
         AnimatedContent(

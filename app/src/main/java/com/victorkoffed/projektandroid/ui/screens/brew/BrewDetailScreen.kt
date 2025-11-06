@@ -158,12 +158,6 @@ fun BrewDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
-        snackbarHost = {
-            // Använder den anpassade ThemedSnackbar
-            SnackbarHost(snackbarHostState) { snackbarData ->
-                ThemedSnackbar(snackbarData)
-            }
-        }
     ) { paddingValues ->
         when {
             // Visa laddningsindikator vid initial laddning (ej i redigeringsläge)
