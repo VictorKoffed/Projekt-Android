@@ -125,13 +125,6 @@ fun LiveBrewScreen(
             !isPaused &&
             isRecordingWhileDisconnected
         ) {
-            alertTitle = if (connectionState is BleConnectionState.Error) "Connection Error" else "Connection Lost"
-            alertMessage = if (connectionState is BleConnectionState.Error) {
-                (connectionState as BleConnectionState.Error).message + " Recording continues..."
-            } else {
-                "The connection to the scale was lost. Recording continues..."
-            }
-            showDisconnectedAlert = true
         } else if (connectionState is BleConnectionState.Connected && !isRecordingWhileDisconnected) {
             showDisconnectedAlert = false
         }
