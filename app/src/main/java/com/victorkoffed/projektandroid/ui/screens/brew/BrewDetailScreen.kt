@@ -277,24 +277,28 @@ fun BrewDetailScreen(
 
                     } // Slut Column
 
-                    // --- Dialogrutor ---
+                    /// --- Dialogrutor ---
                     // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
-                            onDismissRequest = { },
+                            onDismissRequest = { showDeleteConfirmDialog = false },
                             title = { Text("Delete brew?") },
                             text = { Text("Are you sure you want to delete the brew for '${state.bean?.name ?: "this bean"}'? This action cannot be undone.") },
                             confirmButton = {
                                 Button(
                                     onClick = {
                                         viewModel.deleteCurrentBrew {
-                                            onNavigateBack() // Gå tillbaka efter lyckad radering
+                                            onNavigateBack()
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                                 ) { Text("Delete") }
                             },
-                            dismissButton = { TextButton(onClick = { }) { Text("Cancel") } }
+                            dismissButton = {
+                                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
                         )
                     }
 
