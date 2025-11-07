@@ -239,3 +239,5 @@ All AI-genererad kod har granskats, testats och validerats manuellt av en mänsk
 6. Sökfunktion på bönor.
 7. lägga till en del om vattenkemi.
 8. lägga till inköpspris, ursprungsland, region och smaknotiringar av bönan.
+9. Lägga till recept, färdiga samt möjlighet att göra egna, inspration, Brew timer
+10. Lägga till defluid R2
