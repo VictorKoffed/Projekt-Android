@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -55,9 +57,11 @@ import kotlin.math.max
 fun StatusDisplay(
     currentTimeMillis: Long,
     currentMeasurement: ScaleMeasurement,
+    doseGrams: Double,
     isRecording: Boolean,
     isPaused: Boolean,
     isRecordingWhileDisconnected: Boolean,
+    showRatio: Boolean,
     showFlow: Boolean,
     countdown: Int?
 ) {
@@ -66,10 +70,20 @@ fun StatusDisplay(
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
         String.format("%02d:%02d", minutes, seconds)
     }
+    // Formaterar endast siffra, enheten (g) blir etikett
     val weightString =
-        remember(currentMeasurement.weightGrams) { "%.1f g".format(currentMeasurement.weightGrams) }
+        remember(currentMeasurement.weightGrams) { "%.1f".format(currentMeasurement.weightGrams) }
     val flowString =
         remember(currentMeasurement.flowRateGramsPerSecond) { "%.1f g/s".format(currentMeasurement.flowRateGramsPerSecond) }
+
+    val ratioString = remember(currentMeasurement.weightGrams, doseGrams) {
+        if (doseGrams > 0.0) {
+            val ratio = currentMeasurement.weightGrams / doseGrams
+            "1:%.1f".format(ratio)
+        } else {
+            "1:---"
+        }
+    }
 
     val containerColor = when {
         countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
@@ -85,9 +99,9 @@ fun StatusDisplay(
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 16.dp)
+                .padding(vertical = 16.dp, horizontal = 8.dp) // Lade till horisontell padding
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 180.dp),
+                .defaultMinSize(minHeight = 120.dp), // Kan vara kortare
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -104,27 +118,78 @@ fun StatusDisplay(
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             } else {
-                Text(text = timeString, fontSize = 48.sp, fontWeight = FontWeight.Light)
-                Spacer(Modifier.height(8.dp))
+                // --- TOP ROW: TIME & WEIGHT ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (showFlow) Arrangement.SpaceEvenly else Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Time
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Weight", style = MaterialTheme.typography.labelMedium)
-                        Text(text = weightString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                        Text("Time", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = timeString,
+                            fontSize = 36.sp, // Ny, mindre storlek
+                            fontWeight = FontWeight.Light
+                        )
                     }
+
+                    // Divider
+                    Divider(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier
+                            .height(48.dp) // Höjden på dividern
+                            .width(1.dp)
+                    )
+
+                    // Weight
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Weight (g)", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = weightString,
+                            fontSize = 36.sp, // Ny, mindre storlek
+                            fontWeight = FontWeight.Light
+                        )
+                    }
+                }
+
+                // Avstånd mellan raderna
+                if (showRatio || showFlow) {
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // --- BOTTOM ROW: RATIO & FLOW ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (showRatio) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Ratio", style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                text = ratioString,
+                                fontSize = 24.sp, // Mindre storlek
+                                fontWeight = FontWeight.Light
+                            )
+                        }
+                    }
+
                     if (showFlow) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Flow", style = MaterialTheme.typography.labelMedium)
-                            Text(text = flowString, fontSize = 36.sp, fontWeight = FontWeight.Light)
+                            Text(
+                                text = flowString,
+                                fontSize = 24.sp, // Mindre storlek
+                                fontWeight = FontWeight.Light
+                            )
                         }
                     }
                 }
 
+                // --- STATUS (Paused/Reconnecting) ---
                 if (isPaused || isRecordingWhileDisconnected) {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isRecordingWhileDisconnected) {
                             Icon(
@@ -150,6 +215,7 @@ fun StatusDisplay(
     }
 }
 
+// ... (Resten av filen, LiveBrewGraph och BrewControls, är exakt densamma) ...
 @Composable
 fun LiveBrewGraph(
     samples: List<BrewSample>,

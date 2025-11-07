@@ -1,12 +1,15 @@
 package com.victorkoffed.projektandroid.ui.screens.brew
 
 import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -60,6 +63,7 @@ fun LiveBrewScreen(
     val weightAtPause by vm.weightAtPause.collectAsState()
     val countdown by vm.countdown.collectAsState()
     val error by vm.error.collectAsState()
+    val doseGrams by vm.doseGrams.collectAsState()
 
     // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
     val liveMeasurement by scaleVm.measurement.collectAsState()
@@ -69,7 +73,11 @@ fun LiveBrewScreen(
 
     val scope = rememberCoroutineScope()
 
+    // --- ÄNDRING 1 av 4: LADE TILL EN NY STATE-VARIABEL FÖR RATIO ---
+    var showRatioInfo by remember { mutableStateOf(true) }
     var showFlowInfo by remember { mutableStateOf(true) }
+    // --- SLUT PÅ ÄNDRING ---
+
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
@@ -182,9 +190,13 @@ fun LiveBrewScreen(
             StatusDisplay(
                 currentTimeMillis = time,
                 currentMeasurement = displayMeasurement,
+                doseGrams = doseGrams,
                 isRecording = isRecording,
                 isPaused = isPaused,
                 isRecordingWhileDisconnected = isRecordingWhileDisconnected,
+                // --- ÄNDRING 2 av 4: SKICKA IN DEN NYA VARIABELN ---
+                showRatio = showRatioInfo,
+                // --- SLUT PÅ ÄNDRING ---
                 showFlow = showFlowInfo,
                 countdown = countdown
             )
@@ -197,22 +209,50 @@ fun LiveBrewScreen(
                     .padding(vertical = 8.dp)
             )
             Spacer(Modifier.height(8.dp))
-            FilterChip(
-                selected = showFlowInfo,
-                onClick = { showFlowInfo = !showFlowInfo },
-                label = { Text("Show Flow") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (showFlowInfo) Icons.Filled.Check else Icons.Filled.Close,
-                        contentDescription = if (showFlowInfo) "Visible" else "Hidden"
+
+            // --- ÄNDRING 3 av 4: LADE TILL EN ROW RUNT KNAPPARNA ---
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = showRatioInfo,
+                    onClick = { showRatioInfo = !showRatioInfo },
+                    label = { Text("Show Ratio") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (showRatioInfo) Icons.Filled.Check else Icons.Filled.Close,
+                            contentDescription = if (showRatioInfo) "Visible" else "Hidden"
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
                 )
-            )
+
+                Spacer(Modifier.width(8.dp)) // Avstånd mellan knapparna
+
+                FilterChip(
+                    selected = showFlowInfo,
+                    onClick = { showFlowInfo = !showFlowInfo },
+                    label = { Text("Show Flow") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (showFlowInfo) Icons.Filled.Check else Icons.Filled.Close,
+                            contentDescription = if (showFlowInfo) "Visible" else "Hidden"
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                    )
+                )
+            }
+            // --- SLUT PÅ ÄNDRING ---
+
             Spacer(Modifier.height(16.dp))
             BrewControls(
                 isRecording = isRecording,

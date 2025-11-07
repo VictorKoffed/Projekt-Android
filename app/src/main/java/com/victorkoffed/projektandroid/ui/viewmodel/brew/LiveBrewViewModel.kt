@@ -80,6 +80,11 @@ class LiveBrewViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown.asStateFlow()
 
+    // --- ÄNDRING 1 av 2: LADE TILL DENNA STATEFLOW ---
+    private val _doseGrams = MutableStateFlow(0.0)
+    val doseGrams: StateFlow<Double> = _doseGrams.asStateFlow()
+    // --- SLUT PÅ ÄNDRING ---
+
     private var manualTimerJob: Job? = null
 
     init {
@@ -93,6 +98,9 @@ class LiveBrewViewModel @Inject constructor(
                 grindSpeedRpm = savedStateHandle.get<String>("grindSpeedRpm").let { if (it == "null") null else it?.toDoubleOrNull() },
                 brewTempCelsius = savedStateHandle.get<String>("brewTempCelsius").let { if (it == "null") null else it?.toDoubleOrNull() }
             )
+            // --- ÄNDRING 2 av 2: SATTE VÄRDET FÖR DOSEN ---
+            _doseGrams.value = _setupState!!.doseGrams
+            // --- SLUT PÅ ÄNDRING ---
         } catch (e: Exception) {
             Log.e(TAG, "Kunde inte läsa nav arguments för LiveBrewViewModel", e)
             _error.value = "Could not load brew setup. Please go back."
@@ -232,6 +240,8 @@ class LiveBrewViewModel @Inject constructor(
         }
         Log.d(TAG, "Manually paused. Manual timer stopped.")
     }
+
+
 
     fun resumeRecording() {
         if (!_isRecording.value || !_isPaused.value) return
