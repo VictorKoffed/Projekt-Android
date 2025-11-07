@@ -231,7 +231,7 @@ All AI-genererad kod har granskats, testats och validerats manuellt av en mänsk
 
 ## Framtida utveckling
 
-1. Assisted brew, målvikt, tider att sikta på mm? kanske visa ratio mellan kaffe och vatten live i livebrew?
+1. Assisted brew, målvikt, tider att sikta på mm? kanske visa ratio mellan kaffe och vatten live i livebrew?(Nästan klart)
 2. Visa i grafen med den markering där man lyft på bryggaren för att swirla.
 3. Integrea espresso läge med Bookoo EM.
 4. Lägga till rating till brews och bönor.
