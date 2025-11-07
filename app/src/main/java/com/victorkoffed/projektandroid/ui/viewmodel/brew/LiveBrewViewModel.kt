@@ -125,6 +125,16 @@ class LiveBrewViewModel @Inject constructor(
             _error.value = "Could not load brew setup. Please go back."
         }
 
+        // --- ★★★ START PÅ FIX ★★★ ---
+        // Nollställ vågen (tarera) omedelbart när skärmen laddas,
+        // så att användaren ser 0.0g direkt.
+        // Detta löser buggen där vikten är felaktig vid skärmens start.
+        if (scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
+            Log.d(TAG, "Init: Taring scale on entry.")
+            scaleRepo.tareScale()
+        }
+        // --- ★★★ SLUT PÅ FIX ★★★ ---
+
         viewModelScope.launch {
             scaleRepo.observeMeasurements()
                 .collect { measurementData ->
