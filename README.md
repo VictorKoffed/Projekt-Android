@@ -243,4 +243,4 @@ All AI-genererad kod har granskats, testats och validerats manuellt av en mänsk
 10. Lägga till defluid R2
 11. kunna exportera bönor, brew graph till andra enheter och användare?
 12. kunna återanvända en gammal brewgrapf för att kunna följa den i en ny brew
-13. Fixa kabeskapsläge i hela appen.
+13. Fixa landskapsläge i hela appen.
