@@ -226,3 +226,16 @@ AI har huvudsakligen använts för:
 ### Mänsklig granskning
 
 All AI-genererad kod har granskats, testats och validerats manuellt av en mänsklig utvecklare.
+
+---
+
+## Framtida utveckling
+
+1. assisted brew, målvikt, tider att sikta på mm? kanske visa ratio mellan kaffe och vatten live i livebrew?
+2. Visa i grafen med den markering där man lyft på bryggaren för att swirla.
+3. Integrea espresso läge med Bookoo EM.
+4. Lägga till rating till brews och bönor.
+5. Lägga till en del om rostning av bönor.
+6. Sökfunktion på bönor.
+7. lägga till en del om vattenkemi.
+8. lägga till inköpspris, ursprungsland, region och smaknotiringar av bönan.
