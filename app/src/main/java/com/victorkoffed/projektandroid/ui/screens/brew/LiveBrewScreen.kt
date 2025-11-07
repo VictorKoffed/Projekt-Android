@@ -42,6 +42,7 @@ import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewControls
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.LiveBrewGraph
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.StatusDisplay
 import com.victorkoffed.projektandroid.ui.viewmodel.brew.LiveBrewViewModel
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.TargetWeightState // <-- NY IMPORT
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
@@ -65,6 +66,11 @@ fun LiveBrewScreen(
     val error by vm.error.collectAsState()
     val doseGrams by vm.doseGrams.collectAsState()
 
+    // --- NYA STATES FÖR RATIO-GUIDE ---
+    val targetWeightMessage by vm.targetWeightMessage.collectAsState()
+    val targetWeightState by vm.targetWeightState.collectAsState()
+    // --- SLUT NYA STATES ---
+
     // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
     val liveMeasurement by scaleVm.measurement.collectAsState()
     val connectionState by scaleVm.connectionState.collectAsState(
@@ -73,38 +79,29 @@ fun LiveBrewScreen(
 
     val scope = rememberCoroutineScope()
 
-    // --- ÄNDRING 1 av 4: LADE TILL EN NY STATE-VARIABEL FÖR RATIO ---
     var showRatioInfo by remember { mutableStateOf(true) }
     var showFlowInfo by remember { mutableStateOf(true) }
-    // --- SLUT PÅ ÄNDRING ---
 
     var showDisconnectedAlert by remember { mutableStateOf(false) }
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
 
-    // Visa fel från ViewModel (t.ex. om setup-data saknas)
     LaunchedEffect(error) {
         if (error != null) {
             alertTitle = "Error"
             alertMessage = error!!
-            showDisconnectedAlert = true // Återanvänder dialogen för fel
+            showDisconnectedAlert = true
             vm.clearError()
         }
     }
 
 
-    // Logik för att stoppa och spara
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Klickade 'Done'. Försöker spara.")
-
-            // Hämta data från vm
             val finalSamples = vm.recordedSamplesFlow.value
             val finalTime = vm.recordingTimeMillis.value
-
-            // Stoppa inspelningen
             vm.stopRecording()
-
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms.")
 
             val scaleName = (connectionState as? BleConnectionState.Connected)?.deviceName
@@ -126,7 +123,6 @@ fun LiveBrewScreen(
         }
     }
 
-    // Logik: Hantera dialog vid oväntad frånkoppling
     LaunchedEffect(connectionState, isRecording, isPaused, isRecordingWhileDisconnected) {
         if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
             (isRecording) &&
@@ -138,22 +134,16 @@ fun LiveBrewScreen(
         }
     }
 
-    // Bestäm vad som faktiskt ska visas
     val displayMeasurement = remember(liveMeasurement, weightAtPause, isPaused, isRecordingWhileDisconnected, isRecording) {
         val lastKnownWeight = weightAtPause ?: 0f
 
         when {
-            // 1. Om vi är pausade eller frånkopplade, visa den frysta vikten.
             isRecordingWhileDisconnected || isPaused -> {
                 ScaleMeasurement(lastKnownWeight, 0f)
             }
-            // 2. Om vi precis återupptagit inspelningen (isRecording=true) OCH
-            //    den nya live-vikten (0g) är LÄGRE än den pausade (200g),
-            //    fortsätt visa den pausade vikten (200g) tills vågen rapporterar ett högre värde.
             isRecording && liveMeasurement.weightGrams < lastKnownWeight -> {
                 ScaleMeasurement(lastKnownWeight, liveMeasurement.flowRateGramsPerSecond)
             }
-            // 3. Annars (t.ex. live-vikten är > 200g), visa den nya live-vikten.
             else -> {
                 liveMeasurement
             }
@@ -194,11 +184,11 @@ fun LiveBrewScreen(
                 isRecording = isRecording,
                 isPaused = isPaused,
                 isRecordingWhileDisconnected = isRecordingWhileDisconnected,
-                // --- ÄNDRING 2 av 4: SKICKA IN DEN NYA VARIABELN ---
                 showRatio = showRatioInfo,
-                // --- SLUT PÅ ÄNDRING ---
                 showFlow = showFlowInfo,
-                countdown = countdown
+                countdown = countdown,
+                targetWeightMessage = targetWeightMessage, // <-- NY RAD
+                targetWeightState = targetWeightState // <-- NY RAD
             )
             Spacer(Modifier.height(16.dp))
             LiveBrewGraph(
@@ -210,7 +200,6 @@ fun LiveBrewScreen(
             )
             Spacer(Modifier.height(8.dp))
 
-            // --- ÄNDRING 3 av 4: LADE TILL EN ROW RUNT KNAPPARNA ---
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -232,7 +221,7 @@ fun LiveBrewScreen(
                     )
                 )
 
-                Spacer(Modifier.width(8.dp)) // Avstånd mellan knapparna
+                Spacer(Modifier.width(8.dp))
 
                 FilterChip(
                     selected = showFlowInfo,
@@ -251,7 +240,6 @@ fun LiveBrewScreen(
                     )
                 )
             }
-            // --- SLUT PÅ ÄNDRING ---
 
             Spacer(Modifier.height(16.dp))
             BrewControls(
@@ -276,7 +264,6 @@ fun LiveBrewScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        // Om felet var pga setup-data, navigera tillbaka
                         if (error != null && error!!.contains("setup")) {
                             onNavigateBack()
                         }
@@ -285,7 +272,6 @@ fun LiveBrewScreen(
                     }
                 },
                 dismissButton = {
-                    // Visa bara "Stop & Save" om det inte är ett setup-fel
                     if (error == null) {
                         TextButton(onClick = {
                             showDisconnectedAlert = false

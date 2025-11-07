@@ -152,6 +152,11 @@ data class Brew(
     @ColumnInfo(name = "started_at")
     val startedAt: Date = Date(),
 
+    // --- NYTT FÄLT ---
+    @ColumnInfo(name = "target_ratio")
+    val targetRatio: Double? = null,
+    // --- SLUT NYTT FÄLT ---
+
     val notes: String?,
 
     // Lagrar en URI till bilden för den specifika bryggningen.

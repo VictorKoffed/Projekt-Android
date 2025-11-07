@@ -31,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,8 +48,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.withSave
 import com.victorkoffed.projektandroid.data.db.BrewSample
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
+import com.victorkoffed.projektandroid.ui.viewmodel.brew.TargetWeightState
 import kotlin.math.ceil
 import kotlin.math.max
+
+// --- NYA FÄRGER ---
+private val TargetHitGreen = Color(0xFF388E3C) // En mörkare, mättad grön
+private val TargetHitContentColor = Color.White // Vit text för den mörka bakgrunden
 
 @SuppressLint("DefaultLocale")
 @Composable
@@ -63,14 +67,15 @@ fun StatusDisplay(
     isRecordingWhileDisconnected: Boolean,
     showRatio: Boolean,
     showFlow: Boolean,
-    countdown: Int?
+    countdown: Int?,
+    targetWeightMessage: String?,
+    targetWeightState: TargetWeightState
 ) {
     val timeString = remember(currentTimeMillis) {
         val minutes = (currentTimeMillis / 1000 / 60).toInt()
         val seconds = (currentTimeMillis / 1000 % 60).toInt()
         String.format("%02d:%02d", minutes, seconds)
     }
-    // Formaterar endast siffra, enheten (g) blir etikett
     val weightString =
         remember(currentMeasurement.weightGrams) { "%.1f".format(currentMeasurement.weightGrams) }
     val flowString =
@@ -85,40 +90,51 @@ fun StatusDisplay(
         }
     }
 
-    val containerColor = when {
-        countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-        isRecordingWhileDisconnected -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
-        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        isRecording -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    // --- UPPDATERAD FÄRGLOGIK ---
+    // Bestäm container- och content-färgerna (textfärg) TILLSAMMANS
+    val (containerColor, contentColor) = when {
+        countdown != null -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f) to MaterialTheme.colorScheme.onTertiaryContainer
+        isRecordingWhileDisconnected -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) to MaterialTheme.colorScheme.onErrorContainer
+        isPaused -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onSurface
+
+        // Ny logik för target state
+        targetWeightState == TargetWeightState.HIT -> TargetHitGreen to TargetHitContentColor // Mörkgrön bakgrund, vit text
+        targetWeightState == TargetWeightState.OVER_HARD -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f) to MaterialTheme.colorScheme.onErrorContainer
+
+        isRecording -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) to MaterialTheme.colorScheme.onSurface
     }
+    // --- SLUT UPPDATERAD FÄRGLOGIK ---
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor // Sätter standard-textfärgen för ALLT i kortet
+        )
     ) {
         Column(
             modifier = Modifier
-                .padding(vertical = 16.dp, horizontal = 8.dp) // Lade till horisontell padding
+                .padding(vertical = 16.dp, horizontal = 8.dp)
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 120.dp), // Kan vara kortare
+                .defaultMinSize(minHeight = 120.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             if (countdown != null) {
+                // Denna text ärver nu 'onTertiaryContainer' från 'contentColor'
                 Text(
                     text = "Starting in...",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
                     text = countdown.toString(),
                     fontSize = 72.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    fontWeight = FontWeight.Bold
                 )
             } else {
                 // --- TOP ROW: TIME & WEIGHT ---
+                // All text här ärver 'contentColor' (t.ex. vit på grön bakgrund)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -129,16 +145,16 @@ fun StatusDisplay(
                         Text("Time", style = MaterialTheme.typography.labelMedium)
                         Text(
                             text = timeString,
-                            fontSize = 36.sp, // Ny, mindre storlek
+                            fontSize = 36.sp,
                             fontWeight = FontWeight.Light
                         )
                     }
 
                     // Divider
                     Divider(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        color = contentColor.copy(alpha = 0.3f), // Använd ärvd färg
                         modifier = Modifier
-                            .height(48.dp) // Höjden på dividern
+                            .height(48.dp)
                             .width(1.dp)
                     )
 
@@ -147,18 +163,18 @@ fun StatusDisplay(
                         Text("Weight (g)", style = MaterialTheme.typography.labelMedium)
                         Text(
                             text = weightString,
-                            fontSize = 36.sp, // Ny, mindre storlek
+                            fontSize = 36.sp,
                             fontWeight = FontWeight.Light
                         )
                     }
                 }
 
-                // Avstånd mellan raderna
                 if (showRatio || showFlow) {
                     Spacer(Modifier.height(16.dp))
                 }
 
                 // --- BOTTOM ROW: RATIO & FLOW ---
+                // All text här ärver 'contentColor'
                 Row(
                     modifier = Modifier.fillMaxWidth(0.9f),
                     horizontalArrangement = Arrangement.SpaceAround,
@@ -169,7 +185,7 @@ fun StatusDisplay(
                             Text("Ratio", style = MaterialTheme.typography.labelMedium)
                             Text(
                                 text = ratioString,
-                                fontSize = 24.sp, // Mindre storlek
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Light
                             )
                         }
@@ -180,33 +196,46 @@ fun StatusDisplay(
                             Text("Flow", style = MaterialTheme.typography.labelMedium)
                             Text(
                                 text = flowString,
-                                fontSize = 24.sp, // Mindre storlek
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Light
                             )
                         }
                     }
                 }
 
-                // --- STATUS (Paused/Reconnecting) ---
-                if (isPaused || isRecordingWhileDisconnected) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isRecordingWhileDisconnected) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.BluetoothSearching,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.size(4.dp))
-                            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onErrorContainer) {
-                                if (isPaused) {
-                                    Text("Paused - Reconnecting...", fontSize = 14.sp)
-                                } else {
-                                    Text("Recording (Data Paused) - Reconnecting...", fontSize = 14.sp)
-                                }
+                // --- STATUS (Target, Paused, Reconnecting) ---
+                when {
+                    // Target-meddelande (ärver färg, t.ex. vit på grön)
+                    targetWeightMessage != null && !isPaused && !isRecordingWhileDisconnected && isRecording -> {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = targetWeightMessage,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                            // Färg ärvs från Card's 'contentColor'
+                        )
+                    }
+
+                    // Paus/Frånkopplings-meddelande
+                    isPaused || isRecordingWhileDisconnected -> {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isRecordingWhileDisconnected) {
+                                // Ikon och text ärver 'onErrorContainer' från 'contentColor'
+                                Icon(
+                                    Icons.AutoMirrored.Filled.BluetoothSearching,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.size(4.dp))
+                                Text(
+                                    text = if (isPaused) "Paused - Reconnecting..." else "Recording (Data Paused) - Reconnecting...",
+                                    fontSize = 14.sp
+                                )
+                            } else {
+                                // Ärver standard 'contentColor' (t.ex. 'onSurface')
+                                Text("Paused", fontSize = 14.sp)
                             }
-                        } else {
-                            Text("Paused", fontSize = 14.sp)
                         }
                     }
                 }
@@ -215,7 +244,7 @@ fun StatusDisplay(
     }
 }
 
-// ... (Resten av filen, LiveBrewGraph och BrewControls, är exakt densamma) ...
+// ... (Resten av filen, LiveBrewGraph och BrewControls, är oförändrad) ...
 @Composable
 fun LiveBrewGraph(
     samples: List<BrewSample>,
@@ -258,7 +287,6 @@ fun LiveBrewGraph(
     val weightTitleOffsetPx = with(LocalDensity.current) { weightTitleOffsetDp.toPx() }
     val timeTitleOffsetPx = with(LocalDensity.current) { timeTitleOffsetDp.toPx() }
 
-    // Öka bottom-padding så att den nedflyttade titeln inte klipps
     Canvas(
         modifier = modifier.padding(
             start = 32.dp,
@@ -268,7 +296,7 @@ fun LiveBrewGraph(
         )
     ) {
         val axisPadding = 0f
-        val xLabelPadding = 24.dp.toPx() // utrymme för siffrorna (tick labels)
+        val xLabelPadding = 24.dp.toPx()
         val graphWidth = size.width - yLabelPaddingPx - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
@@ -280,7 +308,6 @@ fun LiveBrewGraph(
         val xAxisY = size.height - xLabelPadding
 
         drawContext.canvas.nativeCanvas.apply {
-            // Horisontella gridlinjer + Y-etiketter (massa)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -296,7 +323,6 @@ fun LiveBrewGraph(
                 currentMassGrid += massGridInterval
             }
 
-            // Vertikala gridlinjer + X-etiketter (sekunder)
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
@@ -309,12 +335,10 @@ fun LiveBrewGraph(
                     pathEffect = gridLinePaint.pathEffect
                 )
                 val timeSec = (currentTimeGrid / 1000).toInt()
-                // ⬅️ Siffrorna ligger kvar på samma baslinje (oförändrat)
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
 
-            // ⬇️ Flytta bara titeln "Time" nedåt med timeTitleOffsetPx
             drawText(
                 "Time",
                 yLabelPaddingPx + graphWidth / 2,
@@ -322,7 +346,6 @@ fun LiveBrewGraph(
                 axisLabelPaint
             )
 
-            // Y-titel (roterad)
             withSave {
                 rotate(-90f)
                 drawText(
@@ -334,11 +357,9 @@ fun LiveBrewGraph(
             }
         }
 
-        // Axlar
         drawLine(axisColor, Offset(yLabelPaddingPx, axisPadding), Offset(yLabelPaddingPx, xAxisY))
         drawLine(axisColor, Offset(yLabelPaddingPx, xAxisY), Offset(size.width, xAxisY))
 
-        // Kurvan
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->

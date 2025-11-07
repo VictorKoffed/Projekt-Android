@@ -32,6 +32,7 @@ data class NumericInput(
 data class BrewSetupState(
     val selectedBean: Bean? = null,
     val doseGrams: NumericInput = NumericInput(),
+    val targetRatio: NumericInput = NumericInput(), // <-- NYTT FÄLT (från förra svängen)
     val selectedGrinder: Grinder? = null,
     val grindSetting: String = "",
     val grindSpeedRpm: NumericInput = NumericInput(),
@@ -84,6 +85,20 @@ class BrewSetupViewModel @Inject constructor(
         }
     }
 
+    // --- NY FUNKTION (från förra svängen) ---
+    fun onTargetRatioChange(ratio: String) {
+        val isValid = ratio.matches(decimalRegex)
+        _brewSetupState.update {
+            it.copy(
+                targetRatio = it.targetRatio.copy(
+                    value = ratio,
+                    error = if (isValid || ratio.isBlank()) null else "Måste vara ett giltigt tal (t.ex. 17)"
+                )
+            )
+        }
+    }
+    // --- SLUT NY FUNKTION ---
+
     fun selectGrinder(grinder: Grinder?) {
         _brewSetupState.update { it.copy(selectedGrinder = grinder) }
     }
@@ -127,6 +142,7 @@ class BrewSetupViewModel @Inject constructor(
         val doseValid = doseValue?.let { it > 0 } == true
 
         val noInputErrors = currentState.doseGrams.error == null &&
+                currentState.targetRatio.error == null && // <-- NY KONTROLL (från förra svängen)
                 currentState.grindSpeedRpm.error == null &&
                 currentState.brewTempCelsius.error == null
 
@@ -155,6 +171,9 @@ class BrewSetupViewModel @Inject constructor(
                     it.copy(
                         selectedBean = bean,
                         doseGrams = NumericInput(latestBrew.doseGrams.toString()),
+                        // --- NY ÄNDRING (denna sväng) ---
+                        targetRatio = NumericInput(latestBrew.targetRatio?.toString() ?: ""),
+                        // --- SLUT NY ÄNDRING ---
                         selectedGrinder = grinder,
                         grindSetting = latestBrew.grindSetting ?: "",
                         grindSpeedRpm = NumericInput(latestBrew.grindSpeedRpm?.toInt()?.toString() ?: ""),
@@ -181,6 +200,9 @@ class BrewSetupViewModel @Inject constructor(
             grindSetting = currentSetup.grindSetting.takeIf { it.isNotBlank() },
             grindSpeedRpm = currentSetup.grindSpeedRpm.value.toDoubleOrNull(),
             brewTempCelsius = currentSetup.brewTempCelsius.value.toDoubleOrNull(),
+            // --- NY ÄNDRING (denna sväng) ---
+            targetRatio = currentSetup.targetRatio.value.toDoubleOrNull(),
+            // --- SLUT NY ÄNDRING ---
             notes = currentSetup.notes.takeIf { it.isNotBlank() }
         )
 

@@ -6,15 +6,16 @@
 
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.data.db.BrewSample
-import com.victorkoffed.projektandroid.data.repository.interfaces.ScaleRepository
 import com.victorkoffed.projektandroid.data.repository.interfaces.BeanRepository
 import com.victorkoffed.projektandroid.data.repository.interfaces.BrewRepository
+import com.victorkoffed.projektandroid.data.repository.interfaces.ScaleRepository
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,13 @@ import javax.inject.Inject
 
 data class SaveBrewResult(val brewId: Long?, val beanIdReachedZero: Long? = null)
 
+enum class TargetWeightState {
+    NONE,
+    APPROACHING,
+    HIT,
+    OVER_HARD
+}
+
 private data class ReceivedBrewSetup(
     val beanId: Long,
     val doseGrams: Double,
@@ -41,7 +49,8 @@ private data class ReceivedBrewSetup(
     val grinderId: Long?,
     val grindSetting: String?,
     val grindSpeedRpm: Double?,
-    val brewTempCelsius: Double?
+    val brewTempCelsius: Double?,
+    val targetRatio: Double?
 )
 
 private const val TAG = "LiveBrewViewModel_DEBUG"
@@ -61,7 +70,6 @@ class LiveBrewViewModel @Inject constructor(
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-    // ... (resten av states) ...
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
@@ -80,15 +88,24 @@ class LiveBrewViewModel @Inject constructor(
     private val _countdown = MutableStateFlow<Int?>(null)
     val countdown: StateFlow<Int?> = _countdown.asStateFlow()
 
-    // --- ÄNDRING 1 av 2: LADE TILL DENNA STATEFLOW ---
     private val _doseGrams = MutableStateFlow(0.0)
     val doseGrams: StateFlow<Double> = _doseGrams.asStateFlow()
-    // --- SLUT PÅ ÄNDRING ---
+
+    private val _targetWeight = MutableStateFlow<Double?>(null)
+
+    private val _targetWeightMessage = MutableStateFlow<String?>(null)
+    val targetWeightMessage: StateFlow<String?> = _targetWeightMessage.asStateFlow()
+
+    private val _targetWeightState = MutableStateFlow(TargetWeightState.NONE)
+    val targetWeightState: StateFlow<TargetWeightState> = _targetWeightState.asStateFlow()
 
     private var manualTimerJob: Job? = null
 
     init {
         try {
+            val targetRatioStr = savedStateHandle.get<String>("targetRatio")
+            val targetRatioDouble = targetRatioStr?.toDoubleOrNull()
+
             _setupState = ReceivedBrewSetup(
                 beanId = savedStateHandle.get<Long>("beanId")!!,
                 doseGrams = savedStateHandle.get<String>("doseGrams")!!.toDouble(),
@@ -96,11 +113,13 @@ class LiveBrewViewModel @Inject constructor(
                 grinderId = savedStateHandle.get<Long>("grinderId").let { if (it == -1L) null else it },
                 grindSetting = savedStateHandle.get<String>("grindSetting").let { if (it == "null") null else it },
                 grindSpeedRpm = savedStateHandle.get<String>("grindSpeedRpm").let { if (it == "null") null else it?.toDoubleOrNull() },
-                brewTempCelsius = savedStateHandle.get<String>("brewTempCelsius").let { if (it == "null") null else it?.toDoubleOrNull() }
+                brewTempCelsius = savedStateHandle.get<String>("brewTempCelsius").let { if (it == "null") null else it?.toDoubleOrNull() },
+                targetRatio = targetRatioDouble
             )
-            // --- ÄNDRING 2 av 2: SATTE VÄRDET FÖR DOSEN ---
+
             _doseGrams.value = _setupState!!.doseGrams
-            // --- SLUT PÅ ÄNDRING ---
+            _targetWeight.value = _setupState?.targetRatio?.let { _setupState!!.doseGrams * it }
+
         } catch (e: Exception) {
             Log.e(TAG, "Kunde inte läsa nav arguments för LiveBrewViewModel", e)
             _error.value = "Could not load brew setup. Please go back."
@@ -220,6 +239,10 @@ class LiveBrewViewModel @Inject constructor(
         _isRecordingWhileDisconnected.value = false
         _weightAtPause.value = null
 
+        _targetWeightMessage.value = null
+        _targetWeightState.value = TargetWeightState.NONE
+        _targetWeight.value = _setupState?.targetRatio?.let { _setupState!!.doseGrams * it }
+
         _isRecording.value = true
         startManualTimer()
         Log.d(TAG, "Internal recording state started. Manual timer initiated.")
@@ -276,6 +299,9 @@ class LiveBrewViewModel @Inject constructor(
         _recordedSamplesFlow.value = emptyList()
         _recordingTimeMillis.value = 0L
 
+        _targetWeightMessage.value = null
+        _targetWeightState.value = TargetWeightState.NONE
+
         if (wasRecordingOrPaused && scaleRepo.observeConnectionState().value is BleConnectionState.Connected) {
             scaleRepo.resetTimer()
             Log.d(TAG, "Recording stopped/reset. Sent Reset Timer.")
@@ -284,36 +310,26 @@ class LiveBrewViewModel @Inject constructor(
         }
     }
 
+    @SuppressLint("DefaultLocale")
     private fun addSamplePoint(measurementData: ScaleMeasurement) {
         val sampleTimeMillis = _recordingTimeMillis.value
         if (sampleTimeMillis < 0) return
 
-        // Hämta det senast kända paus-värdet (t.ex. 200g)
         val lastKnownWeight = _weightAtPause.value ?: 0f
-
-        // Hämta det nya live-värdet från vågen (t.ex. 0.5g efter återanslutning)
         val liveWeight = measurementData.weightGrams
-
-        // Välj det högsta av de två.
-        // Om liveWeight (0.5g) < lastKnownWeight (200g), använd lastKnownWeight.
-        // Om liveWeight (201.0g) > lastKnownWeight (200g), använd liveWeight.
         val displayWeight = maxOf(liveWeight, lastKnownWeight)
 
-        // Om vi återansluter och det nya live-värdet nu har "kommit ikapp"
-        // (dvs. vågens rådata + offset är nu högre än pausvärdet),
-        // måste vi nollställa _weightAtPause så att vi inte fastnar på det gamla värdet.
         if (liveWeight > lastKnownWeight) {
             _weightAtPause.value = null
         }
 
-        // Använd 'displayWeight' istället för 'measurementData.weightGrams'
         val weightGramsDouble = String.format(Locale.US, "%.1f", displayWeight).toDouble()
         val flowRateDouble = measurementData.formatFlowRateToDouble()
 
         val newSample = BrewSample(
             brewId = 0,
             timeMillis = sampleTimeMillis,
-            massGrams = weightGramsDouble, // <-- Använder det korrigerade värdet
+            massGrams = weightGramsDouble,
             flowRateGramsPerSecond = flowRateDouble
         )
 
@@ -323,6 +339,47 @@ class LiveBrewViewModel @Inject constructor(
             } else {
                 list + newSample
             }
+        }
+
+        val target = _targetWeight.value
+        if (target == null || !_isRecording.value || _isPaused.value) {
+            if(_targetWeightState.value != TargetWeightState.NONE) {
+                _targetWeightState.value = TargetWeightState.NONE
+                _targetWeightMessage.value = null
+            }
+        } else {
+            // --- NY LOGIK FÖR +/- 5 GRAM ---
+            val diff = target - displayWeight // Positivt om vi är UNDER
+            val over = displayWeight - target // Positivt om vi är ÖVER
+
+            when {
+                // 1. Långt över (RÖD)
+                displayWeight > target + 5.0 -> {
+                    _targetWeightState.value = TargetWeightState.OVER_HARD
+                    _targetWeightMessage.value = "%.1f g over target".format(over)
+                }
+
+                // 2. Inom den gröna zonen (+/- 5g)
+                displayWeight >= target - 5.0 -> {
+                    _targetWeightState.value = TargetWeightState.HIT // GRÖN bakgrund
+
+                    // Sätt texten baserat på om vi är över eller under
+                    if (displayWeight > target) {
+                        // Fortfarande grön, men visa "över"
+                        _targetWeightMessage.value = "%.1f g over target".format(over)
+                    } else {
+                        // Grön, och visa "kvar"
+                        _targetWeightMessage.value = "%.1f g remaining".format(diff)
+                    }
+                }
+
+                // 3. Långt under (NORMAL)
+                else -> {
+                    _targetWeightState.value = TargetWeightState.APPROACHING
+                    _targetWeightMessage.value = "%.1f g remaining".format(diff)
+                }
+            }
+            // --- SLUT PÅ NY LOGIK ---
         }
     }
 
@@ -363,6 +420,7 @@ class LiveBrewViewModel @Inject constructor(
             grindSetting = setup.grindSetting,
             grindSpeedRpm = setup.grindSpeedRpm,
             brewTempCelsius = setup.brewTempCelsius,
+            targetRatio = setup.targetRatio,
             notes = "Recorded${scaleInfo} on ${
                 SimpleDateFormat(
                     "yyyy-MM-dd HH:mm",
@@ -375,7 +433,7 @@ class LiveBrewViewModel @Inject constructor(
         val savedBrewId: Long? = viewModelScope.async {
             try {
                 Log.d(TAG, "saveLiveBrew: Startar repository-transaktion (addBrewWithSamples)...")
-                val id = brewRepository.addBrewWithSamples(newBrew, finalSamples) // <-- ÄNDRAD
+                val id = brewRepository.addBrewWithSamples(newBrew, finalSamples)
                 Log.d(TAG, "saveLiveBrew: Repository-transaktion LYCKADES. Ny BrewId: $id")
                 clearError()
                 id
@@ -393,7 +451,7 @@ class LiveBrewViewModel @Inject constructor(
 
         var beanIdReachedZero: Long? = null
         try {
-            val bean = beanRepository.getBeanById(setup.beanId) // <-- ÄNDRAD
+            val bean = beanRepository.getBeanById(setup.beanId)
             if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
                 beanIdReachedZero = setup.beanId
             }

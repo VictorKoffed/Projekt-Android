@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BrewSample::class
     ],
     views = [BrewMetrics::class],
-    version = 4,
+    version = 5, // <-- ÄNDRING: Höjt från 4 till 5
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -81,7 +81,11 @@ object Migrations {
      */
     val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // db.execSQL("ALTER TABLE 'Bean' ADD COLUMN 'new_column' INTEGER NOT NULL DEFAULT 0")
+            // --- NY SQL-KOD ---
+            // Lägg till den nya kolumnen 'target_ratio' i 'Brew'-tabellen.
+            // REAL motsvarar Double/Float i Kotlin.
+            db.execSQL("ALTER TABLE 'Brew' ADD COLUMN 'target_ratio' REAL DEFAULT NULL")
+            // --- SLUT NY SQL-KOD ---
         }
     }
 }

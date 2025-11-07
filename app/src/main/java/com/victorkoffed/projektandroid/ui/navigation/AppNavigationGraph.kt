@@ -120,7 +120,8 @@ fun AppNavigationGraph(
                         grinderId = setupState.selectedGrinder?.id,
                         grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
                         grindSpeedRpm = setupState.grindSpeedRpm.value.takeIf { it.isNotBlank() },
-                        brewTempCelsius = setupState.brewTempCelsius.value.takeIf { it.isNotBlank() }
+                        brewTempCelsius = setupState.brewTempCelsius.value.takeIf { it.isNotBlank() },
+                        targetRatio = setupState.targetRatio.value.takeIf { it.isNotBlank() } // <-- NY RAD
                     )
                     navController.navigate(route)
                 },

@@ -149,6 +149,22 @@ fun BrewScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // --- NYTT FÄLT FÖR TARGET RATIO ---
+                OutlinedTextField(
+                    value = setupState.targetRatio.value,
+                    onValueChange = { vm.onTargetRatioChange(it) },
+                    label = { Text("Target Ratio (e.g. 17 for 1:17)") },
+                    isError = setupState.targetRatio.error != null,
+                    supportingText = {
+                        if (setupState.targetRatio.error != null) {
+                            Text(text = setupState.targetRatio.error!!)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // --- SLUT NYTT FÄLT ---
+
                 Spacer(Modifier.height(8.dp))
 
                 DropdownSelector(

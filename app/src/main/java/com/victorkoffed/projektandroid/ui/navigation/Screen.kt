@@ -28,14 +28,15 @@ sealed class Screen(val route: String) {
     /**
      * Navigeringsväg för live-bryggning. Kräver setup-data som argument.
      * Obligatoriska: beanId, doseGrams, methodId
-     * Valfria: grinderId, grindSetting, grindSpeedRpm, brewTempCelsius
+     * Valfria: grinderId, grindSetting, grindSpeedRpm, brewTempCelsius, targetRatio
      */
     object LiveBrew : Screen(
         route = "live_brew/{beanId}/{doseGrams}/{methodId}?" +
                 "grinderId={grinderId}&" +
                 "grindSetting={grindSetting}&" +
                 "grindSpeedRpm={grindSpeedRpm}&" +
-                "brewTempCelsius={brewTempCelsius}"
+                "brewTempCelsius={brewTempCelsius}&" +
+                "targetRatio={targetRatio}" // Argumentet måste finnas i rutten
     ) {
         val arguments = listOf(
             // Obligatoriska
@@ -46,7 +47,15 @@ sealed class Screen(val route: String) {
             navArgument("grinderId") { type = NavType.LongType; defaultValue = -1L },
             navArgument("grindSetting") { type = NavType.StringType; defaultValue = "null" }, // Skickas som "null"
             navArgument("grindSpeedRpm") { type = NavType.StringType; defaultValue = "null" },
-            navArgument("brewTempCelsius") { type = NavType.StringType; defaultValue = "null" }
+            navArgument("brewTempCelsius") { type = NavType.StringType; defaultValue = "null" },
+
+            // --- FIX FÖR KRASCH ---
+            navArgument("targetRatio") {
+                type = NavType.StringType
+                nullable = true       // 1. Tala om att argumentet FÅR vara null
+                defaultValue = null     // 2. Standardsvärdet ÄR null
+            }
+            // --- SLUT PÅ FIX ---
         )
 
         /** Bygger den fullständiga rutten med all setup-data. */
@@ -57,16 +66,22 @@ sealed class Screen(val route: String) {
             grinderId: Long?,
             grindSetting: String?,
             grindSpeedRpm: String?,
-            brewTempCelsius: String?
+            brewTempCelsius: String?,
+            targetRatio: String?
         ): String {
             val baseRoute = "live_brew/$beanId/$doseGrams/$methodId"
             // Lägg till valfria parametrar.
-            // Vi använder "null" som sträng-placeholder för null-värden.
+            // Vi använder "null" som sträng-placeholder för de gamla null-värdena.
             return "$baseRoute?" +
                     "grinderId=${grinderId ?: -1L}&" +
                     "grindSetting=${grindSetting ?: "null"}&" +
                     "grindSpeedRpm=${grindSpeedRpm ?: "null"}&" +
-                    "brewTempCelsius=${brewTempCelsius ?: "null"}"
+                    "brewTempCelsius=${brewTempCelsius ?: "null"}&" +
+                    // --- FIX FÖR KRASCH ---
+                    // 3. Skicka en TOM STRÄNG ("") istället för strängen "null".
+                    // En tom sträng är en giltig StringType, till skillnad från ett null-objekt.
+                    "targetRatio=${targetRatio ?: ""}"
+            // --- SLUT PÅ FIX ---
         }
     }
 
