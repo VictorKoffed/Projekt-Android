@@ -79,7 +79,7 @@ fun BrewDetailScreen(
     viewModel: BrewDetailViewModel,
     snackbarHostState: SnackbarHostState
 ) {
-    // --- States ---
+    // --- States --- k
     val state by viewModel.brewDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
     val showArchivePromptOnEntry by viewModel.showArchivePromptOnEntry.collectAsState()
