@@ -233,14 +233,14 @@ All AI-genererad kod har granskats, testats och validerats manuellt av en mänsk
 
 1. Assisted brew, målvikt, tider att sikta på mm? kanske visa ratio mellan kaffe och vatten live i livebrew?(Nästan klart)
 2. Visa i grafen med den markering där man lyft på bryggaren för att swirla.
-3. Integrea espresso läge med Bookoo EM.
+3. Integrea espresso läge med Bookoo EM. https://github.com/BooKooCode/OpenSource/blob/main/espresso_monitor/protocols.md
 4. Lägga till rating till brews och bönor.
 5. Lägga till en del om rostning av bönor.
 6. Sökfunktion på bönor.
 7. lägga till en del om vattenkemi.
 8. lägga till inköpspris, ursprungsland, region och smaknotiringar av bönan.
-9. Lägga till recept, färdiga samt möjlighet att göra egna, inspration, Brew timer
-10. Lägga till defluid R2
+9. Lägga till recept, färdiga samt möjlighet att göra egna, inspration, Brew timer https://play.google.com/store/apps/details?id=com.apptivity.brewtimer
+10. Lägga till defluid R2 https://digitizefluid.com/en-se/pages/difluid-developer-sdk-partnership
 11. kunna exportera bönor, brew graph till andra enheter och användare?
 12. kunna återanvända en gammal brewgrapf för att kunna följa den i en ny brew
 13. Fixa landskapsläge i hela appen.
