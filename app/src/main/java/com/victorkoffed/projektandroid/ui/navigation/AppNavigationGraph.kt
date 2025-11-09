@@ -113,16 +113,22 @@ fun AppNavigationGraph(
             BrewScreen(
                 onStartBrewClick = { setupState ->
                     // Validerad data tas emot, bygg route och navigera
+
+                    // --- START KORRIGERING ---
+                    // Vi måste skicka strängar (även tomma), inte null,
+                    // för att matcha NavType.StringType. Ta bort takeIf().
                     val route = Screen.LiveBrew.createRoute(
                         beanId = setupState.selectedBean!!.id,
                         doseGrams = setupState.doseGrams.value,
                         methodId = setupState.selectedMethod!!.id,
                         grinderId = setupState.selectedGrinder?.id,
-                        grindSetting = setupState.grindSetting.takeIf { it.isNotBlank() },
-                        grindSpeedRpm = setupState.grindSpeedRpm.value.takeIf { it.isNotBlank() },
-                        brewTempCelsius = setupState.brewTempCelsius.value.takeIf { it.isNotBlank() },
-                        targetRatio = setupState.targetRatio.value.takeIf { it.isNotBlank() } // <-- NY RAD
+                        grindSetting = setupState.grindSetting, // Skicka strängen (även om tom)
+                        grindSpeedRpm = setupState.grindSpeedRpm.value, // Skicka strängen (även om tom)
+                        brewTempCelsius = setupState.brewTempCelsius.value, // Skicka strängen (även om tom)
+                        targetRatio = setupState.targetRatio.value // Skicka strängen (även om tom)
                     )
+                    // --- SLUT KORRIGERING ---
+
                     navController.navigate(route)
                 },
                 onSaveWithoutGraph = { newBrewId ->
