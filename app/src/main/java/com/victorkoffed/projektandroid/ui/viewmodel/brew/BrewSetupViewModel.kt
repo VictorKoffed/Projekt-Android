@@ -126,14 +126,12 @@ class BrewSetupViewModel @Inject constructor(
         val doseValue = currentState.doseGrams.value.toDoubleOrNull()
         val doseValid = doseValue?.let { it > 0 } == true
 
-        val noInputErrors = currentState.doseGrams.error == null &&
-                currentState.grindSpeedRpm.error == null &&
-                currentState.brewTempCelsius.error == null
+        val mandatoryInputsValid = currentState.doseGrams.error == null
 
         return currentState.selectedBean != null &&
                 currentState.selectedMethod != null &&
                 doseValid &&
-                noInputErrors
+                mandatoryInputsValid // Uppdaterad kontroll
     }
 
     fun getCurrentSetup(): BrewSetupState { return _brewSetupState.value }
@@ -172,9 +170,16 @@ class BrewSetupViewModel @Inject constructor(
             return null
         }
         val currentSetup = _brewSetupState.value
+
+        val doseGramsValue = currentSetup.doseGrams.value.toDoubleOrNull()
+        if (doseGramsValue == null || doseGramsValue <= 0) {
+            _error.value = "Dose must be a valid positive number."
+            return null
+        }
+
         val newBrew = Brew(
             beanId = currentSetup.selectedBean!!.id,
-            doseGrams = currentSetup.doseGrams.value.toDouble(),
+            doseGrams = doseGramsValue,
             startedAt = Date(System.currentTimeMillis()),
             grinderId = currentSetup.selectedGrinder?.id,
             methodId = currentSetup.selectedMethod!!.id,
