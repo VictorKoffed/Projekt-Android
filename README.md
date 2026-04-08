@@ -216,6 +216,36 @@ Delar av denna kodbas har skapats, refaktorerats eller assisterats med hjälp av
 * **ChatGPT** (för utformning av komplexa algoritmer och dokumentation).
 * **Gemini** (för autokomplettering, boilerplate och tester).
 
+## 👥 Projekt & Kurskontext
+
+Detta projekt utvecklades som ett individuellt projekt inom kursen:
+
+**Systemutveckling för mobila applikationer II (7,5 hp)**  
+(*System Development for Mobile Applications II, 7.5 credits*)
+
+Projektet fokuserar på utveckling av en modern Android-applikation med integration mot extern hårdvara och lokal datalagring.
+
+### 🎯 Fokus i projektet
+
+Arbetet omfattade:
+
+- Utveckling av en native Android-app med Jetpack Compose  
+- Integration med Bluetooth Low Energy (BLE) för realtidsdata från extern enhet  
+- Lokal datalagring med Room (SQLite) och repository-arkitektur  
+- Implementering av MVVM/MVI-inspirerad arkitektur  
+- Användning av dependency injection med Hilt  
+- Hantering av mobil hårdvara (kamera och BLE)  
+- Design av responsivt och modernt mobilgränssnitt  
+
+### 🧠 Lärandeperspektiv
+
+Projektet gav praktisk erfarenhet inom:
+
+- Systemdesign för mobila applikationer  
+- Integration av hårdvarunära funktioner i Android  
+- Arkitekturval i moderna mobilappar  
+- Realtidsdatahantering med Kotlin Coroutines och Flow  
+
 ### Omfattning av AI-assistans
 
 AI har huvudsakligen använts för:
