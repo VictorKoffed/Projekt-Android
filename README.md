@@ -148,6 +148,9 @@ Kör tester:
 📲 Flowchart (Live version)
 <p > <img src="docs/images/Flowchart.png" alt="Coffee Journal App Screenshot" width="955"/> </p>
 
+### 🎬 Demo
+https://github.com/user-attachments/assets/51382519-2b58-4130-84e8-cf8f1e16e673
+
 ---
 
 ## 📚 Katalog över viktiga filer
