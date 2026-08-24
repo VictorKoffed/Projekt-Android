@@ -228,6 +228,8 @@ Den fungerande versionen av appen.
   <img src="docs/images/Flowchart.png" alt="Coffee Journal Flowchart" width="955"/>
 </p>
 
+### lägga till bild på vågen
+
 ### 🎬 Demo
 
 <div align="center">
