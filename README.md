@@ -322,20 +322,20 @@ En senare version av designen.
   <img src="docs/images/mockup_home.png" alt="Mockup Home" width="1296"/>
 </p>
 
-### ⚖️ Bookoo Smart Scale
-
-Den smarta kaffevåg som används för att skicka bryggdata till appen via Bluetooth Low Energy.
-
-<p>
-  <img src="docs/images/BookooTermisMini.png" alt="Bookoo Termis Mini Smart Scale" width="500"/>
-</p>
-
 ### 📲 Faktisk app
 
 Den fungerande versionen av appen.
 
 <p>
   <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="1299"/>
+</p>
+
+### ⚖️ Bookoo Smart Scale
+
+Den smarta kaffevåg som används för att skicka bryggdata till appen via Bluetooth Low Energy.
+
+<p>
+  <img src="docs/images/BookooTermisMini.png" alt="Bookoo Termis Mini Smart Scale" width="500"/>
 </p>
 
 ### 🔄 Appens flöde
