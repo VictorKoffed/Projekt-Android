@@ -1,12 +1,10 @@
-/*
-* EXTERNT PROTOKOLL: Hela BLE-protokollet (tjänster, karaktäristiker, byte-kommandon och svar)
- * är baserat på det öppna protokollet för Bookoo-vågen.
- * Källa: https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
+/**
+ * EXTERNAL PROTOCOL: The BLE protocol implementation (services, characteristics, byte commands, and responses)
+ * is based on the open protocol for the Bookoo scale.
+ * Source: https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md
  *
- * Referensnotering (AI-assistans): Kärnimplementeringen för BLE-kommunikation
- * (BluetoothGattCallback, hantering av service discovery och notifikationer)
- * har skapats och strukturerats med omfattande AI-assistans för att hantera
- * plattformsspecifika utmaningar och trådsäkerhet. Se README.md för AI-verktyg.
+ * Implementation Note: The core BLE communication structure (BluetoothGattCallback, service discovery,
+ * and notifications) was designed to handle platform-specific GATT challenges and thread-safety constraints.
  */
 
 package com.victorkoffed.projektandroid.data.ble
@@ -45,6 +43,11 @@ private const val GATT_SUCCESS_COMPAT = 0
 private const val GATT_UNKNOWN_ERROR_COMPAT = -1
 private const val TAG = "BookooBleClient"
 
+/**
+ * Manages Bluetooth Low Energy (BLE) communication with the Bookoo smart scale.
+ * Responsibilities include scanning, connection lifecycle management, thread-safe GATT operations,
+ * and propagating real-time weight/flow measurements to the application layer.
+ */
 @SuppressLint("MissingPermission")
 class BookooBleClient(private val context: Context) {
 
@@ -120,7 +123,9 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-    /** Startar BLE-skanning och skickar ScanResult via Flow. */
+    /**
+     * Initiates BLE scanning and emits results continuously.
+     */
     fun startScan(): Flow<ScanResult> = callbackFlow {
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) { trySend(result).isSuccess }
@@ -130,7 +135,7 @@ class BookooBleClient(private val context: Context) {
         val adapter = btAdapter
         val currentScanner = scanner
 
-        // Kontroller i callbackFlow är sista utvägen i datalagret för att hantera Bluetooth-tillstånd
+        // Final fallback validation in the data layer to ensure hardware availability before emitting to the flow.
         if (adapter == null) {
             close(IllegalStateException("Bluetooth hardware not available."))
         } else if (!adapter.isEnabled) {
@@ -160,15 +165,15 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-    /** Initierar anslutning till en enhet med den givna BLE-adressen. */
-    /** Initierar anslutning till en enhet med den givna BLE-adressen. */
+    /**
+     * Establishes a GATT connection to a device by its MAC address.
+     * Enforces strict main-thread execution for GATT operations to prevent platform-specific race conditions.
+     */
     fun connect(address: String) {
         val currentState = connectionState.value
-        // Förhindra anslutning om vi redan är anslutna eller håller på att ansluta
         if ((currentState is BleConnectionState.Connected && currentState.deviceAddress == address) || currentState is BleConnectionState.Connecting) return
 
-        // 1. Städa upp gamla resurser innan vi fortsätter.
-        handleGattCleanup(gatt.get()) // <-- Använd .get()
+        handleGattCleanup(gatt.get())
 
         val adapter = btAdapter
         if (adapter == null) {
@@ -180,21 +185,19 @@ class BookooBleClient(private val context: Context) {
             return
         }
 
-        // KÖRS ALLTID PÅ HUVUDTRÅDEN FÖR GATT-SÄKERHET
+        // Android's BLE stack requires GATT connections and state transitions to be invoked on the main thread.
         mainHandler.post {
             try {
-                // Sätt state till Connecting (Måste ske på Main Thread)
                 if (connectionState.value !is BleConnectionState.Connecting) {
                     connectionState.value = BleConnectionState.Connecting
                 }
 
                 val device = adapter.getRemoteDevice(address)
 
-                // 2. Anropa connectGatt. (Måste ske på Main Thread/med Looper)
                 val newGatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
 
-                // 3. TILLDELA GATT OMEDELBART OCH TRÅDSÄKERT PÅ SAMMA TRÅD
-                gatt.set(newGatt) // <-- ÄNDRING 2: Använd AtomicReference.set()
+                // Atomic assignment on the main thread prevents callbacks from accessing a stale GATT instance.
+                gatt.set(newGatt)
 
                 if (newGatt == null) {
                     Log.e(TAG, "connectGatt returned null.")
@@ -220,17 +223,17 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-    /** Stänger den nuvarande BLE-anslutningen. */
+    /**
+     * Terminates the current BLE connection and releases GATT resources.
+     */
     fun disconnect() {
-        handleGattCleanup(gatt.get()) // <-- Använd .get()
+        handleGattCleanup(gatt.get())
     }
-
-    // --- Hjälpfunktioner för GATT Callback-logik (Utbruten logik) ---
 
     private fun handleConnectionSuccess(gatt: BluetoothGatt) {
         Log.i(TAG, "Successfully connected to ${gatt.device.address}")
 
-        // KONTROLL: Ignorera callback om denna GATT-instans inte längre är den aktiva
+        // Drop callbacks from stale GATT instances lingering in the OS queue after rapid disconnects.
         if (this.gatt.get() != gatt) {
             Log.w(TAG, "Ignoring connection success for old GATT instance.")
             handleGattCleanup(gatt)
@@ -240,7 +243,6 @@ class BookooBleClient(private val context: Context) {
         connectionState.value = BleConnectionState.Connecting
         mainHandler.post {
             try {
-                // Dubbelkontroll inuti post
                 if (this.gatt.get() != gatt) return@post
 
                 if (!gatt.discoverServices()) {
@@ -260,7 +262,7 @@ class BookooBleClient(private val context: Context) {
     }
 
     private fun handleServiceDiscoverySuccess(gatt: BluetoothGatt) {
-        // KONTROLL: Ignorera callback om denna GATT-instans inte längre är den aktiva
+        // Guard against stale GATT callbacks.
         if (this.gatt.get() != gatt) {
             Log.w(TAG, "Ignoring service discovery success for old GATT instance.")
             handleGattCleanup(gatt)
@@ -284,7 +286,7 @@ class BookooBleClient(private val context: Context) {
     }
 
     private fun handleCccdWriteSuccess(gatt: BluetoothGatt) {
-        // KONTROLL: Ignorera callback om denna GATT-instans inte längre är den aktiva
+        // Guard against stale GATT callbacks.
         if (this.gatt.get() != gatt) {
             Log.w(TAG, "Ignoring CCCD write success for old GATT instance.")
             handleGattCleanup(gatt)
@@ -310,17 +312,19 @@ class BookooBleClient(private val context: Context) {
         handleGattCleanup(gatt)
     }
 
-    /** Städar upp GATT-resurser och sätter disonnected state. */
+    /**
+     * Safely releases GATT resources and resets the connection state.
+     * Utilizes compare-and-set (CAS) to ensure only the active GATT instance is cleaned up,
+     * preventing accidental closure of newly established connections.
+     */
     private fun handleGattCleanup(gattInstance: BluetoothGatt?) {
         if (gattInstance == null) return
         val address = gattInstance.device.address
         Log.d(TAG, "Handling disconnect/cleanup for $address")
 
-        // FÖRSÖK REKOMMENDERAD GATT CLOSE/DISCONNECT FÖR DEN SPECIFIKA INSTANSEN
         try { gattInstance.disconnect(); gattInstance.close() }
         catch (e: Exception) { Log.e(TAG, "Exception during GATT cleanup for $address", e) }
 
-        // ÄNDRING 3: Försök nollställa AtomicReference endast om den refererar till den instans vi nu städar upp
         val cleanedUp = gatt.compareAndSet(gattInstance, null)
 
         if (cleanedUp) {
@@ -345,7 +349,6 @@ class BookooBleClient(private val context: Context) {
         }
 
         mainHandler.post {
-            // ÄNDRING 4: Hämta den nuvarande referensen på main-tråden och jämför
             val currentGatt = this.gatt.get()
             if (currentGatt != gatt) {
                 Log.w(TAG, "Skipping enableNotifications: GATT reference was replaced.")
@@ -394,7 +397,6 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-    /** Hanterar inkommande data från vågen via notifikationer. */
     private fun handleCharacteristicChanged(
         characteristic: BluetoothGattCharacteristic,
         data: ByteArray
@@ -418,42 +420,42 @@ class BookooBleClient(private val context: Context) {
         }
     }
 
-    // --- Funktioner för att skicka kommandon ---
-
-    /** Skickar Tare-kommandot (0x01). */
+    /** Sends the Tare command. */
     fun sendTareCommand() {
-        // Checksum = 03 ^ 0A ^ 01 ^ 00 ^ 00 = 08
+        // Checksum logic: 0x03 ^ 0x0A ^ 0x01 ^ 0x00 ^ 0x00 = 0x08
         sendCommand(byteArrayOf(0x03, 0x0A, 0x01, 0x00, 0x00, 0x08), "Tare")
     }
 
-    /** Skickar Tare and Start Timer-kommandot (0x07). */
+    /** Sends the Tare and Start Timer command. */
     fun sendTareAndStartTimerCommand() {
-        // Checksum = 03 ^ 0A ^ 07 ^ 00 ^ 00 = 00
+        // Checksum logic: 0x03 ^ 0x0A ^ 0x07 ^ 0x00 ^ 0x00 = 0x00
         sendCommand(byteArrayOf(0x03, 0x0A, 0x07, 0x00, 0x00, 0x00), "Tare and Start Timer")
     }
 
-    /** Skickar Stop Timer-kommandot (0x05). */
+    /** Sends the Stop Timer command. */
     fun sendStopTimerCommand() {
-        // Checksum = 03 ^ 0A ^ 05 ^ 00 ^ 00 = 0D
+        // Checksum logic: 0x03 ^ 0x0A ^ 0x05 ^ 0x00 ^ 0x00 = 0x0D
         sendCommand(byteArrayOf(0x03, 0x0A, 0x05, 0x00, 0x00, 0x0D), "Stop Timer")
     }
 
-    /** Skickar Reset Timer-kommandot (0x06). */
+    /** Sends the Reset Timer command. */
     fun sendResetTimerCommand() {
-        // Checksum = 03 ^ 0A ^ 06 ^ 00 ^ 00 = 0C
+        // Checksum logic: 0x03 ^ 0x0A ^ 0x06 ^ 0x00 ^ 0x00 = 0x0C
         sendCommand(byteArrayOf(0x03, 0x0A, 0x06, 0x00, 0x00, 0x0C), "Reset Timer")
     }
 
-    /** Skickar Start Timer-kommandot (0x04). */
+    /** Sends the Start Timer command. */
     fun sendStartTimerCommand() {
-        // Checksum = 03 ^ 0A ^ 04 ^ 00 ^ 00 = 0A
+        // Checksum logic: 0x03 ^ 0x0A ^ 0x04 ^ 0x00 ^ 0x00 = 0x0A
         sendCommand(byteArrayOf(0x03, 0x0A, 0x04, 0x00, 0x00, 0x0A), "Start Timer")
     }
 
-    /** Gemensam funktion för att skicka kommandon till COMMAND_CHARACTERISTIC_UUID. */
+    /**
+     * Writes a byte array command to the scale's command characteristic.
+     * Handles platform-specific API differences (Tiramisu vs older versions) for descriptor writes.
+     */
     @SuppressLint("MissingPermission")
     private fun sendCommand(commandBytes: ByteArray, commandName: String) {
-        // ÄNDRING 5: Använd AtomicReference.get() för att säkert hämta den aktuella gatt-instansen
         val currentGatt = gatt.get() ?: run { Log.e(TAG, "Cannot send $commandName: gatt null."); return }
 
         val commandChar = currentGatt.getService(BOOKOO_SERVICE_UUID)?.getCharacteristic(COMMAND_CHARACTERISTIC_UUID)
@@ -461,7 +463,7 @@ class BookooBleClient(private val context: Context) {
         if (commandChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0) { Log.e(TAG, "$commandName characteristic not writable."); return }
 
         mainHandler.post {
-            // Jämför GATT-referensen igen på main-tråden för att fånga race conditions
+            // Re-verify GATT reference on the main thread to catch race conditions where the connection drops right before the write execution.
             val gattInstance = gatt.get()
             if (gattInstance != currentGatt) {
                 Log.e(TAG, "Cannot send $commandName: gatt changed or became null before write.")

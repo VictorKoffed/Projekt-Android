@@ -7,39 +7,34 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Kontraktet (interfacet) för att hantera all kommunikation med BLE-vågen.
- * Abstraherar bort den underliggande BLE-implementeringen.
+ * Defines the contract for hardware integration with smart coffee scales via BLE.
+ * Abstracts protocol-specifics to provide a unified API for real-time telemetry,
+ * connection lifecycle management, and hardware command orchestration.
  */
 interface ScaleRepository {
-    /** Startar BLE-skanning och skickar kontinuerligt ut en uppdaterad lista över upptäckta enheter. */
+
     fun startScanDevices(): Flow<List<DiscoveredDevice>>
 
-    /** Initierar anslutning till enheten med den givna BLE-adressen. */
     fun connect(address: String)
 
-    /** Stänger den nuvarande BLE-anslutningen. */
     fun disconnect()
 
-    /** * Ger en Flow med kontinuerliga, TARER-JUSTERADE mätvärden (vikt/flöde/tid)
-     * från den anslutna vågen.
+    /**
+     * Emits real-time scale measurements.
+     * Implementations must ensure emitted values are software-adjusted to account for local taring offsets,
+     * providing immediate UI feedback (a zeroed state) without waiting for a hardware round-trip response.
      */
-    fun observeMeasurements(): StateFlow<ScaleMeasurement> // Ändrad till StateFlow
+    fun observeMeasurements(): StateFlow<ScaleMeasurement>
 
-    /** Ger en StateFlow som reflekterar den aktuella anslutningsstatusen (Disconnected, Connecting, Connected, Error). */
     fun observeConnectionState(): StateFlow<BleConnectionState>
 
-    /** Skickar kommandot för att nollställa (tarera) vågens mätvärde (0x01). */
     fun tareScale()
 
-    /** Skickar kommandot för att nollställa (tarera) OCH starta vågens interna timer (0x07). */
     fun tareScaleAndStartTimer()
 
-    /** Skickar kommandot för att stoppa vågens interna timer (0x05). */
     fun stopTimer()
 
-    /** Skickar kommandot för att nollställa vågens interna timer (0x06). */
     fun resetTimer()
 
-    /** Skickar kommandot för att starta vågens interna timer (0x04). */
     fun startTimer()
 }

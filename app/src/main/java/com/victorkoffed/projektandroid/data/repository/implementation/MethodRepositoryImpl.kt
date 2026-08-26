@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Concrete implementation of [MethodRepository] bridging the domain layer and the local database.
+ * Mediates persistence operations for brewing methods (e.g., V60, Aeropress) used to categorize and track brew sessions.
+ */
 @Singleton
 class MethodRepositoryImpl @Inject constructor(
     private val dao: CoffeeDao

@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Huvuddatabas-klassen för appen.
- * Definierar alla entities (tabeller), vyer och konverterare.
+ * Central persistence layer for the Coffee Journal application.
+ * Manages local storage of brewing configurations, execution data, and derived metrics.
  */
 @Database(
     entities = [
@@ -33,10 +33,6 @@ abstract class CoffeeDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: CoffeeDatabase? = null
 
-        /**
-         * Returnerar den singleton-instansen av databasen.
-         * Bygger instansen om den inte redan existerar, synkroniserat.
-         */
         fun getInstance(context: Context): CoffeeDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -45,8 +41,6 @@ abstract class CoffeeDatabase : RoomDatabase() {
                     "coffee_journal.db"
                 )
                     .addCallback(DatabaseCallback)
-                    // För att undvika krasch i produktion MÅSTE man lägga till en Migration
-                    // för varje versionshopp (t.ex. 4 till 5, 5 till 6, etc.)
                     .addMigrations(
                         Migrations.MIGRATION_4_5
                     )
@@ -57,14 +51,15 @@ abstract class CoffeeDatabase : RoomDatabase() {
         }
 
         /**
-         * Callback för att köra initial SQL, t.ex. PRAGMA, skapa Vyer, och för-populera.
+         * Enforces database-level constraints and seeds default domain data upon initial creation.
          */
         private val DatabaseCallback = object : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
+
+                // Enforces cascading deletes across related tables (e.g., deleting a Bean removes its Brews).
                 db.execSQL("PRAGMA foreign_keys = ON;")
 
-                // För-populera med vanliga bryggmetoder
                 db.execSQL("INSERT INTO Method (name) VALUES ('V60');")
                 db.execSQL("INSERT INTO Method (name) VALUES ('Aeropress');")
             }
@@ -72,13 +67,12 @@ abstract class CoffeeDatabase : RoomDatabase() {
     }
 }
 
-// --- Migrations-klass för att demonstrera/förbereda ---
-// För framtida versioner: Implementera en Migration för varje versionshopp.
+/**
+ * Registry for database schema migrations.
+ * Ensures data preservation during structural changes across version increments.
+ */
 object Migrations {
-    /**
-     * Exempel på en migration från version 4 till version 5.
-     * Denna MÅSTE implementeras med faktisk SQL om du ändrar schemat.
-     */
+
     val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             // db.execSQL("ALTER TABLE 'Bean' ADD COLUMN 'new_column' INTEGER NOT NULL DEFAULT 0")

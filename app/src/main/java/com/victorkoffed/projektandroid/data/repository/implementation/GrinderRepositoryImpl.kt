@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Concrete implementation of [GrinderRepository] bridging the domain layer and the local database.
+ * Mediates persistence operations for coffee grinder equipment profiles used in brewing sessions.
+ */
 @Singleton
 class GrinderRepositoryImpl @Inject constructor(
     private val dao: CoffeeDao

@@ -4,7 +4,9 @@ import com.victorkoffed.projektandroid.data.db.Method
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Interface för att hantera dataoperationer relaterade till Bryggmetoder (Method).
+ * Defines the data operations for managing brewing methods (e.g., V60, Aeropress).
+ * Abstracts the persistence layer to allow observation and management of
+ * method configurations used to categorize brew sessions.
  */
 interface MethodRepository {
     fun getAllMethods(): Flow<List<Method>>

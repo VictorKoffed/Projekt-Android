@@ -4,7 +4,9 @@ import com.victorkoffed.projektandroid.data.db.Grinder
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Interface för att hantera dataoperationer relaterade till Kvarnar (Grinder).
+ * Defines the data operations for managing coffee grinder equipment profiles.
+ * Abstracts the persistence layer to allow observation and management of
+ * grinder configurations used across brewing sessions.
  */
 interface GrinderRepository {
     fun getAllGrinders(): Flow<List<Grinder>>

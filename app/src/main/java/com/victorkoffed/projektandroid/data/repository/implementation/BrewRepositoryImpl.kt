@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Concrete implementation of [BrewRepository] bridging the domain layer and the local database.
+ * Mediates data operations for brewing sessions, high-frequency telemetry samples, and derived metrics.
+ * Responsible for delegating complex transactional business rules to the DAO layer, such as
+ * guaranteeing coffee bean inventory synchronization during brew creation or deletion.
+ */
 @Singleton
 class BrewRepositoryImpl @Inject constructor(
     private val dao: CoffeeDao

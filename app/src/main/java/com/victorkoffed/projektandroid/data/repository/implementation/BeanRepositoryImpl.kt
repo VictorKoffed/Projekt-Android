@@ -7,6 +7,11 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Concrete implementation of [BeanRepository] bridging the domain layer and the local database.
+ * Mediates data operations for coffee bean inventory management, including lifecycle states
+ * like archiving to preserve historical brew integrity without cluttering active selections.
+ */
 @Singleton
 class BeanRepositoryImpl @Inject constructor(
     private val dao: CoffeeDao

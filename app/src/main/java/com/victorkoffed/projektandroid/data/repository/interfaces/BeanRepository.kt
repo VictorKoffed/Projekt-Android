@@ -4,7 +4,9 @@ import com.victorkoffed.projektandroid.data.db.Bean
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Interface för att hantera dataoperationer relaterade till Kaffebönor (Bean).
+ * Defines the data operations for coffee bean inventory management.
+ * Abstracts the underlying data source and provides reactive streams for observing
+ * bean lifecycles, including active stock and archival states.
  */
 interface BeanRepository {
     fun getAllBeans(): Flow<List<Bean>>
