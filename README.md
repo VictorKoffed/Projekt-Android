@@ -6,169 +6,169 @@
 [![Room](https://img.shields.io/badge/Database-Room%20(SQLite)-4285F4)](https://developer.android.com/topic/libraries/architecture/room)
 [![BLE](https://img.shields.io/badge/Connection-BLE%20Flows-00BCD4)](https://developer.android.com/guide/topics/connectivity/bluetooth/le)
 
-## 📝 Introduktion
+## 📝 Introduction
 
-**Coffee Journal** är en native Android-applikation utvecklad i **Kotlin** och **Jetpack Compose** för att dokumentera, analysera och följa kaffebryggningar.
+**Coffee Journal** is a native Android application developed with **Kotlin** and **Jetpack Compose** for documenting, analyzing, and tracking coffee brews.
 
-Appen kan kommunicera med smarta kaffevågar via **Bluetooth Low Energy (BLE)** och presenterar vikt och flödeshastighet i realtid under en pågående bryggning. Bryggningar, kaffebönor, utrustning och mätdata lagras lokalt i en **Room/SQLite-databas**.
+The app can communicate with smart coffee scales via **Bluetooth Low Energy (BLE)** and displays weight and flow rate in real time during an active brew. Brews, coffee beans, equipment, and measurement data are stored locally in a **Room/SQLite database**.
 
-Projektet kombinerar mobilutveckling, hårdvaruintegration och lokal datalagring. Fokus ligger på att skapa ett användarvänligt verktyg där användaren kan följa sina bryggningar över tid och få en tydligare bild av hur olika parametrar påverkar resultatet.
+The project combines mobile development, hardware integration, and local data storage. The focus is on creating a user-friendly tool that allows users to track their brews over time and gain a clearer understanding of how different parameters affect the result.
 
-Appen innehåller bland annat stöd för:
+The app includes support for:
 
-- Realtidsdata från en smart kaffevåg via BLE.
-- Visualisering av vikt och flödeshastighet under bryggning.
-- Lagring och hantering av kaffebönor och bryggningar.
-- Statistik och historik över tidigare bryggningar.
-- Fotografering och koppling av bilder till bryggningar.
-- Automatisk återanslutning till senast använda våg.
-- Responsivt gränssnitt med Jetpack Compose och Material 3.
+- Real-time data from a smart coffee scale via BLE.
+- Visualization of weight and flow rate during brewing.
+- Storage and management of coffee beans and brews.
+- Statistics and history for previous brews.
+- Taking photos and attaching them to brews.
+- Automatic reconnection to the last used scale.
+- Responsive UI built with Jetpack Compose and Material 3.
 
-Projektet är utvecklat som ett individuellt högskoleprojekt med fokus på Android-utveckling, realtidsdata och integration med extern hårdvara.
+The project was developed as an individual university project with a focus on Android development, real-time data, and integration with external hardware.
 
 ---
 
-## 📑 Innehåll
+## 📑 Contents
 
-- [Projektstruktur](#-projektstruktur)
-- [Mappstruktur](#-mappstruktur)
-- [Kom igång](#-kom-igång)
-- [Funktioner](#-funktioner)
-- [Arkitektur](#️-arkitektur)
-- [Kotlin/Android-koncept](#-kotlinandroid-koncept)
-- [Testning](#-testning)
-- [Skärmbilder & Demo](#-skärmbilder--demo)
-- [Katalog över viktiga filer](#-katalog-över-viktiga-filer)
+- [Project Structure](#-project-structure)
+- [Directory Structure](#-directory-structure)
+- [Getting Started](#-getting-started)
+- [Features](#-features)
+- [Architecture](#️-architecture)
+- [Kotlin/Android Concepts](#-kotlinandroid-concepts)
+- [Testing](#-testing)
+- [Screenshots & Demo](#-screenshots--demo)
+- [Key Files](#-key-files)
 - [License](#-license)
-- [AI-assistans](#-ai-assistans)
-- [Projekt & Kurskontext](#-projekt--kurskontext)
-- [Framtida utveckling](#-framtida-utveckling)
+- [AI Assistance](#-ai-assistance)
+- [Project & Course Context](#-project--course-context)
+- [Future Development](#-future-development)
 
 ---
 
-## 📁 Projektstruktur
+## 📁 Project Structure
 
-Projektet är organiserat som en Android-applikation där användargränssnitt, presentation/state, datalager och externa integrationer hålls separerade.
+The project is organized as an Android application where the UI, presentation/state, data layer, and external integrations are kept separate.
 
-| Del | Typ | Syfte |
+| Part | Type | Purpose |
 |:---|:---|:---|
-| `ProjektAndroid` | Gradle Root | Projektets övergripande nivå och Gradle-konfiguration. |
-| `app` | Android Application | Innehåller appens UI, ViewModels, repositories, databashantering, BLE-kommunikation och dependency injection. |
+| `ProjektAndroid` | Gradle Root | Project-level structure and Gradle configuration. |
+| `app` | Android Application | Contains the app's UI, ViewModels, repositories, database handling, BLE communication, and dependency injection. |
 
-Applikationen är strukturerad kring ett tydligt ansvar mellan olika lager:
+The application is structured around clear responsibilities across different layers:
 
-- **UI** – Jetpack Compose-skärmar och användarinteraktion.
-- **ViewModels** – Hanterar UI-state och koordinerar användarflöden.
-- **Repositories** – Abstraherar åtkomst till data och externa datakällor.
-- **Data** – Hanterar Room-databasen, BLE-kommunikation och externa datakällor.
-- **Domain** – Innehåller domänmodeller som används av applikationen.
-- **DI** – Hilt används för dependency injection och för att koppla samman applikationens komponenter.
+- **UI** – Jetpack Compose screens and user interaction.
+- **ViewModels** – Manage UI state and coordinate user flows.
+- **Repositories** – Abstract access to data and external data sources.
+- **Data** – Handles the Room database, BLE communication, and external data sources.
+- **Domain** – Contains domain models used by the application.
+- **DI** – Hilt is used for dependency injection and to connect the application's components.
 
 ---
 
-## 🧱 Mappstruktur
+## 🧱 Directory Structure
 
-Kärnlogiken för appen finns under:
+The core application logic is located under:
 
 `app/src/main/java/com/victorkoffed/projektandroid/`
 
-```text
+~~~text
 com.victorkoffed.projektandroid/
-├─ di/                        # Hilt-moduler och dependency injection
+├─ di/                        # Hilt modules and dependency injection
 ├─ data/
-│  ├─ ble/                    # BLE-kommunikation med smarta kaffevågar
-│  ├─ db/                     # Room-databas, entities, DAO:er och converters
-│  └─ repository/             # Repository-interface och implementationer
-├─ domain/                    # Domänmodeller och applikationslogik
+│  ├─ ble/                    # BLE communication with smart coffee scales
+│  ├─ db/                     # Room database, entities, DAOs, and converters
+│  └─ repository/             # Repository interfaces and implementations
+├─ domain/                    # Domain models and application logic
 └─ ui/
-   ├─ navigation/             # Navigation och routes
-   ├─ screens/                # Jetpack Compose-skärmar
-   ├─ theme/                  # Material 3-tema och UI-styling
-   └─ viewmodel/              # ViewModels och hantering av UI-state
-```
+   ├─ navigation/             # Navigation and routes
+   ├─ screens/                # Jetpack Compose screens
+   ├─ theme/                  # Material 3 theme and UI styling
+   └─ viewmodel/              # ViewModels and UI state management
+~~~
 
 ---
 
-## 🚀 Kom igång
+## 🚀 Getting Started
 
-### Förutsättningar
+### Prerequisites
 
-För att bygga och köra projektet behöver du:
+To build and run the project, you need:
 
-- Android Studio (Giraffe 2022.3.1 eller senare)
+- Android Studio (Giraffe 2022.3.1 or later)
 - Kotlin
 - Gradle
-- Android SDK (API 36 rekommenderas)
-- En Android-enhet eller Android-emulator
+- Android SDK (API 36 recommended)
+- An Android device or Android emulator
 
-> **Obs:** BLE-funktionerna kräver en fysisk Android-enhet med Bluetooth. En emulator kan användas för att testa övriga delar av applikationen, men rekommenderas inte för funktioner som kräver fysisk Bluetooth-kommunikation.
+> **Note:** BLE features require a physical Android device with Bluetooth. An emulator can be used to test other parts of the application, but is not recommended for features that require physical Bluetooth communication.
 
-### Installera och starta
+### Installation and Setup
 
-1. Klona repot.
-2. Öppna projektet i Android Studio.
-3. Låt Android Studio synkronisera Gradle-filerna.
-4. Kontrollera att nödvändiga Android SDK-versioner är installerade.
-5. Anslut en Android-enhet med USB-felsökning aktiverad eller starta en emulator.
-6. Välj `app` som körkonfiguration.
-7. Starta applikationen med **Run**.
+1. Clone the repository.
+2. Open the project in Android Studio.
+3. Let Android Studio sync the Gradle files.
+4. Make sure the required Android SDK versions are installed.
+5. Connect an Android device with USB debugging enabled or start an emulator.
+6. Select `app` as the run configuration.
+7. Start the application using **Run**.
 
-Android Studio bygger då projektet och installerar applikationen på den valda enheten.
+Android Studio will then build the project and install the application on the selected device.
 
-### Bygga från kommandoraden
+### Building from the Command Line
 
-Debug-versionen kan även byggas med Gradle:
+The debug version can also be built with Gradle:
 
-```bash
+~~~bash
 ./gradlew assembleDebug
-```
+~~~
 
-Den resulterande APK-filen skapas under:
+The resulting APK file is created under:
 
-```text
+~~~text
 app/build/outputs/apk/debug/
-```
+~~~
 
-### BLE-funktioner
+### BLE Features
 
-För att testa funktionerna som kommunicerar med en Bookoo-kaffevåg behöver:
+To test the features that communicate with a Bookoo coffee scale, you need:
 
-- En kompatibel Bookoo-våg vara tillgänglig.
-- Bluetooth vara aktiverat på Android-enheten.
-- Appen ha de Bluetooth-behörigheter som krävs av Android-versionen.
-- Vågen vara tillgänglig för anslutning.
+- A compatible Bookoo scale.
+- Bluetooth enabled on the Android device.
+- The Bluetooth permissions required by the Android version in use.
+- The scale to be available for connection.
 
-BLE-kommunikationen hanteras av `BookooBleClient`.
+BLE communication is handled by `BookooBleClient`.
 
 ---
 
-## ⚙️ Funktioner
+## ⚙️ Features
 
-| Funktion | Beskrivning |
+| Feature | Description |
 |:---|:---|
-| **Live Brew & BLE** | Ansluter till en Bookoo smart scale via Bluetooth Low Energy och visar vikt och flödeshastighet i realtid under bryggningen. |
-| **Realtidsvisualisering** | Visualiserar vikt och flödesdata i en graf under pågående bryggning. |
-| **Brew-historik** | Sparar och visar tidigare bryggningar med tillhörande mätdata och detaljer. |
-| **Datalagring** | Lagrar kaffebönor, bryggningar, utrustning och mätdata lokalt med Room/SQLite. |
-| **Bönhantering** | Skapa, redigera och arkivera kaffebönor som används i bryggningar. |
-| **Redigera bryggningar** | Sparade bryggningar kan redigeras i efterhand. |
-| **Realtidsstatistik** | Visar bland annat antal bryggningar, tillgänglig bönvikt och tid sedan senaste bryggning. |
-| **Vågminne** | Sparar information om vilken kaffevåg som senast användes. |
-| **Auto-connect** | Försöker automatiskt återansluta till den senast använda vågen. |
-| **Robust BLE-hantering** | Hanterar frånkopplingar från vågen under en pågående bryggning och försöker återupprätta kommunikationen. |
-| **Fotohantering** | Använder CameraX för att ta bilder och koppla dem till bryggningar. |
-| **Mörkt läge** | Stöd för ljust och mörkt tema med Material 3. |
-| **Responsivt UI** | Använder Jetpack Compose för ett flexibelt gränssnitt anpassat efter olika skärmstorlekar. |
+| **Live Brew & BLE** | Connects to a Bookoo smart scale via Bluetooth Low Energy and displays weight and flow rate in real time during brewing. |
+| **Real-Time Visualization** | Displays weight and flow data in a graph during an active brew. |
+| **Brew History** | Saves and displays previous brews along with their measurement data and details. |
+| **Data Storage** | Stores coffee beans, brews, equipment, and measurement data locally using Room/SQLite. |
+| **Bean Management** | Create, edit, and archive coffee beans used in brews. |
+| **Edit Brews** | Saved brews can be edited afterwards. |
+| **Real-Time Statistics** | Displays information such as the number of brews, available bean weight, and time since the last brew. |
+| **Scale Memory** | Stores information about which coffee scale was used most recently. |
+| **Auto-Connect** | Automatically attempts to reconnect to the last used scale. |
+| **Robust BLE Handling** | Handles disconnections from the scale during an active brew and attempts to re-establish communication. |
+| **Photo Management** | Uses CameraX to take photos and attach them to brews. |
+| **Dark Mode** | Supports light and dark themes with Material 3. |
+| **Responsive UI** | Uses Jetpack Compose to provide a flexible interface adapted to different screen sizes. |
 
 ---
 
-## 🏗️ Arkitektur
+## 🏗️ Architecture
 
-Appen använder en **MVVM/MVI-inspirerad arkitektur** där Jetpack Compose ansvarar för presentationen och ViewModels hanterar UI-state och användarflöden.
+The app uses an **MVVM/MVI-inspired architecture**, where Jetpack Compose is responsible for presentation and ViewModels manage UI state and user flows.
 
-Dataåtkomsten abstraheras genom repositories, medan separata datakällor ansvarar för lokal datalagring, BLE-kommunikation och externa API-anrop.
+Data access is abstracted through repositories, while separate data sources handle local data storage, BLE communication, and external API calls.
 
-```mermaid
+~~~mermaid
 graph TD
   UI["Compose Screens"] --> VM["ViewModels / StateFlow"]
   VM --> Repo["Repositories"]
@@ -181,134 +181,134 @@ graph TD
   DI["Hilt Dependency Injection"] --- VM
   DI --- Repo
   DI --- Data
-```
+~~~
 
-### UI och state
+### UI and State
 
-Jetpack Compose används för appens användargränssnitt. Skärmarna observerar state från ViewModels via bland annat `StateFlow`.
+Jetpack Compose is used for the app's user interface. Screens observe state from ViewModels using mechanisms such as `StateFlow`.
 
-När state förändras kan Compose automatiskt uppdatera de delar av gränssnittet som påverkas.
+When the state changes, Compose can automatically update the affected parts of the UI.
 
 ### ViewModels
 
-ViewModels fungerar som ett mellanlager mellan UI och repositories.
+ViewModels act as an intermediary between the UI and repositories.
 
-De ansvarar bland annat för:
+They are responsible for:
 
-- Hantering av UI-state.
-- Koordinering av användarflöden.
-- Kommunikation med repositories.
-- Hantering av asynkrona operationer med Kotlin Coroutines och Flow.
-- Hantering av realtidsdata från BLE.
+- Managing UI state.
+- Coordinating user flows.
+- Communicating with repositories.
+- Handling asynchronous operations with Kotlin Coroutines and Flow.
+- Handling real-time data from BLE.
 
 ### Repositories
 
-Repositories abstraherar åtkomsten till applikationens olika datakällor.
+Repositories abstract access to the application's different data sources.
 
-Det gör att ViewModels inte behöver känna till detaljerna kring exempelvis:
+This means that ViewModels do not need to know the implementation details of, for example:
 
-- Room-databasen.
-- BLE-kommunikation.
-- Externa API-anrop.
+- The Room database.
+- BLE communication.
+- External API calls.
 
-Det skapar en tydligare separation mellan presentation och datahantering.
+This creates a clearer separation between presentation and data handling.
 
-### Data layer
+### Data Layer
 
-Data-lagret innehåller de konkreta implementationerna för applikationens datakällor.
+The data layer contains the concrete implementations of the application's data sources.
 
-Room / SQLite används för lokal lagring av bland annat:
+Room / SQLite is used for local storage of, among other things:
 
-- Kaffebönor.
-- Bryggningar.
-- Utrustning.
-- Mätdata.
+- Coffee beans.
+- Brews.
+- Equipment.
+- Measurement data.
 
-`BookooBleClient` ansvarar för kommunikationen med kaffevågen via Bluetooth Low Energy.
+`BookooBleClient` is responsible for communicating with the coffee scale via Bluetooth Low Energy.
 
-Externa datakällor hanteras separat från den lokala databasen och nås via repositories.
+External data sources are handled separately from the local database and accessed through repositories.
 
 ### Dependency Injection
 
-Hilt används för dependency injection och för att hantera hur applikationens komponenter skapas och kopplas samman.
+Hilt is used for dependency injection and to manage how the application's components are created and connected.
 
-Det används bland annat för att tillhandahålla:
+It is used, among other things, to provide:
 
-- Databasen.
-- DAO:er.
+- The database.
+- DAOs.
 - Repositories.
-- BLE-klienten.
+- The BLE client.
 - ViewModels.
 
-Det minskar kopplingen mellan komponenterna och gör strukturen enklare att testa och underhålla.
+This reduces coupling between components and makes the structure easier to test and maintain.
 
 ---
 
-## 🧩 Kotlin/Android-koncept
+## 🧩 Kotlin/Android Concepts
 
-| Område | Exempel i projektet | Användning |
+| Area | Example in the Project | Usage |
 |:---|:---|:---|
-| **Kotlin Flow** | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Används för reaktiv hantering av state och för att skicka förändringar mellan datalager, ViewModels och UI. |
-| **Kotlin Coroutines** | `viewModelScope`, `withTimeoutOrNull`, `Dispatchers.IO` | Används för asynkrona operationer utan att blockera huvudtråden. |
-| **BLE-kommunikation** | `callbackFlow`, `BluetoothGatt` | Används för att ta emot och hantera realtidsdata från kaffevågen via Bluetooth Low Energy. |
-| **Room** | `@Database`, `@Dao`, `@Entity`, `@DatabaseView`, `ForeignKey.CASCADE` | Används för lokal lagring av bryggningar, bönor, utrustning och mätdata. |
-| **Hilt** | Dependency injection-moduler | Används för att skapa och tillhandahålla databaser, repositories, BLE-klienter och andra beroenden. |
-| **Jetpack Compose** | `@Composable`, Material 3, Compose State | Används för att bygga appens användargränssnitt och hantera UI-state. |
-| **Jetpack Navigation** | `NavHost`, routes, `SavedStateHandle` | Används för navigation mellan appens olika skärmar och för att bevara navigeringsrelaterat state. |
-| **CameraX** | `ImageCapture`, `ProcessCameraProvider` | Används för att ta bilder med enhetens kamera och koppla dem till bryggningar. |
-| **Nätverkskommunikation** | `CoffeeImageRepositoryImpl`, `URL().readText()` | Används för att hämta extern information och bilder på `Dispatchers.IO`. |
+| **Kotlin Flow** | `StateFlow`, `SharedFlow`, `combine`, `collectLatest` | Used for reactive state management and for propagating changes between the data layer, ViewModels, and UI. |
+| **Kotlin Coroutines** | `viewModelScope`, `withTimeoutOrNull`, `Dispatchers.IO` | Used for asynchronous operations without blocking the main thread. |
+| **BLE Communication** | `callbackFlow`, `BluetoothGatt` | Used to receive and process real-time data from the coffee scale via Bluetooth Low Energy. |
+| **Room** | `@Database`, `@Dao`, `@Entity`, `@DatabaseView`, `ForeignKey.CASCADE` | Used for local storage of brews, beans, equipment, and measurement data. |
+| **Hilt** | Dependency injection modules | Used to create and provide databases, repositories, BLE clients, and other dependencies. |
+| **Jetpack Compose** | `@Composable`, Material 3, Compose State | Used to build the app's user interface and manage UI state. |
+| **Jetpack Navigation** | `NavHost`, routes, `SavedStateHandle` | Used for navigation between the app's different screens and for preserving navigation-related state. |
+| **CameraX** | `ImageCapture`, `ProcessCameraProvider` | Used to take photos with the device camera and attach them to brews. |
+| **Network Communication** | `CoffeeImageRepositoryImpl`, `URL().readText()` | Used to retrieve external information and images on `Dispatchers.IO`. |
 
 ---
 
-## 🧪 Testning
+## 🧪 Testing
 
-Projektet innehåller både **enhetstester** och **instrumenterade tester**.
+The project contains both **unit tests** and **instrumented tests**.
 
-### Enhetstester
+### Unit Tests
 
-Enhetstester finns under:
+Unit tests are located under:
 
-```text
+~~~text
 app/src/test/
-```
+~~~
 
-Ett exempel är `BookooDataParserTest`, som testar parsningen av rådata från Bluetooth-kommunikationen.
+One example is `BookooDataParserTest`, which tests the parsing of raw data from Bluetooth communication.
 
-Testerna kontrollerar bland annat att BLE-data tolkas korrekt för:
+The tests verify, among other things, that BLE data is correctly interpreted for:
 
-- Vikt.
-- Flöde.
-- Tid.
+- Weight.
+- Flow rate.
+- Time.
 
-Enhetstesterna kan köras med Gradle:
+Unit tests can be run with Gradle:
 
-```bash
+~~~bash
 ./gradlew test
-```
+~~~
 
-### Instrumenterade tester
+### Instrumented Tests
 
-Instrumenterade tester finns under:
+Instrumented tests are located under:
 
-```text
+~~~text
 app/src/androidTest/
-```
+~~~
 
-Dessa tester körs på en Android-enhet eller emulator och kan användas för att testa funktionalitet som är beroende av Android-ramverket.
+These tests run on an Android device or emulator and can be used to test functionality that depends on the Android framework.
 
-De kan köras från Android Studio eller med Gradle:
+They can be run from Android Studio or with Gradle:
 
-```bash
+~~~bash
 ./gradlew connectedAndroidTest
-```
+~~~
 
 ---
 
-## 🖼️ Skärmbilder & Demo
+## 🖼️ Screenshots & Demo
 
 ### 📱 Wireframe
 
-Grundidén för appens startsida.
+The basic concept for the app's home screen.
 
 <p>
   <img src="docs/images/wireframe_home.png" alt="Wireframe Home" width="1048"/>
@@ -316,15 +316,15 @@ Grundidén för appens startsida.
 
 ### 📱 Mockup
 
-En senare version av designen.
+A later version of the design.
 
 <p>
   <img src="docs/images/mockup_home.png" alt="Mockup Home" width="1296"/>
 </p>
 
-### 📲 Faktisk app
+### 📲 Actual App
 
-Den fungerande versionen av appen.
+The working version of the app.
 
 <p>
   <img src="docs/images/real_home.png" alt="Coffee Journal App Screenshot" width="1299"/>
@@ -332,15 +332,15 @@ Den fungerande versionen av appen.
 
 ### ⚖️ Bookoo Smart Scale
 
-Den smarta kaffevåg som används för att skicka bryggdata till appen via Bluetooth Low Energy.
+The smart coffee scale used to send brew data to the app via Bluetooth Low Energy.
 
 <p>
   <img src="docs/images/BookooTermisMini.png" alt="Bookoo Termis Mini Smart Scale" width="500"/>
 </p>
 
-### 🔄 Appens flöde
+### 🔄 App Flow
 
-Översikt över appens huvudsakliga användarflöde.
+Overview of the app's main user flow.
 
 <p>
   <img src="docs/images/Flowchart.png" alt="Coffee Journal Flowchart" width="955"/>
@@ -354,35 +354,35 @@ Den smarta kaffevåg som används för att skicka bryggdata till appen via Bluet
 
 ---
 
-## 📚 Katalog över viktiga filer
+## 📚 Key Files
 
-Här är några av de viktigaste filerna och komponenterna i projektet.
+Here are some of the most important files and components in the project.
 
 <details>
-<summary><strong>Gradle och konfiguration</strong></summary>
+<summary><strong>Gradle and Configuration</strong></summary>
 
-- `gradle/libs.versions.toml` – Central hantering av versionsnummer och projektets beroenden.
-- `app/build.gradle.kts` – Konfiguration för Android-applikationen, Compose, Hilt och KSP.
-- `AndroidManifest.xml` – Appens deklarationer och behörigheter, bland annat för BLE och kamera.
+- `gradle/libs.versions.toml` – Centralized management of version numbers and project dependencies.
+- `app/build.gradle.kts` – Configuration for the Android application, Compose, Hilt, and KSP.
+- `AndroidManifest.xml` – App declarations and permissions, including those for BLE and camera access.
 
 </details>
 
 <details>
-<summary><strong>Data och arkitektur</strong></summary>
+<summary><strong>Data and Architecture</strong></summary>
 
-- `data/repository/interfaces/BrewRepository.kt` – Interface för hantering av bryggdata.
-- `data/db/DatabaseEntities.kt` – Room-entiteter och modeller för bland annat bryggdata och mätvärden.
-- `data/ble/BookooBleClient.kt` – Ansvarar för kommunikationen med Bookoo-vågen via Bluetooth Low Energy.
-- `di/DatabaseModule.kt` – Hilt-konfiguration för databas och repositories.
+- `data/repository/interfaces/BrewRepository.kt` – Interface for managing brew data.
+- `data/db/DatabaseEntities.kt` – Room entities and models for brew data and measurements.
+- `data/ble/BookooBleClient.kt` – Responsible for communication with the Bookoo scale via Bluetooth Low Energy.
+- `di/DatabaseModule.kt` – Hilt configuration for the database and repositories.
 
 </details>
 
 <details>
-<summary><strong>UI och navigation</strong></summary>
+<summary><strong>UI and Navigation</strong></summary>
 
-- `MainActivity.kt` – Appens startpunkt och konfiguration av navigation och huvudgränssnitt.
-- `ui/viewmodel/scale/ScaleViewModel.kt` – Hanterar BLE-state och mätdata från vågen.
-- `ui/screens/brew/LiveBrewScreen.kt` – Ansvarar för gränssnittet under en pågående bryggning.
+- `MainActivity.kt` – App entry point and configuration of navigation and the main UI.
+- `ui/viewmodel/scale/ScaleViewModel.kt` – Handles BLE state and measurement data from the scale.
+- `ui/screens/brew/LiveBrewScreen.kt` – Responsible for the UI during an active brew.
 
 </details>
 
@@ -417,76 +417,76 @@ SOFTWARE.
 
 ---
 
-## 🤖 AI-assistans
+## 🤖 AI Assistance
 
-AI-verktyg har använts som stöd under utvecklingen av projektet.
+AI tools were used as development support throughout the project.
 
-### Verktyg som använts
+### Tools Used
 
-- **ChatGPT** – idéarbete, felsökning, algoritmer och dokumentation.
-- **Gemini** – kodförslag, felsökning och vissa delar av implementationen.
+- **ChatGPT** – Ideation, debugging, algorithms, and documentation.
+- **Gemini** – Code suggestions, debugging, and parts of the implementation.
 
-AI har framför allt använts som ett utvecklingsstöd. Förslag och genererad kod har granskats, anpassats och testats innan de använts i projektet.
+AI was primarily used as a development aid. Suggestions and generated code were reviewed, adapted, and tested before being used in the project.
 
-Den slutliga implementationen samt beslut kring arkitektur och funktionalitet har gjorts av utvecklaren.
+The final implementation, as well as architectural and functional decisions, were made by the developer.
 
 ---
 
-## 👥 Projekt & Kurskontext
+## 👥 Project & Course Context
 
-Detta projekt utvecklades som ett individuellt projekt inom kursen:
+This project was developed as an individual project within the course:
 
-**Systemutveckling för mobila applikationer II (7,5 hp)**  
+**System Development for Mobile Applications II (7.5 credits)**  
 (*System Development for Mobile Applications II, 7.5 credits*)
 
-Projektet fokuserade på utveckling av en native Android-applikation som kommunicerar med extern hårdvara via Bluetooth Low Energy (BLE), hanterar realtidsdata och lagrar information lokalt.
+The project focused on developing a native Android application that communicates with external hardware via Bluetooth Low Energy (BLE), handles real-time data, and stores information locally.
 
-### 🎯 Fokus i projektet
+### 🎯 Project Focus
 
-Arbetet omfattade bland annat:
+The work included:
 
-- Utveckling av en native Android-app med Kotlin och Jetpack Compose.
-- Kommunikation med en Bookoo-kaffevåg via Bluetooth Low Energy.
-- Tolkning och hantering av data från vågens BLE-protokoll.
-- Hantering av realtidsdata med Kotlin Coroutines och Flow.
-- Lagring av bönor, bryggningar och mätdata med Room/SQLite.
-- Repository-baserad struktur för att separera datahantering från UI och ViewModels.
-- MVVM/MVI-inspirerad arkitektur.
-- Dependency injection med Hilt.
-- Integration med mobilens kamera via CameraX.
-- Hantering av anslutning, frånkoppling och återanslutning till extern hårdvara.
+- Developing a native Android app with Kotlin and Jetpack Compose.
+- Communicating with a Bookoo coffee scale via Bluetooth Low Energy.
+- Parsing and handling data from the scale's BLE protocol.
+- Handling real-time data with Kotlin Coroutines and Flow.
+- Storing beans, brews, and measurement data using Room/SQLite.
+- A repository-based structure for separating data handling from the UI and ViewModels.
+- MVVM/MVI-inspired architecture.
+- Dependency injection with Hilt.
+- Integration with the device camera using CameraX.
+- Handling connections, disconnections, and reconnections to external hardware.
 
-### 🧠 Vad projektet gav erfarenhet av
+### 🧠 What the Project Provided Experience With
 
-Projektet gav framför allt praktisk erfarenhet av:
+The project provided hands-on experience with:
 
-- Android-utveckling med Kotlin och Jetpack Compose.
-- BLE-kommunikation och integration med extern hårdvara.
-- Kotlin Coroutines, Flow och asynkron programmering.
-- Realtidsdata och state-hantering i Android.
-- Lokal datalagring med Room och SQLite.
-- Dependency injection med Hilt.
-- Arkitektur och separation av ansvar i en större Android-applikation.
-- Att integrera hårdvara, datalager och användargränssnitt i samma applikation.
+- Android development using Kotlin and Jetpack Compose.
+- BLE communication and integration with external hardware.
+- Kotlin Coroutines, Flow, and asynchronous programming.
+- Real-time data and state management in Android.
+- Local data storage using Room and SQLite.
+- Dependency injection with Hilt.
+- Architecture and separation of responsibilities in a larger Android application.
+- Integrating hardware, data storage, and user interfaces within the same application.
 
 ---
 
-## 🚧 Framtida utveckling
+## 🚧 Future Development
 
-Det finns flera saker som jag vill bygga vidare på i projektet:
+There are several things I would like to build on in the project:
 
-1. Assisted brew med målvikt, tider och eventuellt ratio mellan kaffe och vatten.
-2. Visa i grafen när bryggaren lyfts för att swirla.
-3. Lägga till stöd för espresso-läge med Bookoo EM.
+1. Assisted brewing with target weight, timings, and potentially a coffee-to-water ratio.
+2. Show in the graph when the brewer is lifted to swirl.
+3. Add support for espresso mode with Bookoo EM.
    - [Bookoo Espresso Monitor Protocol](https://github.com/BooKooCode/OpenSource/blob/main/espresso_monitor/protocols.md)
-4. Lägga till rating för bryggningar och bönor.
-5. Lägga till information om rostning.
-6. Söka bland sparade bönor.
-7. Lägga till stöd för vattenkemi.
-8. Fler detaljer för bönor, exempelvis inköpspris, ursprungsland, region och smaknoter.
-9. Lägga till recept, både färdiga och egna, samt eventuellt ett brew-timer-läge.
-10. Lägga till stöd för DiFluid R2.
+4. Add ratings for brews and beans.
+5. Add roasting information.
+6. Search saved beans.
+7. Add support for water chemistry.
+8. Add more details for beans, such as purchase price, country of origin, region, and tasting notes.
+9. Add recipes, both predefined and custom, and potentially a brew timer mode.
+10. Add support for DiFluid R2.
     - [DiFluid Developer SDK](https://digitizefluid.com/en-se/pages/difluid-developer-sdk-partnership)
-11. Möjlighet att exportera bönor och brew-grafer till andra enheter eller användare.
-12. Kunna använda en tidigare brew-graf som referens vid en ny bryggning.
-13. Fixa landskapsläge i hela appen.
+11. Allow beans and brew graphs to be exported to other devices or users.
+12. Allow a previous brew graph to be used as a reference during a new brew.
+13. Fix landscape mode throughout the app.
