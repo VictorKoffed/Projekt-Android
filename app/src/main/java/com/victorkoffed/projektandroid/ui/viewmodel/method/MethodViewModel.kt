@@ -12,32 +12,21 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel för hantering av bryggmetoder (Methods).
- *
- * Använder [MethodRepository] för all datalagerinteraktion.
+ * ViewModel managing coffee brewing method inventory lists and handling CRUD operations
+ * for brewing method profiles.
  */
 @HiltViewModel
 class MethodViewModel @Inject constructor(
     private val methodRepository: MethodRepository
 ) : ViewModel() {
 
-    /**
-     * Exponerar alla lagrade [Method]-objekt som en [StateFlow].
-     *
-     * Använder `stateIn` för att konvertera flödet från databasen till en StateFlow,
-     * vilket är optimalt för UI-bindning i Jetpack Compose/Views.
-     */
     val allMethods: StateFlow<List<Method>> = methodRepository.getAllMethods()
         .stateIn(
             scope = viewModelScope,
-            // Håller flödet aktivt i 5 sekunder efter att den sista observatören försvinner.
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    /**
-     * Lägger till en ny bryggmetod i databasen om namnet inte är tomt.
-     */
     fun addMethod(name: String) {
         if (name.isNotBlank()) {
             viewModelScope.launch {
@@ -46,18 +35,12 @@ class MethodViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Uppdaterar en befintlig bryggmetod i databasen.
-     */
     fun updateMethod(method: Method) {
         viewModelScope.launch {
             methodRepository.updateMethod(method)
         }
     }
 
-    /**
-     * Tar bort en bryggmetod från databasen.
-     */
     fun deleteMethod(method: Method) {
         viewModelScope.launch {
             methodRepository.deleteMethod(method)

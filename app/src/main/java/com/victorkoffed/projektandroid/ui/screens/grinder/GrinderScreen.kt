@@ -41,9 +41,9 @@ import com.victorkoffed.projektandroid.data.db.Grinder
 import com.victorkoffed.projektandroid.ui.viewmodel.grinder.GrinderViewModel
 
 /**
- * Huvudskärm för att visa, lägga till, redigera och ta bort kvarnar.
- * Använder Compose State för att hantera vilka dialoger som visas.
- * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
+ * Screen presenting the inventory and configuration management for coffee grinders.
+ * Orchestrates CRUD operations through dialog states and exposes equipment profiles
+ * for selection during brew setup.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,14 +51,10 @@ fun GrinderScreen(
     vm: GrinderViewModel,
     onMenuClick: () -> Unit
 ) {
-    // Hämta kvarnar som en State från ViewModel
     val grinders by vm.allGrinders.collectAsState()
 
-    // State-variabler som styr vilka dialogrutor som är synliga
     var showAddDialog by remember { mutableStateOf(false) }
-    // Används för att skicka det Grinder-objekt som ska redigeras till dialogen
     var grinderToEdit by remember { mutableStateOf<Grinder?>(null) }
-    // Används för att skicka det Grinder-objekt som ska bekräftas för borttagning
     var grinderToDelete by remember { mutableStateOf<Grinder?>(null) }
 
     Scaffold(
@@ -103,9 +99,6 @@ fun GrinderScreen(
             }
         }
 
-        // --- Dialoghantering ---
-
-        // Lägg till dialog
         if (showAddDialog) {
             AddGrinderDialog(
                 onDismiss = { showAddDialog = false },
@@ -115,7 +108,6 @@ fun GrinderScreen(
             )
         }
 
-        // Redigera dialog (visas endast om grinderToEdit är satt)
         grinderToEdit?.let { currentGrinder ->
             EditGrinderDialog(
                 grinder = currentGrinder,
@@ -127,7 +119,6 @@ fun GrinderScreen(
             )
         }
 
-        // Bekräftelse för borttagning (visas endast om grinderToDelete är satt)
         grinderToDelete?.let { currentGrinder ->
             DeleteGrinderConfirmationDialog(
                 grinderName = currentGrinder.name,
@@ -142,8 +133,7 @@ fun GrinderScreen(
 }
 
 /**
- * Komponent för att visa en enskild kvarn i listan.
- * Klick på kortet startar redigering, klick på ikon startar borttagning.
+ * Summary card presenting an individual coffee grinder profile.
  */
 @Composable
 fun GrinderCard(
@@ -164,10 +154,8 @@ fun GrinderCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(grinder.name, style = MaterialTheme.typography.titleMedium)
-                // Visa anteckningar endast om de finns
                 grinder.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
-            // Delete-ikon knapp
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -180,7 +168,7 @@ fun GrinderCard(
 }
 
 /**
- * Dialogruta för att lägga till en ny kvarn.
+ * Input dialog for registering a new grinder profile.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,7 +190,6 @@ fun AddGrinderDialog(
         },
         confirmButton = {
             Button(
-                // Kontrollerar att namnet inte är tomt före tillägg
                 onClick = {
                     if (name.isNotBlank()) {
                         onAddGrinder(name, notes.takeIf { it.isNotBlank() })
@@ -217,8 +204,7 @@ fun AddGrinderDialog(
 }
 
 /**
- * Dialogruta för att redigera en befintlig kvarn.
- * Använder Grinder-objektet för att förfylla fälten.
+ * Input dialog for modifying an existing grinder configuration.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,7 +213,6 @@ fun EditGrinderDialog(
     onDismiss: () -> Unit,
     onSaveGrinder: (updatedGrinder: Grinder) -> Unit
 ) {
-    // Förfyll fälten med befintliga värden
     var name by remember { mutableStateOf(grinder.name) }
     var notes by remember { mutableStateOf(grinder.notes ?: "") }
 
@@ -244,8 +229,6 @@ fun EditGrinderDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        // Skapa en kopia av det ursprungliga objektet med de nya värdena.
-                        // Detta är viktigt eftersom det behåller det ursprungliga ID:t.
                         val updatedGrinder = grinder.copy(
                             name = name,
                             notes = notes.takeIf { it.isNotBlank() }
@@ -262,7 +245,8 @@ fun EditGrinderDialog(
 }
 
 /**
- * Dialogruta för att bekräfta borttagning av en kvarn.
+ * Confirmation dialog guarding the permanent deletion of a grinder profile.
+ * Highlights potential foreign-key cascading impacts on historical brew sessions.
  */
 @Composable
 fun DeleteGrinderConfirmationDialog(
@@ -273,7 +257,6 @@ fun DeleteGrinderConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete grinder?") },
-        // Varningstext om att kopplingen till befintliga bryggningar försvinner
         text = { Text("Are you sure you want to delete '$grinderName'? Brews that used this grinder will lose the connection.") },
         confirmButton = {
             Button(
@@ -281,7 +264,6 @@ fun DeleteGrinderConfirmationDialog(
                     onConfirm()
                     onDismiss()
                 },
-                // Använd error-färg för att markera en destruktiv handling
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }
         },

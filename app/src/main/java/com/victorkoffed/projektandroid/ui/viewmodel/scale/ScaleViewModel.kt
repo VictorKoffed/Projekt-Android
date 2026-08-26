@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): Hanteringen av auto-reconnect-logiken och
- * BleErrorTranslator har utvecklats med AI-assistans för att skapa ett robust
- * state-maskin. Se README.md för AI-verktyg.
+ * Reference Note (AI Assistance): The management of auto-reconnect logic and
+ * BleErrorTranslator was developed with AI assistance to create a robust
+ * state machine. See README.md for AI tools.
  */
 
 package com.victorkoffed.projektandroid.ui.viewmodel.scale
@@ -31,14 +31,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.Dispatchers // <-- Behåll denna import
+import kotlinx.coroutines.Dispatchers
 
-// --- Konstanter ---
 private const val TAG = "ScaleViewModel"
 private val SCAN_TIMEOUT = 10.seconds
 
 /**
- * Översätter råa BLE-felmeddelanden till användarvänliga strängar.
+ * Translates low-level Bluetooth Low Energy error states into user-facing messages.
  */
 private object BleErrorTranslator {
     fun translate(rawMessage: String?): String {
@@ -58,9 +57,8 @@ private object BleErrorTranslator {
 }
 
 /**
- * ViewModel som hanterar all logik relaterad till BLE-vågen:
- * Skanning, anslutning, och auto-connect.
- * INSPELNINGSLOGIK ÄR BORTFLYTTA TILL BrewViewModel.
+ * ViewModel managing Bluetooth Low Energy peripheral discovery, pairing connections,
+ * and persistent auto-reconnection state machines.
  */
 @HiltViewModel
 class ScaleViewModel @Inject constructor(
@@ -72,7 +70,6 @@ class ScaleViewModel @Inject constructor(
     private var isManualDisconnect = false
     private var reconnectAttempted = false
 
-    // --- StateFlows (Exposed to UI) ---
     private val _devices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
     val devices: StateFlow<List<DiscoveredDevice>> = _devices.asStateFlow()
 
@@ -82,48 +79,36 @@ class ScaleViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    // Hämta inställningar från Preference Manager
     val rememberScaleEnabled: StateFlow<Boolean> = prefsManager.rememberScaleEnabled
     val autoConnectEnabled: StateFlow<Boolean> = prefsManager.autoConnectEnabled
     val rememberedScaleAddress: StateFlow<String?> = prefsManager.rememberedScaleAddress
 
-    // --- Private Job Management ---
     private var scanJob: Job? = null
     private var scanTimeoutJob: Job? = null
 
-    /** Exponerar den justerade mätdata direkt från Repository. */
     val measurement: StateFlow<ScaleMeasurement> = scaleRepo.observeMeasurements()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ScaleMeasurement(0.0f, 0.0f))
 
-    /** Delat Flöde för anslutningsstatus (med översatta fel och sidoeffekter). */
     val connectionState: StateFlow<BleConnectionState> = scaleRepo.observeConnectionState()
         .map { state ->
-            // Översätt råa felmeddelanden innan de exponeras
             if (state is BleConnectionState.Error) {
                 BleConnectionState.Error(BleErrorTranslator.translate(state.message))
             } else {
                 state
             }
         }
-        // Hantera sidoeffekter (auto-connect) i denna onEach
         .onEach { state -> handleConnectionStateChange(state) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = BleConnectionState.Disconnected // Sätter ett startvärde
+            initialValue = BleConnectionState.Disconnected
         )
 
 
     init {
-        // --- ★★★ STARTA ÄNDRING ★★★ ---
-        // Försök inte ansluta omedelbart i init-blocket.
-        // Detta blockerar UI-tråden under appstart.
-        // Låt oss lägga till en liten fördröjning.
         viewModelScope.launch {
-            delay(1500L) // Vänta 1.5 sekunder efter att ViewModel har skapats
+            delay(1500L)
 
-            // Kontrollera om vi fortfarande ska ansluta (t.ex. om användaren
-            // manuellt har kopplat från under tiden)
             val state = connectionState.value
             if (state is BleConnectionState.Disconnected && !isManualDisconnect) {
                 Log.d(TAG, "Init: Fördröjd auto-anslutning startar.")
@@ -132,15 +117,12 @@ class ScaleViewModel @Inject constructor(
                 Log.d(TAG, "Init: Skippar fördröjd auto-anslutning (State: $state, ManualDisconnect: $isManualDisconnect)")
             }
         }
-        // --- ★★★ SLUT ÄNDRING ★★★ ---
     }
 
     private fun isBluetoothAvailableAndEnabled(): Boolean {
         val adapter = (getApplication<Application>().getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
         return adapter != null && adapter.isEnabled
     }
-
-    // --- Skanning & Anslutning ---
 
     fun startScan() {
         if (_isScanning.value) return
@@ -186,7 +168,6 @@ class ScaleViewModel @Inject constructor(
         isManualDisconnect = false
         reconnectAttempted = false
         clearError()
-        // (Behåll denna på IO-tråden, som vi fixade tidigare)
         viewModelScope.launch(Dispatchers.IO) {
             scaleRepo.connect(device.address)
         }
@@ -199,17 +180,12 @@ class ScaleViewModel @Inject constructor(
         Log.d(TAG, "Manual disconnect initiated.")
     }
 
-    // --- Tarering ---
-    // Denna funktion finns kvar för ScaleConnectScreen
     fun tareScale() {
         if (connectionState.value !is BleConnectionState.Connected) {
             _error.value = "Scale not connected."; return
         }
-        // Anropar repon, som hanterar offset
         scaleRepo.tareScale()
     }
-
-    // --- Hantera anslutningsstatus (Auto-Connect & Disconnect) ---
 
     private fun handleConnectionStateChange(state: BleConnectionState) {
         when (state) {
@@ -247,7 +223,7 @@ class ScaleViewModel @Inject constructor(
         val shouldAttempt = !isManualDisconnect && rememberScaleEnabled.value && autoConnectEnabled.value && !reconnectAttempted
         if (!shouldAttempt) return
 
-        reconnectAttempted = true // Sätt låset
+        reconnectAttempted = true
 
         viewModelScope.launch {
             delay(2000L)
@@ -273,8 +249,6 @@ class ScaleViewModel @Inject constructor(
             }
         }
     }
-
-    // --- Inställningar (Persistence) ---
 
     fun setRememberScaleEnabled(enabled: Boolean) {
         prefsManager.setRememberScaleEnabled(enabled)
@@ -317,7 +291,6 @@ class ScaleViewModel @Inject constructor(
 
             isManualDisconnect = false
             clearError()
-            // (Behåll denna på IO-tråden, som vi fixade tidigare)
             viewModelScope.launch(Dispatchers.IO) {
                 scaleRepo.connect(addr)
             }
@@ -339,7 +312,6 @@ class ScaleViewModel @Inject constructor(
             val state = connectionState.value
             if (state is BleConnectionState.Connected || state is BleConnectionState.Connecting) return
             isManualDisconnect = false
-            // (Behåll denna på IO-tråden, som vi fixade tidigare)
             viewModelScope.launch(Dispatchers.IO) {
                 scaleRepo.connect(addr)
             }
@@ -348,7 +320,6 @@ class ScaleViewModel @Inject constructor(
         }
     }
 
-    // --- Övriga funktioner ---
     fun clearError() {
         if (_error.value != null) _error.value = null
     }

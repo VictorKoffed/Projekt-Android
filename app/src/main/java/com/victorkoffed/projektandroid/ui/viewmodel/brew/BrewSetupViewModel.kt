@@ -40,6 +40,10 @@ data class BrewSetupState(
     val notes: String = ""
 )
 
+/**
+ * Manages configuration state, validation rules, and persistence workflows
+ * for initiating or recording a new coffee brewing session.
+ */
 @HiltViewModel
 class BrewSetupViewModel @Inject constructor(
     private val beanRepository: BeanRepository,
@@ -131,7 +135,7 @@ class BrewSetupViewModel @Inject constructor(
         return currentState.selectedBean != null &&
                 currentState.selectedMethod != null &&
                 doseValid &&
-                mandatoryInputsValid // Uppdaterad kontroll
+                mandatoryInputsValid
     }
 
     fun getCurrentSetup(): BrewSetupState { return _brewSetupState.value }

@@ -7,12 +7,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Material 3 typografisättning.
- * Denna fil definierar hur olika textroller (t.ex. bodyLarge, titleMedium) ska se ut.
- * Endast de stilar som är specificerade här kommer att åsidosätta standardinställningarna.
+ * Defines the application's customized Material 3 typography hierarchy,
+ * establishing consistent text styles across dashboard cards, titles, and body content.
  */
 val Typography = Typography(
-    // Standardstorlek för brödtext.
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -23,13 +21,12 @@ val Typography = Typography(
 
     titleMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold, // Gör rubriker fetare
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.sp
     ),
 
-    // Används för större rubriker (t.ex. i BrewSummaryCard)
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -38,7 +35,6 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
 
-    // Används för mindre text, ofta som etiketter (t.ex. "Weight" i BrewMetricsCard)
     labelMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,

@@ -33,6 +33,10 @@ data class BeanDetailState(
     val error: String? = null
 )
 
+/**
+ * Manages state and domain operations for individual coffee bean details,
+ * including inventory editing, archive triggers upon depletion, and related brew telemetry tracking.
+ */
 @HiltViewModel
 class BeanDetailViewModel @Inject constructor(
     private val beanRepository: BeanRepository,
@@ -176,8 +180,8 @@ class BeanDetailViewModel @Inject constructor(
                 _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = true)) }
                 onSuccess()
             } catch (e: Exception) {
-                Log.e("BeanDetailVM", "Kunde inte arkivera böna", e)
-                _beanDetailState.update { it.copy(error = "Kunde inte arkivera: ${e.message}") }
+                Log.e("BeanDetailVM", "Failed to archive bean", e)
+                _beanDetailState.update { it.copy(error = "Failed to archive: ${e.message}") }
             }
         }
     }
@@ -190,8 +194,8 @@ class BeanDetailViewModel @Inject constructor(
                     beanRepository.updateBeanArchivedStatus(beanToUnarchive.id, false)
                     _beanDetailState.update { it.copy(bean = it.bean?.copy(isArchived = false), error = null) }
                 } catch (e: Exception) {
-                    Log.e("BeanDetailVM", "Kunde inte av-arkivera böna", e)
-                    _beanDetailState.update { it.copy(error = "Kunde inte av-arkivera: ${e.message}") }
+                    Log.e("BeanDetailVM", "Failed to unarchive bean", e)
+                    _beanDetailState.update { it.copy(error = "Failed to unarchive: ${e.message}") }
                 }
             }
         }
@@ -206,7 +210,7 @@ class BeanDetailViewModel @Inject constructor(
                         beanRepository.deleteBean(beanToDelete)
                         onSuccess()
                     } else {
-                        _beanDetailState.update { it.copy(error = "Kan endast radera arkiverade bönor.") }
+                        _beanDetailState.update { it.copy(error = "Only archived beans can be deleted.") }
                     }
                 } catch (e: Exception) {
                     Log.e("BeanDetailVM", "Failed to delete: ${e.message}", e)

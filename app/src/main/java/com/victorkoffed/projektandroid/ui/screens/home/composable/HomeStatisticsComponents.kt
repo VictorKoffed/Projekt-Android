@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): De detaljerade formatteringsfunktionerna
- * (t.ex. formatTimeSince och formatWeight) samt den tillståndsbaserade
- * renderingen av ScaleStatusCard har utvecklats med AI-assistans. Se README.md.
+ * Reference Note (AI Assistance): The detailed formatting functions (such as formatTimeSince
+ * and formatWeight) as well as the state-based rendering of ScaleStatusCard were
+ * developed with AI assistance. See README.md.
  */
 
 package com.victorkoffed.projektandroid.ui.screens.home.composable
@@ -60,14 +60,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// --- Hjälpfunktioner ---
-
-/**
- * Hjälpfunktion för att formatera tiden som gått sedan senaste bryggningen.
- *
- * @param lastBrewTime Tidpunkten för den senaste bryggningen.
- * @return Formaterad sträng (t.ex. "5 min", "3 h", "2 w").
- */
 fun formatTimeSince(lastBrewTime: Date?): String? {
     if (lastBrewTime == null) return null
 
@@ -79,7 +71,6 @@ fun formatTimeSince(lastBrewTime: Date?): String? {
     val diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis)
     val diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis)
 
-    // Returnerar den största relevanta tidsenheten
     return when {
         diffSeconds < 60 -> "< 1 min"
         diffMinutes < 60 -> "$diffMinutes min"
@@ -97,49 +88,26 @@ fun formatTimeSince(lastBrewTime: Date?): String? {
     }
 }
 
-// --- NY HJÄLPFUNKTION FÖR VIKT ---
-/**
- * Formaterar en vikt i gram till en läsbar sträng (g, kg, eller t).
- * @param weightGrams Vikten i gram.
- * @return Formaterad sträng (t.ex. "250 g", "1.2 kg", "1.0 t").
- */
 @SuppressLint("DefaultLocale")
 private fun formatWeight(weightGrams: Double): String {
     return when {
-        // Över 1 ton (1,000,000 g)
         weightGrams >= 1_000_000 -> {
             val tonnes = weightGrams / 1_000_000
             String.format("%.1f t", tonnes)
         }
-        // Över 1 kg (1000 g)
         weightGrams >= 1000 -> {
             val kg = weightGrams / 1000
             String.format("%.1f kg", kg)
         }
-        // Gram (behåller ursprunglig formatering utan decimaler för gram)
         else -> {
             String.format("%.0f g", weightGrams)
         }
     }
 }
 
-
-// --- Komponenter ---
-
 /**
- * Rutnät för infokorten som visar nyckelstatistik och status.
- *
- * @param totalBrews Totalt antal genomförda bryggningar.
- * @param beansExplored Totalt antal bönor i databasen.
- * @param availableWeight Total kvarvarande vikt av aktiva bönor.
- * @param imageUrl URL till den slumpmässiga kaffebilden.
- * @param imageLoading Anger om bildladdning pågår.
- * @param imageError Felmeddelande vid bildladdning.
- * @param timeSinceLastCoffee Formaterad tid sedan senaste bryggning.
- * @param scaleConnectionState Aktuell anslutningsstatus till vågen.
- * @param rememberedScaleAddress Adressen till den ihågkomna vågen (om någon).
- * @param onReloadImage Callback för att ladda om bilden.
- * @param onRetryScaleConnect Callback för att försöka återansluta till vågen.
+ * Organizes home dashboard statistics, telemetry widgets, and peripheral status cards
+ * into a responsive grid layout.
  */
 @Composable
 fun InfoGrid(
@@ -159,15 +127,12 @@ fun InfoGrid(
     val otherRowHeight = 100.dp
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Första raden: Bild och vågens status
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Kort 1: Slumpmässig bild
             InfoCard(modifier = Modifier.weight(1f).height(firstRowHeight)) {
                 Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                     when {
                         imageLoading -> CircularProgressIndicator(modifier = Modifier.size(32.dp))
                         imageError != null -> {
-                            // Visa felikon och en knapp för att ladda om
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.Warning, "Error loading image", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 IconButton(onClick = onReloadImage, modifier= Modifier.size(32.dp)) {
@@ -188,7 +153,6 @@ fun InfoGrid(
                 }
             }
 
-            // Kort 2: Vågens status
             ScaleStatusCard(
                 connectionState = scaleConnectionState,
                 rememberedAddress = rememberedScaleAddress,
@@ -197,17 +161,14 @@ fun InfoGrid(
             )
         }
 
-        // Andra raden: Brews och Tid sedan kaffe
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = totalBrews.toString(), subtitle = "Brews", modifier = Modifier.weight(1f).height(otherRowHeight))
             InfoCard(title = timeSinceLastCoffee, subtitle = "Since last coffee", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
 
-        // Tredje raden: Beans explored och Beans available
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoCard(title = beansExplored.toString(), subtitle = "Beans explored", modifier = Modifier.weight(1f).height(otherRowHeight))
 
-            // Använder den nya formateringsfunktionen för att visa vikten
             val formattedWeight = remember(availableWeight) { formatWeight(availableWeight) }
             InfoCard(title = formattedWeight, subtitle = "Beans available", modifier = Modifier.weight(1f).height(otherRowHeight))
         }
@@ -215,12 +176,8 @@ fun InfoGrid(
 }
 
 /**
- * Visar vågens anslutningsstatus med dynamiska ikoner och färger.
- *
- * @param connectionState Aktuell Bluetooth-anslutningsstatus.
- * @param rememberedAddress Adressen till den ihågkomna vågen.
- * @param onRetryConnect Callback för att försöka återansluta.
- * @param modifier Modifier för layout.
+ * Encapsulates Bluetooth hardware connection states, relaying visual feedback and interaction triggers
+ * for scale pairing and reconnections.
  */
 @Composable
 fun ScaleStatusCard(
@@ -300,7 +257,6 @@ fun ScaleStatusCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, color = titleColor)
-            // För instruktionstexten, visa även menyikonen
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 if (connectionState is BleConnectionState.Disconnected && rememberedAddress == null) {
@@ -317,12 +273,8 @@ fun ScaleStatusCard(
 }
 
 /**
- * Generisk baskomponent för informationskort.
- *
- * @param modifier Modifier för layout.
- * @param title Huvudtiteln/värdet.
- * @param subtitle Undertiteln/etiketten.
- * @param content Valfri Composable för att ersätta standardinnehållet (t.ex. för bilder/laddning).
+ * Reusable container surface providing standardized elevation and rounded container shapes
+ * for dashboard summary data blocks.
  */
 @Composable
 fun InfoCard(
@@ -353,13 +305,6 @@ fun InfoCard(
     }
 }
 
-/**
- * Placeholder-text som visas när inga bryggningar finns sparade.
- * Gör hela ytan klickbar för att starta bryggning.
- *
- * @param modifier Modifier för layout.
- * @param onStartBrewClick Callback för att starta bryggningsprocessen.
- */
 @Composable
 fun NoBrewsTextWithIcon(
     modifier: Modifier = Modifier,
@@ -402,10 +347,8 @@ fun NoBrewsTextWithIcon(
 }
 
 /**
- * Kortkomponent för att visa en nyligen genomförd bryggning.
- *
- * @param brewItem Daten för den senaste bryggningen.
- * @param onClick Callback när kortet klickas (navigera till detaljvy).
+ * Summary card presenting a historical brew session entry, including timestamps,
+ * bean metadata, and thumbnail previews.
  */
 @Composable
 fun RecentBrewCard(
@@ -433,7 +376,6 @@ fun RecentBrewCard(
             }
             Spacer(Modifier.width(12.dp))
 
-            // Bild eller standardikon
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -448,7 +390,6 @@ fun RecentBrewCard(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Visar en standardikon om ingen bild finns (R.mipmap.ic_launcher_foreground)
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                         contentDescription = "Brew Image",

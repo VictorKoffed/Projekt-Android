@@ -33,7 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,7 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.ui.screens.bean.ArchiveConfirmationDialog
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewEditCard
 import com.victorkoffed.projektandroid.ui.screens.brew.composable.BrewImageSection
@@ -66,9 +64,9 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewDetailViewModel
 import kotlinx.coroutines.launch
 
 /**
- * Huvudskärmen för att visa detaljer om en specifik bryggning.
- * Orkestrerar layouten genom att använda mindre, återanvändbara komponenter.
- * Hanterar även redigeringsläge, dialogrutor och navigering.
+ * Screen presenting comprehensive analytics and telemetry for a specific brewing session.
+ * Orchestrates layout composition across summary metrics, interactive progress graphs,
+ * photo attachments, and administrative actions such as editing or deletion.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,31 +77,20 @@ fun BrewDetailScreen(
     viewModel: BrewDetailViewModel,
     snackbarHostState: SnackbarHostState
 ) {
-    // --- States ---
     val state by viewModel.brewDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
     val showArchivePromptOnEntry by viewModel.showArchivePromptOnEntry.collectAsState()
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    // States som endast behövs i redigeringsläge (skickas till BrewEditCard)
     val availableGrinders by viewModel.availableGrinders.collectAsState()
     val availableMethods by viewModel.availableMethods.collectAsState()
-    // Lokala UI-states för grafen
     var showWeightLine by remember { mutableStateOf(true) }
     var showFlowLine by remember { mutableStateOf(true) }
-    // State för Snackbar
-    // val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // State för arkiveringsdialog
     val beanForPrompt = state.bean
-    // Beräkna om snabbspara-knappen för anteckningar ska vara aktiv.
     val savedNotes = state.brew?.notes ?: ""
     val hasUnsavedQuickNotes = viewModel.quickEditNotes.trim() != savedNotes.trim()
-    // --- Slut States ---
 
-    // --- LaunchedEffects ---
-
-    // Visa felmeddelanden från ViewModel i Snackbar
     LaunchedEffect(state.error) {
         if (state.error != null) {
             scope.launch {
@@ -112,10 +99,9 @@ fun BrewDetailScreen(
                     duration = SnackbarDuration.Long
                 )
             }
-            viewModel.clearError() // Nollställ felet
+            viewModel.clearError()
         }
     }
-    // --- Slut LaunchedEffects ---
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -123,13 +109,11 @@ fun BrewDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        // Visa titel baserat på läge (redigering/visning)
                         if (isEditing) "Edit Brew"
                         else state.brew?.let { "Brew: ${state.bean?.name ?: "Unknown"}" } ?: "Loading..."
                     )
                 },
                 navigationIcon = {
-                    // Tillbaka- eller Avbryt-knapp
                     IconButton(onClick = { if (isEditing) viewModel.cancelEditing() else onNavigateBack() }) {
                         Icon(
                             if (isEditing) Icons.Default.Cancel else Icons.AutoMirrored.Filled.ArrowBack,
@@ -138,11 +122,10 @@ fun BrewDetailScreen(
                     }
                 },
                 actions = {
-                    // Knappar för Spara, Redigera, Ta bort
                     if (isEditing) {
                         IconButton(
                             onClick = { viewModel.saveChanges() },
-                            enabled = state.brew != null // Aktivera när data laddats
+                            enabled = state.brew != null
                         ) {
                             Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
                         }
@@ -150,7 +133,7 @@ fun BrewDetailScreen(
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.brew != null) {
                             Icon(Icons.Default.Edit, "Edit")
                         }
-                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) { // <--- KORRIGERING
+                        IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = state.brew != null) {
                             Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -160,28 +143,24 @@ fun BrewDetailScreen(
         },
     ) { paddingValues ->
         when {
-            // Visa laddningsindikator vid initial laddning (ej i redigeringsläge)
             state.isLoading && !isEditing -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
-            // Visa huvudinnehåll
             else -> {
                 val currentBrew = state.brew
                 if (currentBrew != null) {
-                    // Scrollbar kolumn för innehållet
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues) // Padding från Scaffold
-                            .padding(horizontal = 16.dp) // Horisontell padding för innehållet
-                            .verticalScroll(rememberScrollState()), // Gör kolumnen scrollbar
-                        verticalArrangement = Arrangement.spacedBy(16.dp), // Avstånd mellan elementen
+                            .padding(paddingValues)
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Spacer(modifier = Modifier.height(0.dp)) // Första elementet får padding via Column
+                        Spacer(modifier = Modifier.height(0.dp))
 
-                        // Anropa bildsektionen
                         BrewImageSection(
                             imageUri = currentBrew.imageUri,
                             isEditing = isEditing,
@@ -190,7 +169,6 @@ fun BrewDetailScreen(
                             onDeleteImage = { viewModel.updateBrewImageUri(null) }
                         )
 
-                        // Visa antingen sammanfattning eller redigeringsfält
                         if (isEditing) {
                             BrewEditCard(
                                 viewModel = viewModel,
@@ -201,10 +179,9 @@ fun BrewDetailScreen(
                             BrewSummaryCard(state = state)
                         }
 
-                        // Visa metrik-kortet (om data finns)
                         state.metrics?.let { metrics ->
                             BrewMetricsCard(metrics = metrics)
-                        } ?: Card( // Placeholder om metrik saknas
+                        } ?: Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
@@ -213,7 +190,6 @@ fun BrewDetailScreen(
 
                         Text("Brew Progress", style = MaterialTheme.typography.titleMedium)
 
-                        // Filterchips för att styra grafens linjer
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = showWeightLine,
@@ -239,7 +215,6 @@ fun BrewDetailScreen(
                             )
                         }
 
-                        // Visa grafen (om data finns)
                         if (state.samples.isNotEmpty()) {
                             BrewSamplesGraph(
                                 samples = state.samples,
@@ -248,7 +223,7 @@ fun BrewDetailScreen(
                                 modifier = Modifier.fillMaxWidth().height(300.dp)
                             )
                         } else {
-                            Card( // Placeholder om grafdata saknas
+                            Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
@@ -256,7 +231,6 @@ fun BrewDetailScreen(
                             }
                         }
 
-                        // Anropa anteckningssektionen
                         BrewNotesSection(
                             isEditing = isEditing,
                             quickEditNotesValue = viewModel.quickEditNotes,
@@ -269,10 +243,8 @@ fun BrewDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                    } // Slut Column
+                    }
 
-                    /// --- Dialogrutor ---
-                    // Bekräfta borttagning
                     if (showDeleteConfirmDialog) {
                         AlertDialog(
                             onDismissRequest = { showDeleteConfirmDialog = false },
@@ -296,7 +268,6 @@ fun BrewDetailScreen(
                         )
                     }
 
-                    // Bekräfta arkivering (visas vid navigering från LiveBrew)
                     if (showArchivePromptOnEntry != null && beanForPrompt != null && showArchivePromptOnEntry == beanForPrompt.id) {
                         ArchiveConfirmationDialog(
                             beanName = beanForPrompt.name,
@@ -304,22 +275,19 @@ fun BrewDetailScreen(
                             onDismiss = { viewModel.dismissArchivePromptOnEntry() }
                         )
                     }
-                    // --- Slut Dialogrutor ---
 
                 } else {
-                    // Fallback om brew blir null (t.ex. raderad medan vyn är öppen)
                     Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                         Text(state.error ?: "Brew data unavailable.")
                     }
                 }
             }
-        } // Slut when
-    } // Slut Scaffold
+        }
+    }
 }
 
-// --- Helskärmsbild ---
 /**
- * Skärm för att visa bryggningsbilden i helskärm.
+ * Presents captured session photographs in an immersive full-screen view with pan and zoom capabilities.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

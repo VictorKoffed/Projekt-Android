@@ -8,6 +8,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Manages asynchronous fetching and state exposure for random coffee imagery
+ * displayed across dashboard placeholders.
+ */
 @HiltViewModel
 class CoffeeImageViewModel @Inject constructor(
     private val imageRepository: CoffeeImageRepository

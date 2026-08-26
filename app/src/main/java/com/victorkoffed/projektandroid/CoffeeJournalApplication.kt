@@ -4,11 +4,8 @@ import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 
 /**
- * Anpassad Application-klass som håller globala singleton-instanser för
- * databasen (CoffeeDatabase) och repository-lagret (CoffeeRepository).
- * Dessa instanser initieras lat.
- *
- * Hilt kommer att hantera beroendeinjektionen för de flesta instanser.
+ * Custom Application class serving as the dependency injection root
+ * for Hilt components across the application lifecycle.
  */
 @HiltAndroidApp
 class CoffeeJournalApplication : Application()

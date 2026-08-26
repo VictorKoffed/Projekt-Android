@@ -1,11 +1,9 @@
 package com.victorkoffed.projektandroid.domain.model
 
 /**
- * Representerar en hittad BLE-enhet under skanning.
- *
- * @property name Enhetens annonserade namn (kan vara null).
- * @property address Enhetens unika MAC-adress (identifierare).
- * @property rssi Signalstyrka i dBm (högre, dvs. närmare noll, betyder starkare signal).
+ * Represents a Bluetooth Low Energy (BLE) device identified during a hardware scan.
+ * Acts as a lightweight data transfer object (DTO) to relay device availability
+ * and signal strength (RSSI) to the UI layer for proximity-based sorting and connection selection.
  */
 data class DiscoveredDevice(
     val name: String?,

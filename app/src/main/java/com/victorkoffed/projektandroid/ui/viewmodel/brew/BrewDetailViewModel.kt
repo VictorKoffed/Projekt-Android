@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): Flödeshanteringen (som använder combine och
- * flatMapLatest för att aggregera data från flera repositories) är ett avancerat
- * Coroutine Flow-mönster som implementerats med AI-assistans. Se README.md.
+ * Reference Note (AI Assistance): Flow orchestration (using combine and
+ * flatMapLatest to aggregate data across multiple repositories) leverages advanced
+ * Coroutine Flow patterns implemented with AI assistance. See README.md.
  */
 
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
@@ -51,6 +51,10 @@ data class BrewDetailState(
     val error: String? = null
 )
 
+/**
+ * Manages state and domain coordination for detailed brew inspection and editing,
+ * handling reactive multi-repository telemetry streams, metadata modifications, and stock adjustments.
+ */
 @HiltViewModel
 class BrewDetailViewModel @Inject constructor(
     private val brewRepository: BrewRepository,
@@ -155,7 +159,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // --- Redigeringsfunktioner ---
     fun startEditing() {
         resetEditFieldsToCurrentState()
         isEditing = true
@@ -204,7 +207,6 @@ class BrewDetailViewModel @Inject constructor(
         editNotes = currentState.brew?.notes ?: ""
     }
 
-    // --- Snabbredigering av anteckningar ---
     fun onQuickEditNotesChanged(value: String) {
         quickEditNotes = value
     }
@@ -226,7 +228,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // --- Bildhantering ---
     fun updateBrewImageUri(uri: String?) {
         Log.d(logTag, "updateBrewImageUri anropad med: $uri")
         val currentBrew = _brewDetailState.value.brew ?: run {
@@ -248,7 +249,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // --- Radering av bryggning ---
     fun deleteCurrentBrew(onSuccess: () -> Unit) {
         val brewToDelete = _brewDetailState.value.brew
         if (brewToDelete != null) {
@@ -266,7 +266,6 @@ class BrewDetailViewModel @Inject constructor(
         }
     }
 
-    // --- Arkiveringsprompt (från LiveBrew) ---
     fun archiveBeanFromPrompt(beanId: Long) {
         viewModelScope.launch {
             try {

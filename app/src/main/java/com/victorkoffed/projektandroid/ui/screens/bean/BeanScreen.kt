@@ -52,16 +52,13 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// Återanvändbar formatterare för rostdatum
 @SuppressLint("ConstantLocale")
 private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
 /**
- * Huvudskärmen för att visa en lista över alla lagrade kaffebönor.
- * Hanterar visning av AKTIVA och ARKIVERADE bönor, lägg till-dialogen och navigering till detaljvy.
- * @param vm ViewModel som tillhandahåller bönor som en Flow.
- * @param onBeanClick Callback för att navigera till detaljvyn för den klickade bönan.
- * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
+ * Screen presenting an inventory overview of coffee beans.
+ * Organizes stock into active and archived partitions, handles manual creation dialogs,
+ * and exposes entry points to detailed bean analytics.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,8 +67,8 @@ fun BeanScreen(
     onBeanClick: (Long) -> Unit,
     onMenuClick: () -> Unit
 ) {
-    val activeBeans by vm.allBeans.collectAsState() // Nu bara aktiva
-    val archivedBeans by vm.archivedBeans.collectAsState() // Ny lista för arkiverade
+    val activeBeans by vm.allBeans.collectAsState()
+    val archivedBeans by vm.archivedBeans.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -90,27 +87,24 @@ fun BeanScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp), // Ta bort vertikal padding här
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Flytta knappen högst upp
             Button(onClick = { showAddDialog = true }, modifier = Modifier.padding(top = 16.dp)) {
                 Text("Add new bean")
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Använd LazyColumn för hela skärmens innehåll för att scrolla båda listorna
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp) // Padding i botten
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                // --- Aktiva bönor ---
                 if (activeBeans.isEmpty()) {
                     item {
                         Text(
                             "No active beans added yet.",
-                            modifier = Modifier.padding(vertical = 16.dp) // Padding när listan är tom
+                            modifier = Modifier.padding(vertical = 16.dp)
                         )
                     }
                 } else {
@@ -122,10 +116,8 @@ fun BeanScreen(
                     }
                 }
 
-                // --- Arkiverade bönor (om det finns några) ---
                 if (archivedBeans.isNotEmpty()) {
                     item {
-                        // Separator och rubrik för arkiverade bönor
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 16.dp),
                             thickness = DividerDefaults.Thickness,
@@ -140,7 +132,7 @@ fun BeanScreen(
                     items(archivedBeans, key = { "archived-${it.id}" }) { bean ->
                         BeanCard(
                             bean = bean,
-                            isArchived = true, // Skicka med flagga
+                            isArchived = true,
                             onClick = { onBeanClick(bean.id) }
                         )
                     }
@@ -148,12 +140,10 @@ fun BeanScreen(
             }
         }
 
-        // Dialog för att lägga till ny böna
         if (showAddDialog) {
             AddBeanDialog(
                 onDismiss = { showAddDialog = false },
                 onAddBean = { name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes ->
-                    // Anropar ViewModel för att spara den nya bönan
                     vm.addBean(name, roaster, roastDateStr, initialWeightStr, remainingWeight, notes)
                     showAddDialog = false
                 }
@@ -163,9 +153,8 @@ fun BeanScreen(
 }
 
 /**
- * Kortkomponent som visar en sammanfattning av en bönas data i listan.
- * Klicket på kortet triggar navigering till detaljvyn.
- * @param isArchived Indikerar om bönan visas i arkivlistan för anpassad styling.
+ * Summary card for an individual coffee bean.
+ * Applies muted visual styling for archived entities to distinguish depleted inventory.
  */
 @Composable
 fun BeanCard(
@@ -173,7 +162,7 @@ fun BeanCard(
     isArchived: Boolean = false,
     onClick: () -> Unit
 ) {
-    val cardAlpha = if (isArchived) 0.7f else 1.0f // Gör arkiverade kort lite genomskinliga
+    val cardAlpha = if (isArchived) 0.7f else 1.0f
     val textColor = if (isArchived) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
 
     Card(
@@ -186,7 +175,7 @@ fun BeanCard(
         )
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp), // Padding end för ikon
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.Top
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -206,14 +195,12 @@ fun BeanCard(
                     Text("Roast Date: $dateStr $ageStr", style = MaterialTheme.typography.bodySmall, color = textColor.copy(alpha = 0.8f))
                 }
 
-                // Visa kvarvarande vikt endast om den inte är arkiverad
                 if (!isArchived) {
                     Text("Remaining: %.1f g".format(bean.remainingWeightGrams), style = MaterialTheme.typography.bodyMedium, color = textColor)
                 }
                 bean.initialWeightGrams?.let { Text("Initial: %.1f g".format(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline.copy(alpha = cardAlpha)) }
                 bean.notes?.let { Text("Notes: $it", style = MaterialTheme.typography.bodySmall, color = textColor.copy(alpha = 0.8f)) }
             }
-            // Visa Unarchive-ikon för arkiverade bönor (klicket hanteras i detaljvyn)
             if (isArchived) {
                 Icon(
                     Icons.Default.Unarchive,
@@ -226,10 +213,9 @@ fun BeanCard(
     }
 }
 
-
 /**
- * Dialogruta för att mata in data för en ny böna.
- * Validerar att namn och aktuell vikt är giltiga innan sparande.
+ * Input dialog for registering new coffee beans.
+ * Enforces validation rules ensuring mandatory name presence and non-negative initial stock.
  */
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -238,7 +224,6 @@ fun AddBeanDialog(
     onDismiss: () -> Unit,
     onAddBean: (name: String, roaster: String?, roastDateStr: String?, initialWeightStr: String?, remainingWeight: Double, notes: String?) -> Unit
 ) {
-    // Lokala states för inmatningsfälten
     var name by remember { mutableStateOf("") }
     var roaster by remember { mutableStateOf("") }
     var roastDateStr by remember { mutableStateOf("") }
@@ -246,7 +231,6 @@ fun AddBeanDialog(
     var remainingWeightStr by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // Logik för DatePickerDialog
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -257,7 +241,6 @@ fun AddBeanDialog(
         DatePickerDialog(
             context,
             { _, selectedYear: Int, selectedMonth: Int, selectedDayOfMonth: Int ->
-                // Formatera datumet till YYYY-MM-DD för lagring
                 roastDateStr = "$selectedYear-${String.format("%02d", selectedMonth + 1)}-${String.format("%02d", selectedDayOfMonth)}"
             },
             year,
@@ -273,7 +256,6 @@ fun AddBeanDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, singleLine = true)
                 OutlinedTextField(value = roaster, onValueChange = { roaster = it }, label = { Text("Roaster") }, singleLine = true)
-                // Klickbart fält för att välja rostdatum
                 OutlinedTextField(
                     value = roastDateStr,
                     onValueChange = {},
@@ -292,7 +274,6 @@ fun AddBeanDialog(
                         )
                     }
                 )
-                // Numeriska fält med decimal-tangentbord
                 OutlinedTextField(
                     value = initialWeightStr,
                     onValueChange = { newValue ->
@@ -316,7 +297,6 @@ fun AddBeanDialog(
                 onClick = {
                     val remainingWeight = remainingWeightStr.toDoubleOrNull()
                     if (name.isNotBlank() && remainingWeight != null && remainingWeight >= 0) {
-                        // Anropar callback med validerad data
                         onAddBean(
                             name,
                             roaster.takeIf { it.isNotBlank() },
@@ -328,7 +308,6 @@ fun AddBeanDialog(
                         onDismiss()
                     }
                 },
-                // Aktivera endast om obligatoriska fält är ifyllda och giltiga
                 enabled = name.isNotBlank() && (remainingWeightStr.toDoubleOrNull() ?: -1.0) >= 0.0
             ) { Text("Add") }
         },

@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel managing coffee grinder inventory lists and handling CRUD operations
+ * for equipment profiles.
+ */
 @HiltViewModel
 class GrinderViewModel @Inject constructor(
     private val grinderRepository: GrinderRepository

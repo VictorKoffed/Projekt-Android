@@ -50,7 +50,11 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
+/**
+ * Screen presenting the central home dashboard of the application.
+ * Aggregates high-level telemetry, inventory stats, hardware connection status,
+ * and historical brew feeds while enforcing dependency validation rules prior to session creation.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -63,7 +67,6 @@ fun HomeScreen(
     coffeeImageVm: CoffeeImageViewModel = hiltViewModel(),
     brewVm: BrewSetupViewModel = hiltViewModel()
 ) {
-    // --- Data från ViewModels (State Collection) ---
     val recentBrews by homeVm.recentBrews.collectAsState()
     val beansExplored by homeVm.beansExploredCount.collectAsState()
     val availableWeight by homeVm.totalAvailableBeanWeight.collectAsState()
@@ -81,7 +84,6 @@ fun HomeScreen(
     )
     val rememberedScaleAddress by scaleVm.rememberedScaleAddress.collectAsState()
 
-    // Hämta states från brewVm för validering
     val availableBeans by brewVm.availableBeans.collectAsState()
     val availableMethods by brewVm.availableMethods.collectAsState()
 
@@ -89,20 +91,16 @@ fun HomeScreen(
 
     val scope = rememberCoroutineScope()
 
-    // Logik: En bryggning får endast startas om minst en böna och en metod finns.
     val isBrewSetupEnabled = availableBeans.isNotEmpty() && availableMethods.isNotEmpty()
 
-    // Definierar den villkorliga åtgärden för att starta bryggning
     val startBrewAction = {
         if (isBrewSetupEnabled) {
-            brewVm.clearForm() // Byt namn från clearBrewResults
+            brewVm.clearForm()
             onNavigateToBrewSetup()
         } else {
             showSetupWarningDialog = true
         }
     }
-
-    // --- Launched Effects (Sid-effekter) ---
 
     LaunchedEffect(Unit) {
         if (imageUrl == null) {
@@ -214,11 +212,11 @@ fun HomeScreen(
 
     if (showSetupWarningDialog) {
         AlertDialog(
-            onDismissRequest = { showSetupWarningDialog = false }, // Tillåt att stänga
+            onDismissRequest = { showSetupWarningDialog = false },
             title = { Text("Cannot start brew") },
             text = { Text("You must first add at least one bean (under 'Bean') and one brewing method (under 'Method') before you can start a new brew") },
             confirmButton = {
-                TextButton(onClick = { showSetupWarningDialog = false }) { // Stäng vid klick
+                TextButton(onClick = { showSetupWarningDialog = false }) {
                     Text("Understood")
                 }
             }

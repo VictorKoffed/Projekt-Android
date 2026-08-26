@@ -68,6 +68,10 @@ data class NavItem(
     val unselectedIcon: ImageVector
 )
 
+/**
+ * Main entry point activity hosting the application's root navigation graph,
+ * global snackbar hosts, bottom navigation bars, and modal navigation drawers.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -75,31 +79,26 @@ class MainActivity : ComponentActivity() {
     lateinit var themePreferenceManager: ThemePreferenceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_ProjektAndroid) // Behåll splash screen temat
+        setTheme(R.style.Theme_ProjektAndroid)
         super.onCreate(savedInstanceState)
 
         setContent {
-            // Använd den injicerade themePreferenceManager
             ProjektAndroidTheme(themePreferenceManager = themePreferenceManager) {
 
-                // NavController och globala states
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val scope = rememberCoroutineScope()
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-                // SCOPA OM: Hämta ScaleViewModel HÄR så den lever lika länge som MainActivity
                 val homeVm: HomeViewModel = hiltViewModel()
-                val scaleVm: ScaleViewModel = hiltViewModel() // SCOPED HÄR
+                val scaleVm: ScaleViewModel = hiltViewModel()
 
-                // Observera states som behövs i MainActivity (för Drawer eller global Snackbar)
                 val isDarkModeManual by homeVm.isDarkMode.collectAsState()
                 val scaleConnectionState by scaleVm.connectionState.collectAsState(
                     initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
                 )
                 val scaleError by scaleVm.error.collectAsState()
 
-                // --- Global Snackbar-logik ---
                 LaunchedEffect(scaleConnectionState, scaleError) {
                     val errorMessage: String? = when {
                         scaleConnectionState is BleConnectionState.Error -> (scaleConnectionState as BleConnectionState.Error).message
@@ -119,10 +118,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                // --- Slut Global Snackbar-logik ---
 
-                // --- Definition av Bottom Nav Items ---
-                val navItems = remember { // remember för att undvika rekreation
+                val navItems = remember {
                     listOf(
                         NavItem("Home", Screen.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
                         NavItem("Bean", Screen.BeanList.route, Icons.Filled.Coffee, Icons.Outlined.Coffee),
@@ -134,13 +131,11 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 val showBottomBar = currentRoute in bottomBarRoutes
-                // --- Slut Definition av Bottom Nav Items ---
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
-                    gesturesEnabled = showBottomBar, // Aktivera svepgesten endast när bottenmenyn visas
+                    gesturesEnabled = showBottomBar,
                     drawerContent = {
-                        // Innehållet i Drawer (kan också brytas ut till en egen Composable)
                         AppDrawerContent(
                             isDarkMode = isDarkModeManual,
                             onToggleDarkMode = { homeVm.toggleDarkMode(it) },
@@ -148,7 +143,6 @@ class MainActivity : ComponentActivity() {
                                 scope.launch { drawerState.close() }
                                 navController.navigate(Screen.ScaleConnect.route)
                             },
-                            // Lägg till fler callbacks för andra menyalternativ här
                         )
                     }
                 ) {
@@ -161,10 +155,10 @@ class MainActivity : ComponentActivity() {
                                     onNavigate = { route ->
                                         navController.navigate(route) {
                                             popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true // Spara state för skärmar i bottenmenyn
+                                                saveState = true
                                             }
                                             launchSingleTop = true
-                                            restoreState = true // Återställ state när man navigerar tillbaka
+                                            restoreState = true
                                         }
                                     }
                                 )
@@ -173,28 +167,29 @@ class MainActivity : ComponentActivity() {
                         snackbarHost = {
                             SnackbarHost(
                                 snackbarHostState,
-                                snackbar = { snackbarData -> ThemedSnackbar(snackbarData) } // <-- Använder den lokala funktionen
+                                snackbar = { snackbarData -> ThemedSnackbar(snackbarData) }
                             )
                         }
                     ) { innerPadding ->
                         AppNavigationGraph(
                             navController = navController,
-                            snackbarHostState = snackbarHostState, // Skicka vidare den globala
+                            snackbarHostState = snackbarHostState,
                             innerPadding = innerPadding,
-                            startDrawerOpen = { // Skicka en lambda för att öppna lådan
+                            startDrawerOpen = {
                                 scope.launch { drawerState.open() }
                             },
-                            scaleVm = scaleVm // SKICKA DEN SCOPADE INSTANSEN
+                            scaleVm = scaleVm
                         )
-                    } // Slut Scaffold Content Scope
-                } // Slut ModalNavigationDrawer Content Scope
-            } // Slut ProjektAndroidTheme
-        } // Slut setContent
-    } // Slut onCreate
-} // Slut MainActivity
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
- * Composable för innehållet i navigeringslådan (Drawer).
+ * Modal drawer content panel exposing global application settings such as dark mode toggles
+ * and scale connection shortcuts.
  */
 @Composable
 fun AppDrawerContent(
@@ -210,7 +205,6 @@ fun AppDrawerContent(
             modifier = Modifier.padding(16.dp)
         )
         HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
-        // Dark Mode Toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -226,29 +220,27 @@ fun AppDrawerContent(
             )
         }
         HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
-        // Connect to Scale Item
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onNavigateToScale) // Använd callback
+                .clickable(onClick = onNavigateToScale)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.Bluetooth,
-                contentDescription = null, // Dekorativ ikon
+                contentDescription = null,
                 modifier = Modifier.padding(end = 16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text("Connect to Scale")
         }
         HorizontalDivider(Modifier.padding(horizontal = 16.dp), DividerDefaults.Thickness, MaterialTheme.colorScheme.outline)
-        // Lägg till fler inställningar här vid behov
     }
 }
 
 /**
- * Composable för bottennavigeringsfältet.
+ * Primary bottom navigation bar enabling persistent navigation across top-level destination screens.
  */
 @Composable
 fun AppBottomNavigationBar(
@@ -272,10 +264,10 @@ fun AppBottomNavigationBar(
                 onClick = { onNavigate(item.screenRoute) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary, // Gör texten primärfärgad också
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Lite dovare färg för ovalda
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = Color.Transparent // Ingen "piller"-indikator
+                    indicatorColor = Color.Transparent
                 )
             )
         }

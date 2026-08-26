@@ -39,9 +39,12 @@ import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
 private const val BREW_DETAIL_FLOW_ROUTE = "brew_detail_flow/{brewId}?beanIdToArchivePrompt={beanIdToArchivePrompt}"
-
 private const val CAMERA_URI_KEY = "captured_image_uri"
 
+/**
+ * Defines the root navigation graph for the application.
+ * Manages route declarations, parameter passing, and ViewModel lifecycles (screen-level vs nested flow-level).
+ */
 @Composable
 fun AppNavigationGraph(
     navController: NavHostController,
@@ -56,7 +59,6 @@ fun AppNavigationGraph(
         modifier = Modifier.padding(innerPadding)
     ) {
 
-        // --- Home ---
         composable(Screen.Home.route) {
             HomeScreen(
                 snackbarHostState = snackbarHostState,
@@ -68,11 +70,10 @@ fun AppNavigationGraph(
                 },
                 onMenuClick = startDrawerOpen,
                 scaleVm = scaleVm,
-                brewVm = hiltViewModel<BrewSetupViewModel>() // Uppdaterad VM
+                brewVm = hiltViewModel<BrewSetupViewModel>()
             )
         }
 
-        // --- Huvudmenyns skärmar ---
         composable(Screen.BeanList.route) {
             BeanScreen(
                 vm = hiltViewModel<BeanViewModel>(),
@@ -82,12 +83,14 @@ fun AppNavigationGraph(
                 onMenuClick = startDrawerOpen
             )
         }
+
         composable(Screen.GrinderList.route) {
             GrinderScreen(
                 vm = hiltViewModel<GrinderViewModel>(),
                 onMenuClick = startDrawerOpen
             )
         }
+
         composable(Screen.MethodList.route) {
             MethodScreen(
                 vm = hiltViewModel<MethodViewModel>(),
@@ -95,7 +98,6 @@ fun AppNavigationGraph(
             )
         }
 
-        // --- Våg ---
         composable(Screen.ScaleConnect.route) {
             ScaleConnectScreen(
                 snackbarHostState = snackbarHostState,
@@ -104,19 +106,16 @@ fun AppNavigationGraph(
             )
         }
 
-        // --- Flöde för ny bryggning (Setup) ---
         composable(Screen.BrewSetup.route) {
             val scope = rememberCoroutineScope()
-            // BrewSetupViewModel är nu bunden till denna skärms livscykel
             val brewSetupVm: BrewSetupViewModel = hiltViewModel()
 
             BrewScreen(
                 onStartBrewClick = { setupState ->
-                    // Validerad data tas emot, bygg route och navigera
-
-                    // --- START KORRIGERING ---
-                    // Vi måste skicka strängar (även tomma), inte null,
-                    // för att matcha NavType.StringType.
+                    /*
+                     * Jetpack Navigation strictly requires non-null string representations (even if empty)
+                     * for optional arguments mapped to NavType.StringType to prevent routing crashes.
+                     */
                     val route = Screen.LiveBrew.createRoute(
                         beanId = setupState.selectedBean!!.id,
                         doseGrams = setupState.doseGrams.value,
@@ -126,7 +125,6 @@ fun AppNavigationGraph(
                         grindSpeedRpm = setupState.grindSpeedRpm.value,
                         brewTempCelsius = setupState.brewTempCelsius.value
                     )
-                    // --- SLUT KORRIGERING ---
 
                     navController.navigate(route)
                 },
@@ -146,18 +144,15 @@ fun AppNavigationGraph(
                 },
                 onNavigateToScale = { navController.navigate(Screen.ScaleConnect.route) },
                 onNavigateBack = { navController.popBackStack() },
-                vm = brewSetupVm, // Skicka den nya VM:n
+                vm = brewSetupVm,
                 scaleVm = scaleVm
             )
         }
 
-        // --- Flöde för ny bryggning (Live) ---
         composable(
             route = Screen.LiveBrew.route,
-            arguments = Screen.LiveBrew.arguments // Använd argumenten från Screen.kt
+            arguments = Screen.LiveBrew.arguments
         ) {
-            // LiveBrewViewModel är nu bunden till denna skärms livscykel
-            // och tar emot argumenten via SavedStateHandle
             val liveBrewVm: LiveBrewViewModel = hiltViewModel()
 
             LiveBrewScreen(
@@ -177,8 +172,6 @@ fun AppNavigationGraph(
             )
         }
 
-
-        // --- Detalj-skärmar (Bean) ---
         composable(
             route = Screen.BeanDetail.route,
             arguments = listOf(navArgument("beanId") { type = NavType.LongType })
@@ -198,14 +191,17 @@ fun AppNavigationGraph(
             }
         }
 
-        // --- Nestad graf för BrewDetail och Camera ---
+        /*
+         * Scopes the BrewDetailViewModel to a nested graph to share state between the
+         * BrewDetailScreen and CameraScreen. This allows the camera to seamlessly return
+         * the captured image URI back to the detail screen via the SavedStateHandle.
+         */
         navigation(
-            route = BREW_DETAIL_FLOW_ROUTE, // "brew_detail_flow/{brewId}?..."
-            startDestination = Screen.BrewDetail.route, // "brew_detail/{brewId}?..."
-            arguments = Screen.BrewDetail.arguments // Dela argumenten
+            route = BREW_DETAIL_FLOW_ROUTE,
+            startDestination = Screen.BrewDetail.route,
+            arguments = Screen.BrewDetail.arguments
         ) {
 
-            // --- Brew Detail (inuti det nya flödet) ---
             composable(
                 route = Screen.BrewDetail.route,
                 arguments = Screen.BrewDetail.arguments
@@ -239,7 +235,6 @@ fun AppNavigationGraph(
                 )
             }
 
-            // --- Kamera (inuti det nya flödet) ---
             composable(Screen.Camera.route) {
                 CameraScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -248,7 +243,6 @@ fun AppNavigationGraph(
             }
         }
 
-        // --- Helskärmsvy för bild (kan ligga kvar på rotnivå) ---
         composable(
             route = Screen.ImageFullscreen.route,
             arguments = listOf(navArgument("uri") { type = NavType.StringType })
@@ -266,5 +260,5 @@ fun AppNavigationGraph(
                 LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
-    } // End NavHost
+    }
 }

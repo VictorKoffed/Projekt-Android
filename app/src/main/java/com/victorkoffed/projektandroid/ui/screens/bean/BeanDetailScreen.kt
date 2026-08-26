@@ -38,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.data.db.Bean
 import com.victorkoffed.projektandroid.data.db.Brew
 import com.victorkoffed.projektandroid.ui.viewmodel.bean.BeanDetailViewModel
@@ -70,7 +68,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-// --- Konstanter ---
 @SuppressLint("ConstantLocale")
 private val detailDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 @SuppressLint("ConstantLocale")
@@ -82,20 +79,16 @@ fun BeanDetailScreen(
     onNavigateBack: () -> Unit,
     onBrewClick: (Long) -> Unit,
     snackbarHostState: SnackbarHostState,
-    // Hämta ViewModel direkt här med Hilt.
     viewModel: BeanDetailViewModel = hiltViewModel()
 ) {
-    // UI-states från ViewModel
     val state by viewModel.beanDetailState.collectAsState()
     val isEditing by remember { derivedStateOf { viewModel.isEditing } }
     val showArchivePrompt by viewModel.showArchivePromptAfterSave.collectAsState()
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showArchiveWeightWarningDialog by remember { mutableStateOf(false) }
 
-    // Snackbar-hantering
     val scope = rememberCoroutineScope()
 
-    // Effekt för felmeddelanden
     LaunchedEffect(state.error) {
         if (state.error != null) {
             scope.launch {
@@ -113,7 +106,6 @@ fun BeanDetailScreen(
             TopAppBar(
                 title = { Text(state.bean?.name ?: "Loading bean...") },
                 navigationIcon = {
-                    // Avbryt-knapp i redigeringsläge, annars tillbaka-knapp
                     IconButton(onClick = { if (isEditing) viewModel.cancelEditing() else onNavigateBack() }) {
                         Icon(
                             if (isEditing) Icons.Default.Cancel else Icons.AutoMirrored.Filled.ArrowBack,
@@ -123,36 +115,28 @@ fun BeanDetailScreen(
                 },
                 actions = {
                     if (isEditing) {
-                        // Spara-knapp i redigeringsläge
                         IconButton(onClick = { viewModel.saveChanges() }, enabled = state.bean != null) {
                             Icon(Icons.Default.Save, contentDescription = "Save changes", tint = MaterialTheme.colorScheme.primary)
                         }
                     } else {
-                        // Visa Redigera-knapp
                         IconButton(onClick = { viewModel.startEditing() }, enabled = state.bean != null) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
 
                         state.bean?.let { bean ->
                             if (bean.isArchived) {
-                                // --- Arkiverad status ---
-                                // Av-arkivera-knapp
                                 IconButton(onClick = { viewModel.unarchiveBean() }, enabled = !state.isLoading) {
                                     Icon(Icons.Default.Unarchive, contentDescription = "Unarchive Bean", tint = MaterialTheme.colorScheme.primary)
                                 }
-                                // Permanent Radera-knapp
                                 IconButton(onClick = { showDeleteConfirmDialog = true }, enabled = !state.isLoading) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete Bean permanently", tint = MaterialTheme.colorScheme.error)
                                 }
                             } else {
-                                // --- Aktiv status ---
-                                // Arkivera-knapp (visar Archive-ikon)
                                 IconButton(
                                     onClick = {
                                         if (bean.remainingWeightGrams == 0.0) {
-                                            viewModel.archiveBean { /* Stannar kvar på sidan */ }
+                                            viewModel.archiveBean { }
                                         } else {
-                                            // Visa varning om vikt > 0
                                             showArchiveWeightWarningDialog = true
                                         }
                                     },
@@ -206,17 +190,15 @@ fun BeanDetailScreen(
                     }
                 }
             }
-            else -> { // Fallback om bönan är null och inte laddar
+            else -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
                     Text(state.error ?: "Bean not found or has been deleted.")
                 }
             }
-        } // Slut when
+        }
 
-        // --- Dialogrutor ---
         if (isEditing && state.bean != null) {
             EditBeanDialog(
-                // ... (samma som tidigare)
                 editName = viewModel.editName,
                 editRoaster = viewModel.editRoaster,
                 editRoastDateStr = viewModel.editRoastDateStr,
@@ -234,17 +216,14 @@ fun BeanDetailScreen(
             )
         }
 
-        // NYTT: Dialogruta för att bekräfta arkivering efter sparande till noll
         if (showArchivePrompt && state.bean != null && !state.bean!!.isArchived) {
             ArchiveConfirmationDialog(
                 beanName = state.bean!!.name,
-                onConfirm = { viewModel.confirmAndArchiveBean() }, // Bekräfta arkivering
-                onDismiss = { viewModel.dismissArchivePrompt() }  // Avbryt arkivering
+                onConfirm = { viewModel.confirmAndArchiveBean() },
+                onDismiss = { viewModel.dismissArchivePrompt() }
             )
         }
 
-
-        // Varningsdialog vid försök att arkivera med vikt > 0
         if (showArchiveWeightWarningDialog) {
             AlertDialog(
                 onDismissRequest = { showArchiveWeightWarningDialog = false },
@@ -258,23 +237,21 @@ fun BeanDetailScreen(
             )
         }
 
-        // Borttagningsbekräftelse
         if (showDeleteConfirmDialog && state.bean != null) {
             DeleteConfirmationDialog(
                 beanName = state.bean!!.name,
                 brewCount = state.brews.size,
-                isArchived = state.bean!!.isArchived, // Skicka med arkivstatus
+                isArchived = state.bean!!.isArchived,
                 onConfirm = {
-                    // Försök radera via ViewModel (som kollar isArchived)
                     viewModel.deleteBean {
-                        onNavigateBack() // Gå tillbaka endast vid lyckad radering
+                        onNavigateBack()
                     }
                     showDeleteConfirmDialog = false
                 },
                 onDismiss = { showDeleteConfirmDialog = false }
             )
         }
-    } // Slut Scaffold
+    }
 }
 
 @Composable
@@ -285,7 +262,6 @@ fun BeanDetailHeaderCard(bean: Bean) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Visa arkivstatus
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(bean.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 if (bean.isArchived) {
@@ -357,7 +333,6 @@ fun DetailRow(label: String, value: String) {
         Text(value)
     }
 }
-
 
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -433,9 +408,6 @@ fun EditBeanDialog(
     )
 }
 
-/**
- * NYTT: Dialog för att bekräfta arkivering när vikten når noll.
- */
 @Composable
 fun ArchiveConfirmationDialog(
     beanName: String,
@@ -453,12 +425,11 @@ fun ArchiveConfirmationDialog(
     )
 }
 
-
 @Composable
 fun DeleteConfirmationDialog(
     beanName: String,
     brewCount: Int,
-    isArchived: Boolean, // Tar emot arkivstatus
+    isArchived: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -476,7 +447,7 @@ fun DeleteConfirmationDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                enabled = isArchived, // Endast aktiv om bönan är arkiverad
+                enabled = isArchived,
                 colors = ButtonDefaults.buttonColors(containerColor = if (isArchived) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ) { Text("Delete") }
         },

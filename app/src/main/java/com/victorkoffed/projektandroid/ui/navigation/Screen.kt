@@ -4,8 +4,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
 /**
- * En förseglad klass som definierar alla navigeringsvägar (routes) i applikationen.
- * Detta säkerställer att alla vägar hanteras på ett centralt och säkert sätt.
+ * Defines the centralized routing structure and argument contracts for the application's navigation graph.
  */
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -16,20 +15,10 @@ sealed class Screen(val route: String) {
     object BrewSetup : Screen("brew_setup")
     object Camera : Screen("camera")
 
-    /**
-     * Navigeringsväg för att visa en bild i fullskärm. Kräver en URI som argument.
-     * URI:n måste vanligtvis vara URL-kodad.
-     */
     object ImageFullscreen : Screen("image_fullscreen/{uri}") {
-        /** Bygger den fullständiga rutten med den specifika URI:n. */
         fun createRoute(uri: String) = "image_fullscreen/$uri"
     }
 
-    /**
-     * Navigeringsväg för live-bryggning. Kräver setup-data som argument.
-     * Obligatoriska: beanId, doseGrams, methodId
-     * Valfria: grinderId, grindSetting, grindSpeedRpm, brewTempCelsius
-     */
     object LiveBrew : Screen(
         route = "live_brew/{beanId}/{doseGrams}/{methodId}?" +
                 "grinderId={grinderId}&" +
@@ -38,18 +27,15 @@ sealed class Screen(val route: String) {
                 "brewTempCelsius={brewTempCelsius}"
     ) {
         val arguments = listOf(
-            // Obligatoriska
             navArgument("beanId") { type = NavType.LongType },
-            navArgument("doseGrams") { type = NavType.StringType }, // Skickas som sträng
+            navArgument("doseGrams") { type = NavType.StringType },
             navArgument("methodId") { type = NavType.LongType },
-            // Valfria (med standardvärden)
             navArgument("grinderId") { type = NavType.LongType; defaultValue = -1L },
-            navArgument("grindSetting") { type = NavType.StringType; defaultValue = "null" }, // Skickas som "null"
+            navArgument("grindSetting") { type = NavType.StringType; defaultValue = "null" },
             navArgument("grindSpeedRpm") { type = NavType.StringType; defaultValue = "null" },
             navArgument("brewTempCelsius") { type = NavType.StringType; defaultValue = "null" }
         )
 
-        /** Bygger den fullständiga rutten med all setup-data. */
         fun createRoute(
             beanId: Long,
             doseGrams: String,
@@ -60,8 +46,11 @@ sealed class Screen(val route: String) {
             brewTempCelsius: String?
         ): String {
             val baseRoute = "live_brew/$beanId/$doseGrams/$methodId"
-            // Lägg till valfria parametrar.
-            // Vi använder "null" som sträng-placeholder för null-värden.
+            /*
+             * Jetpack Navigation arguments cannot be explicitly typed as nullable primitives;
+             * therefore, "null" is utilized as a literal fallback placeholder for optional parameters
+             * to safely satisfy string serialization constraints.
+             */
             return "$baseRoute?" +
                     "grinderId=${grinderId ?: -1L}&" +
                     "grindSetting=${grindSetting ?: "null"}&" +
@@ -70,26 +59,17 @@ sealed class Screen(val route: String) {
         }
     }
 
-
-    /**
-     * Navigeringsväg för att visa detaljer för en bryggning. Kräver ID:t för bryggningen.
-     * NYTT: Lägger till ett valfritt argument för att signalera arkiveringsprompt.
-     */
     object BrewDetail : Screen("brew_detail/{brewId}?beanIdToArchivePrompt={beanIdToArchivePrompt}") {
-        // Argumentdefinitioner
         val arguments = listOf(
             navArgument("brewId") { type = NavType.LongType },
-            // Valfritt argument med standardvärde -1 (eller annat ogiltigt ID)
             navArgument("beanIdToArchivePrompt") {
                 type = NavType.LongType
                 defaultValue = -1L
             }
         )
 
-        /** Bygger den fullständiga rutten med det specifika bryggnings-ID:t och eventuellt bön-ID för arkivering. */
         fun createRoute(brewId: Long, beanIdToArchivePrompt: Long? = null): String {
             val baseRoute = "brew_detail/$brewId"
-            // Lägg till query parameter endast om beanIdToArchivePrompt har ett giltigt värde
             return if (beanIdToArchivePrompt != null && beanIdToArchivePrompt > 0) {
                 "$baseRoute?beanIdToArchivePrompt=$beanIdToArchivePrompt"
             } else {
@@ -98,12 +78,7 @@ sealed class Screen(val route: String) {
         }
     }
 
-
-    /**
-     * Navigeringsväg för att visa detaljer för en böna. Kräver ID:t för bönan.
-     */
     object BeanDetail : Screen("bean_detail/{beanId}") {
-        /** Bygger den fullständiga rutten med det specifika bön-ID:t. */
         fun createRoute(beanId: Long) = "bean_detail/$beanId"
     }
 }

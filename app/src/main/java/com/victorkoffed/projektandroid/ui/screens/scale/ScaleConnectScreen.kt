@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.victorkoffed.projektandroid.ThemedSnackbar
 import com.victorkoffed.projektandroid.domain.model.BleConnectionState
 import com.victorkoffed.projektandroid.domain.model.DiscoveredDevice
 import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
@@ -56,8 +54,9 @@ import com.victorkoffed.projektandroid.ui.permission.rememberBluetoothPermission
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 
 /**
- * Huvudskärm för att hantera anslutning till Bluetooth-vågen.
- * UI-läget växlar baserat på 'connectionState' (Ansluten, Scanning, Frånkopplad, Fel).
+ * Screen presenting Bluetooth Low Energy (BLE) peripheral discovery and connection management.
+ * Dynamically switches UI contracts between scanning lists and active scale telemetry views
+ * based on the underlying connection state machine.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,28 +65,19 @@ fun ScaleConnectScreen(
     snackbarHostState: SnackbarHostState,
     vm: ScaleViewModel
 ) {
-    // Hämta aktuell anslutningsstatus (med fallback till senaste värde)
     val connectionState by vm.connectionState.collectAsState(initial = vm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected)
-    // Hämta felmeddelanden från ViewModel (för skanning/sparande)
     val error by vm.error.collectAsState()
-    // --- Hämta Remember & Auto-Connect State ---
     val rememberScaleEnabled by vm.rememberScaleEnabled.collectAsState()
     val autoConnectEnabled by vm.autoConnectEnabled.collectAsState()
     val rememberedAddress by vm.rememberedScaleAddress.collectAsState()
 
-
-    // --- Snackbar state för felmeddelanden ---
-
-    // Effekt för att visa (skanning/sparande) felmeddelanden i en Snackbar
     LaunchedEffect(error) {
-        // Skapa ett lokalt, stabilt värde. Returnera om null (förhindrar krasch).
         val msg = error ?: return@LaunchedEffect
 
         snackbarHostState.showSnackbar(
             message = msg,
             duration = SnackbarDuration.Long
         )
-        // Nollställ felet i ViewModel så det inte visas igen
         vm.clearError()
     }
 
@@ -103,7 +93,6 @@ fun ScaleConnectScreen(
             )
         },
     ) { padding ->
-        // Använder AnimatedContent för en smidig övergång mellan anslutna/frånkopplade vyer
         AnimatedContent(
             targetState = connectionState,
             modifier = Modifier.padding(padding),
@@ -125,13 +114,12 @@ fun ScaleConnectScreen(
                         onTare = { vm.tareScale() }
                     )
                 }
-                else -> { // Hanterar Disconnected, Connecting och Error
+                else -> {
                     val devices by vm.devices.collectAsState()
                     val isScanning by vm.isScanning.collectAsState()
 
-                    // Launcher för att begära Bluetooth- och platstillstånd vid start av scanning
                     val requestPermissions = rememberBluetoothPermissionLauncher { granted ->
-                        if (granted) vm.startScan() // Starta scanning om tillstånd ges
+                        if (granted) vm.startScan()
                     }
 
                     ScanningView(
@@ -141,7 +129,6 @@ fun ScaleConnectScreen(
                         rememberedAddress = rememberedAddress,
                         onToggleScan = { if (isScanning) vm.stopScan() else requestPermissions() },
                         onDeviceClick = { device ->
-                            // Tillåt anslutning endast om vågen är frånkopplad eller i fel-läge
                             if (state is BleConnectionState.Disconnected || state is BleConnectionState.Error) {
                                 vm.connect(device)
                             }
@@ -154,8 +141,6 @@ fun ScaleConnectScreen(
     }
 }
 
-
-// --- ConnectedView ---
 @Composable
 private fun ConnectedView(
     deviceName: String,
@@ -178,7 +163,6 @@ private fun ConnectedView(
         Text(deviceName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
-        // Kontroll för "Kom ihåg våg"
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { onRememberScaleChange(!rememberScale) }
@@ -189,12 +173,10 @@ private fun ConnectedView(
             )
             Text("Remember this scale")
         }
-        // NY KONTROLL för "Auto-connect"
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            // Gör endast klickbar om "Remember" är på
             modifier = Modifier.clickable(enabled = rememberScale) {
-                if (rememberScale) { // Dubbelkolla att remember är på innan ändring
+                if (rememberScale) {
                     onAutoConnectChange(!autoConnect)
                 }
             }
@@ -202,18 +184,15 @@ private fun ConnectedView(
             Checkbox(
                 checked = autoConnect,
                 onCheckedChange = onAutoConnectChange,
-                enabled = rememberScale // Checkbox är bara aktiv om "Remember" är på
+                enabled = rememberScale
             )
             Text(
                 text ="Auto-connect when available",
-                // Gråa ut texten om "Remember" är av
                 color = if (rememberScale) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
         Spacer(Modifier.height(16.dp))
 
-
-        // Visning av aktuell vikt
         Text("Weight", style = MaterialTheme.typography.titleLarge)
         Text(
             text = "%.1f g".format(measurement.weightGrams),
@@ -222,7 +201,6 @@ private fun ConnectedView(
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
-        // Tara- och Frånkopplingsknappar
         Button(onClick = onTare) {
             Text("Tare")
         }
@@ -233,8 +211,6 @@ private fun ConnectedView(
     }
 }
 
-
-// --- ScanningView ---
 @Composable
 private fun ScanningView(
     devices: List<DiscoveredDevice>,
@@ -257,7 +233,6 @@ private fun ScanningView(
             onToggleScan = onToggleScan
         )
 
-        // Visa en rad för att glömma vågen om en adress finns sparad
         if (rememberedAddress != null) {
             ForgetScaleRow(
                 address = rememberedAddress,
@@ -265,16 +240,12 @@ private fun ScanningView(
             )
         }
 
-        // Separator mellan kontroller och lista
         HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
-        // Visar listan över hittade enheter
         DeviceList(devices, isScanning, connectionState, onDeviceClick)
     }
 }
 
-
-// --- ScanControls ---
 @Composable
 private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionState, onToggleScan: () -> Unit) {
     Row(
@@ -284,30 +255,25 @@ private fun ScanControls(isScanning: Boolean, connectionState: BleConnectionStat
     ) {
         Button(
             onClick = onToggleScan,
-            // Tillåt scanning endast om vågen är frånkopplad eller i fel-läge
             enabled = connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error
         ) {
             when {
-                // Specialläge: Visar "Ansluter..." medan anslutningsförsöket pågår
                 connectionState is BleConnectionState.Connecting -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
                     Text("Connecting...")
                 }
-                // Visar "Stoppa scanning" om aktiv
                 isScanning -> {
                     CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(8.dp))
                     Text("Stop scanning")
                 }
-                // Standardläge: Starta scanning
                 else -> Text("Start scanning")
             }
         }
     }
 }
 
-// --- DeviceList ---
 @Composable
 private fun DeviceList(
     devices: List<DiscoveredDevice>,
@@ -319,19 +285,16 @@ private fun DeviceList(
         Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
             Text("Scanning for devices...")
         }
-    } else if (!isScanning && devices.isEmpty() && connectionState is BleConnectionState.Disconnected) { // Visa endast om Disconnected
-        // Visa om scanningen avslutades utan resultat (och inget fel finns)
+    } else if (!isScanning && devices.isEmpty() && connectionState is BleConnectionState.Disconnected) {
         Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
-            Text("No devices found. Tap 'Start scanning' to search again.") // Tydligare text
+            Text("No devices found. Tap 'Start scanning' to search again.")
         }
-    } else if (connectionState is BleConnectionState.Error && devices.isEmpty()) { // Visa fel om inga enheter hittades OCH fel uppstod
+    } else if (connectionState is BleConnectionState.Error && devices.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.TopCenter) {
-            // Meddelandet här är nu det översatta från connectionState
             Text(connectionState.message)
         }
     }
     else {
-        // Lista över hittade enheter
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(items = devices, key = { it.address }) { device ->
                 DeviceCard(device = device, onClick = { onDeviceClick(device) })
@@ -340,21 +303,19 @@ private fun DeviceList(
     }
 }
 
-
-// --- DeviceCard ---
 @Composable
 private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick), // Gör kortet klickbart för att initiera anslutning
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = device.name ?: "(Unknown Device)", // Fallback om enheten saknar namn
+                text = device.name ?: "(Unknown Device)",
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Address: ${device.address}", style = MaterialTheme.typography.bodySmall)
@@ -363,7 +324,6 @@ private fun DeviceCard(device: DiscoveredDevice, onClick: () -> Unit) {
     }
 }
 
-// Composable för att visa den sparade vågen och "Glöm"-knappen
 @Composable
 private fun ForgetScaleRow(
     address: String,

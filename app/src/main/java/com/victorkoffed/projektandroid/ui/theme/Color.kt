@@ -2,31 +2,22 @@ package com.victorkoffed.projektandroid.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- HUVUDFÄRGER ---
-
-// Primär accentfärg (Baserad på DCC7AA från din ursprungliga design)
 val CoffeeBrown = Color(0xFFDCC7AA)
 
-// Mörkbrun/kontrasterande färg (Kan användas som Primary/Secondary i ett mörkt schema)
 val CoffeeDark = Color(0xFF331A15)
 
-// Ren svart (Behålls som konstant, även om Color.Black ofta används)
 val Black = Color(0xFF000000)
 
-
-// --- GRAFFÄRGER (SPECIFIKA KONSTANTER) ---
-
-// Sekundär färg: Används för flödesgrafen i LiveBrewScreen/BrewDetailScreen
+/**
+ * Dedicated secondary charting color allocated for flow rate curves in real-time telemetry screens.
+ */
 val GraphFlowBlue = Color(0xFF007BFF)
 
-// Tertiär färg: Används för viktgrafen i LiveBrewScreen/BrewDetailScreen
+/**
+ * Dedicated tertiary charting color allocated for mass/weight curves in real-time telemetry screens.
+ */
 val GraphWeightBlack = Color(0xFF000000)
 
-
-// --- PLATSHÅLLARFÄRGER (SPECIFIKA FÖR UTVALDA KOMPONENTER) ---
-
-// Mörkgrå färg för ikoner/text inuti bildplatshållaren (för kontrast)
 val PlaceholderDarkGray = Color(0xFF606060)
 
-// FÄRG: Ljusgrå för huvudbakgrund
 val AppBackgroundGray = Color(0xFFF0F0F0)

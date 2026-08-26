@@ -50,6 +50,11 @@ import com.victorkoffed.projektandroid.domain.model.ScaleMeasurement
 import kotlin.math.ceil
 import kotlin.math.max
 
+/**
+ * Renders real-time telemetry metrics during an active brew session,
+ * dynamically adapting container colors to reflect hardware connection states,
+ * countdown phases, and session pausing.
+ */
 @SuppressLint("DefaultLocale")
 @Composable
 fun StatusDisplay(
@@ -150,6 +155,10 @@ fun StatusDisplay(
     }
 }
 
+/**
+ * Plots live mass telemetry against elapsed time using a high-performance Canvas component,
+ * handling grid line intervals and coordinate clamping during live brew execution.
+ */
 @Composable
 fun LiveBrewGraph(
     samples: List<BrewSample>,
@@ -192,7 +201,6 @@ fun LiveBrewGraph(
     val weightTitleOffsetPx = with(LocalDensity.current) { weightTitleOffsetDp.toPx() }
     val timeTitleOffsetPx = with(LocalDensity.current) { timeTitleOffsetDp.toPx() }
 
-    // Öka bottom-padding så att den nedflyttade titeln inte klipps
     Canvas(
         modifier = modifier.padding(
             start = 32.dp,
@@ -202,7 +210,7 @@ fun LiveBrewGraph(
         )
     ) {
         val axisPadding = 0f
-        val xLabelPadding = 24.dp.toPx() // utrymme för siffrorna (tick labels)
+        val xLabelPadding = 24.dp.toPx()
         val graphWidth = size.width - yLabelPaddingPx - axisPadding
         val graphHeight = size.height - xLabelPadding - axisPadding
         if (graphWidth <= 0 || graphHeight <= 0) return@Canvas
@@ -214,7 +222,6 @@ fun LiveBrewGraph(
         val xAxisY = size.height - xLabelPadding
 
         drawContext.canvas.nativeCanvas.apply {
-            // Horisontella gridlinjer + Y-etiketter (massa)
             val massGridInterval = 50f
             var currentMassGrid = massGridInterval
             while (currentMassGrid < maxMass / 1.1f) {
@@ -230,7 +237,6 @@ fun LiveBrewGraph(
                 currentMassGrid += massGridInterval
             }
 
-            // Vertikala gridlinjer + X-etiketter (sekunder)
             val timeGridInterval = 30000f
             var currentTimeGrid = timeGridInterval
             while (currentTimeGrid < maxTime / 1.05f) {
@@ -243,12 +249,10 @@ fun LiveBrewGraph(
                     pathEffect = gridLinePaint.pathEffect
                 )
                 val timeSec = (currentTimeGrid / 1000).toInt()
-                // ⬅️ Siffrorna ligger kvar på samma baslinje (oförändrat)
                 drawText("${timeSec}s", x, size.height, textPaint)
                 currentTimeGrid += timeGridInterval
             }
 
-            // ⬇️ Flytta bara titeln "Time" nedåt med timeTitleOffsetPx
             drawText(
                 "Time",
                 yLabelPaddingPx + graphWidth / 2,
@@ -256,7 +260,6 @@ fun LiveBrewGraph(
                 axisLabelPaint
             )
 
-            // Y-titel (roterad)
             withSave {
                 rotate(-90f)
                 drawText(
@@ -268,11 +271,9 @@ fun LiveBrewGraph(
             }
         }
 
-        // Axlar
         drawLine(axisColor, Offset(yLabelPaddingPx, axisPadding), Offset(yLabelPaddingPx, xAxisY))
         drawLine(axisColor, Offset(yLabelPaddingPx, xAxisY), Offset(size.width, xAxisY))
 
-        // Kurvan
         if (samples.size > 1) {
             val path = Path()
             samples.forEachIndexed { index, sample ->
@@ -292,6 +293,10 @@ fun LiveBrewGraph(
     }
 }
 
+/**
+ * Provides action controls for managing active brew execution (start, pause, resume, reset, and taring).
+ * Enforces hardware connection dependencies and operational state machine rules.
+ */
 @Composable
 fun BrewControls(
     isRecording: Boolean,

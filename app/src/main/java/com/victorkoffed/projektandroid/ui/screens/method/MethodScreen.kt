@@ -41,9 +41,9 @@ import com.victorkoffed.projektandroid.data.db.Method
 import com.victorkoffed.projektandroid.ui.viewmodel.method.MethodViewModel
 
 /**
- * Huvudskärm för att hantera bryggmetoder (t.ex. V60, Chemex, Aeropress).
- * Hanterar listvisning, samt tillägg, redigering och borttagning via dialoger.
- * @param onMenuClick Callback för att öppna navigationslådan (hamburgermenyn).
+ * Screen presenting inventory and configuration management for brewing methods (e.g., V60, Chemex).
+ * Orchestrates CRUD operations through dialog states and exposes method profiles
+ * for selection during brew setup.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,10 +51,8 @@ fun MethodScreen(
     vm: MethodViewModel,
     onMenuClick: () -> Unit
 ) {
-    // Hämta listan med metoder som en Compose State
     val methods by vm.allMethods.collectAsState()
 
-    // State-variabler för att styra vilka dialogrutor som ska visas
     var showAddDialog by remember { mutableStateOf(false) }
     var methodToEdit by remember { mutableStateOf<Method?>(null) }
     var methodToDelete by remember { mutableStateOf<Method?>(null) }
@@ -86,7 +84,6 @@ fun MethodScreen(
             if (methods.isEmpty()) {
                 Text("No methods added yet.")
             } else {
-                // Effektiv LazyColumn för listvisning
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -94,17 +91,14 @@ fun MethodScreen(
                     items(methods) { method ->
                         MethodCard(
                             method = method,
-                            onClick = { methodToEdit = method }, // Sätt state för att öppna redigering
-                            onDeleteClick = { methodToDelete = method } // Sätt state för att öppna borttagningsbekräftelse
+                            onClick = { methodToEdit = method },
+                            onDeleteClick = { methodToDelete = method }
                         )
                     }
                 }
             }
         }
 
-        // --- Dialoghantering ---
-
-        // Lägg till dialog
         if (showAddDialog) {
             AddMethodDialog(
                 onDismiss = { showAddDialog = false },
@@ -114,24 +108,22 @@ fun MethodScreen(
             )
         }
 
-        // Redigera dialog
         methodToEdit?.let { currentMethod ->
             EditMethodDialog(
                 method = currentMethod,
                 onDismiss = { methodToEdit = null },
                 onSaveMethod = { updatedMethod ->
-                    vm.updateMethod(updatedMethod) // Uppdatera ViewModel
+                    vm.updateMethod(updatedMethod)
                     methodToEdit = null
                 }
             )
         }
 
-        // Borttagningsbekräftelse
         methodToDelete?.let { currentMethod ->
             DeleteMethodConfirmationDialog(
                 methodName = currentMethod.name,
                 onConfirm = {
-                    vm.deleteMethod(currentMethod) // Radera via ViewModel
+                    vm.deleteMethod(currentMethod)
                     methodToDelete = null
                 },
                 onDismiss = { methodToDelete = null }
@@ -141,7 +133,7 @@ fun MethodScreen(
 }
 
 /**
- * Komponent för att visa en enskild bryggmetod i listan.
+ * Summary card presenting an individual brewing method profile.
  */
 @Composable
 fun MethodCard(
@@ -152,7 +144,7 @@ fun MethodCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick), // Gör kortet klickbart för att starta redigering
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -160,9 +152,7 @@ fun MethodCard(
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Texten tar upp all tillgänglig vikt i raden
             Text(method.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            // Knapp för att starta borttagningsbekräftelse
             IconButton(onClick = onDeleteClick, modifier = Modifier.padding(end = 8.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -175,8 +165,7 @@ fun MethodCard(
 }
 
 /**
- * Dialogruta för att lägga till en ny bryggmetod.
- * Notera: Bryggmetoder (i motsats till kvarnar) har inget anteckningsfält i datamodellen.
+ * Input dialog for registering a new brewing method profile.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,7 +188,6 @@ fun AddMethodDialog(
         },
         confirmButton = {
             Button(
-                // Knappen är endast aktiv om namnfältet inte är tomt
                 onClick = {
                     if (name.isNotBlank()) {
                         onAddMethod(name)
@@ -214,7 +202,7 @@ fun AddMethodDialog(
 }
 
 /**
- * Dialogruta för att redigera en befintlig bryggmetod.
+ * Input dialog for modifying an existing brewing method configuration.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -223,7 +211,6 @@ fun EditMethodDialog(
     onDismiss: () -> Unit,
     onSaveMethod: (updatedMethod: Method) -> Unit
 ) {
-    // Förfyll fältet med det aktuella namnet
     var name by remember { mutableStateOf(method.name) }
 
     AlertDialog(
@@ -241,8 +228,6 @@ fun EditMethodDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        // Skapa en kopia av det ursprungliga Method-objektet med det nya namnet.
-                        // Detta säkerställer att ID:t och andra fält (om de fanns) bevaras.
                         onSaveMethod(method.copy(name = name))
                         onDismiss()
                     }
@@ -255,7 +240,8 @@ fun EditMethodDialog(
 }
 
 /**
- * Dialogruta för att bekräfta borttagning av en metod.
+ * Confirmation dialog guarding the permanent deletion of a method profile.
+ * Highlights potential foreign-key cascading impacts on historical brew sessions.
  */
 @Composable
 fun DeleteMethodConfirmationDialog(
@@ -266,7 +252,6 @@ fun DeleteMethodConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Delete method?") },
-        // Varningstext om att kopplingen till befintliga bryggningar försvinner
         text = { Text("Are you sure you want to delete '$methodName'? Brews that used this method will lose the connection.") },
         confirmButton = {
             Button(
@@ -274,7 +259,6 @@ fun DeleteMethodConfirmationDialog(
                     onConfirm()
                     onDismiss()
                 },
-                // Använd error-färg för att markera en destruktiv handling
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) { Text("Delete") }
         },

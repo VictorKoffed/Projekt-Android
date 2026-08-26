@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): Implementeringen av kundanpassad graf-ritning
- * med Compose Canvas (hantering av koordinatsystem, axlar, skalning och linjer)
- * har utvecklats med AI-assistans. Se README.md för AI-verktyg.
+ * Reference Note (AI Assistance): Custom graph plotting implementation using Compose Canvas
+ * (coordinating coordinate systems, axes, scaling, and path rendering) was developed with AI assistance.
+ * See README.md for details on AI tools.
  */
 
 package com.victorkoffed.projektandroid.ui.screens.brew.composable
@@ -55,6 +55,11 @@ private data class GraphDrawingContext(
     val weightTitleOffsetPx: Float,
     val flowTitleOffsetPx: Float,
 )
+
+/**
+ * Renders real-time telemetry curves for brew mass and flow rate using a custom Canvas implementation.
+ * Calculates dynamic scaling intervals and dual-axis bounds for precise telemetry visualization.
+ */
 @SuppressLint("DefaultLocale")
 @Composable
 fun BrewSamplesGraph(
@@ -146,6 +151,7 @@ fun BrewSamplesGraph(
         drawAxisTitles(hasFlowData, showFlowLine, drawingContext)
     }
 }
+
 @SuppressLint("DefaultLocale")
 private fun DrawScope.drawGridAndLabels(
     hasFlowData: Boolean,
@@ -183,6 +189,7 @@ private fun DrawScope.drawGridAndLabels(
         }
     }
 }
+
 private fun DrawScope.drawAxes(
     hasFlowData: Boolean,
     showFlowLine: Boolean,
@@ -194,6 +201,7 @@ private fun DrawScope.drawAxes(
         drawLine(axisColor, Offset(graphEndX, graphTopY), Offset(graphEndX, graphBottomY))
     }
 }
+
 private fun DrawScope.drawDataPaths(
     samples: List<BrewSample>,
     showWeightLine: Boolean,
@@ -235,6 +243,7 @@ private fun DrawScope.drawDataPaths(
         }
     }
 }
+
 private fun DrawScope.drawAxisTitles(
     hasFlowData: Boolean,
     showFlowLine: Boolean,

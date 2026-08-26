@@ -6,10 +6,8 @@ import androidx.compose.material3.SnackbarData
 import androidx.compose.runtime.Composable
 
 /**
- * En anpassad Composable för att visa Snackbar-meddelanden
- * med tematiska färger, som ersätter standardutseendet.
- *
- * @param data Dataobjektet som innehåller informationen för Snackbar.
+ * Custom snackbar component applying theme-consistent color schemes
+ * to snackbar containers, text content, and action triggers.
  */
 @Composable
 fun ThemedSnackbar(data: SnackbarData) {

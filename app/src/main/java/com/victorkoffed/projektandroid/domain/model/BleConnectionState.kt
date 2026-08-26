@@ -1,24 +1,26 @@
 package com.victorkoffed.projektandroid.domain.model
 
 /**
- * Representerar de olika tillstånden en BLE-anslutning kan ha.
- * Används för att informera UI:t om vad som händer med anslutningen
- * och bära med sig relevant data, som enhetens namn och adress.
+ * Represents the lifecycle states of a Bluetooth Low Energy (BLE) connection.
+ * Acts as the primary state machine contract between the hardware communication layer
+ * and the UI, encapsulating connection transitions and device metadata.
  */
 sealed class BleConnectionState {
-    /** Inget aktivt försök till anslutning. Standardläge. */
+
     object Disconnected : BleConnectionState()
 
-    /** Anslutningsförsök pågår, väntar på GATT-callback. */
+    /**
+     * Indicates an ongoing connection attempt.
+     * Represents the transitional state while pending GATT service discovery
+     * and platform-specific callback resolutions.
+     */
     object Connecting : BleConnectionState()
 
-    /** Anslutning etablerad och tjänster har upptäckts. */
     data class Connected(
         val deviceName: String,
         val deviceAddress: String,
         val batteryPercent: Int? = null
     ) : BleConnectionState()
 
-    /** Ett fel uppstod under skanning, anslutning eller tjänstupptäckt. */
     data class Error(val message: String) : BleConnectionState()
 }

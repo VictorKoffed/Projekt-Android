@@ -15,6 +15,10 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 
+/**
+ * ViewModel managing coffee bean inventory lists (active and archived partitions)
+ * and handling domain registration use cases.
+ */
 @HiltViewModel
 class BeanViewModel @Inject constructor(
     private val beanRepository: BeanRepository

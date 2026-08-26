@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): Den komplexa tillståndslogiken (hantering av
- * _isRecordingWhileDisconnected, _weightAtPause, och den manuella timerns coroutine)
- * har utvecklats med AI-assistans för att säkerställa robust inspelning. Se README.md.
+ * Reference Note (AI Assistance): Complex state logic (handling of
+ * _isRecordingWhileDisconnected, _weightAtPause, and the manual timer coroutine)
+ * was developed with AI assistance to ensure robust recording. See README.md.
  */
 
 package com.victorkoffed.projektandroid.ui.viewmodel.brew
@@ -46,6 +46,10 @@ private data class ReceivedBrewSetup(
 
 private const val TAG = "LiveBrewViewModel_DEBUG"
 
+/**
+ * Manages real-time data collection, hardware timer coordination,
+ * and edge-case failure handling (such as Bluetooth disconnections) during active brew sessions.
+ */
 @HiltViewModel
 class LiveBrewViewModel @Inject constructor(
     private val brewRepository: BrewRepository,
@@ -61,7 +65,6 @@ class LiveBrewViewModel @Inject constructor(
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-    // ... (resten av states) ...
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
@@ -278,32 +281,21 @@ class LiveBrewViewModel @Inject constructor(
         val sampleTimeMillis = _recordingTimeMillis.value
         if (sampleTimeMillis < 0) return
 
-        // Hämta det senast kända paus-värdet (t.ex. 200g)
         val lastKnownWeight = _weightAtPause.value ?: 0f
-
-        // Hämta det nya live-värdet från vågen (t.ex. 0.5g efter återanslutning)
         val liveWeight = measurementData.weightGrams
-
-        // Välj det högsta av de två.
-        // Om liveWeight (0.5g) < lastKnownWeight (200g), använd lastKnownWeight.
-        // Om liveWeight (201.0g) > lastKnownWeight (200g), använd liveWeight.
         val displayWeight = maxOf(liveWeight, lastKnownWeight)
 
-        // Om vi återansluter och det nya live-värdet nu har "kommit ikapp"
-        // (dvs. vågens rådata + offset är nu högre än pausvärdet),
-        // måste vi nollställa _weightAtPause så att vi inte fastnar på det gamla värdet.
         if (liveWeight > lastKnownWeight) {
             _weightAtPause.value = null
         }
 
-        // Använd 'displayWeight' istället för 'measurementData.weightGrams'
         val weightGramsDouble = String.format(Locale.US, "%.1f", displayWeight).toDouble()
         val flowRateDouble = measurementData.formatFlowRateToDouble()
 
         val newSample = BrewSample(
             brewId = 0,
             timeMillis = sampleTimeMillis,
-            massGrams = weightGramsDouble, // <-- Använder det korrigerade värdet
+            massGrams = weightGramsDouble,
             flowRateGramsPerSecond = flowRateDouble
         )
 
@@ -365,7 +357,7 @@ class LiveBrewViewModel @Inject constructor(
         val savedBrewId: Long? = viewModelScope.async {
             try {
                 Log.d(TAG, "saveLiveBrew: Startar repository-transaktion (addBrewWithSamples)...")
-                val id = brewRepository.addBrewWithSamples(newBrew, finalSamples) // <-- ÄNDRAD
+                val id = brewRepository.addBrewWithSamples(newBrew, finalSamples)
                 Log.d(TAG, "saveLiveBrew: Repository-transaktion LYCKADES. Ny BrewId: $id")
                 clearError()
                 id
@@ -383,7 +375,7 @@ class LiveBrewViewModel @Inject constructor(
 
         var beanIdReachedZero: Long? = null
         try {
-            val bean = beanRepository.getBeanById(setup.beanId) // <-- ÄNDRAD
+            val bean = beanRepository.getBeanById(setup.beanId)
             if (bean != null && bean.remainingWeightGrams <= 0.0 && !bean.isArchived) {
                 beanIdReachedZero = setup.beanId
             }

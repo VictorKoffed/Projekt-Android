@@ -23,11 +23,16 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * Centralized Dependency Injection module for the application's data layer.
+ * Configures application-wide singletons for local persistence (Room Database & DAOs),
+ * external hardware integrations (BLE), and repository implementations.
+ * Ensures that the UI and ViewModels interact strictly with domain abstractions.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    // --- DB & DAO ---
     @Provides @Singleton
     fun provideCoffeeDatabase(@ApplicationContext context: Context): CoffeeDatabase =
         CoffeeDatabase.getInstance(context)
@@ -35,7 +40,6 @@ object DatabaseModule {
     @Provides
     fun provideCoffeeDao(db: CoffeeDatabase): CoffeeDao = db.coffeeDao()
 
-    // --- Databas-relaterade Repositories ---
     @Provides @Singleton
     fun provideBeanRepository(dao: CoffeeDao): BeanRepository =
         BeanRepositoryImpl(dao)
@@ -52,14 +56,12 @@ object DatabaseModule {
     fun provideMethodRepository(dao: CoffeeDao): MethodRepository =
         MethodRepositoryImpl(dao)
 
-    // --- Externa Repositories ---
     @Provides @Singleton
     fun provideScaleRepository(impl: BookooScaleRepositoryImpl): ScaleRepository = impl
 
     @Provides @Singleton
     fun provideCoffeeImageRepository(impl: CoffeeImageRepositoryImpl): CoffeeImageRepository = impl
 
-    // --- Preferences ---
     @Provides @Singleton
     fun provideScalePreferenceManager(@ApplicationContext context: Context): ScalePreferenceManager =
         ScalePreferenceManager(context)

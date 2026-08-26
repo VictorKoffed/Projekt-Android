@@ -7,13 +7,17 @@ import androidx.navigation.NavController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
+/**
+ * Manages camera capture workflows, propagating captured media URIs back through
+ * the navigation back stack for consumption by preceding screens.
+ */
 @HiltViewModel
 class CameraViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * Sparar den tagna bildens URI i SavedStateHandle för den *föregående* skärmen
-     * och navigerar sedan tillbaka.
+     * Persists the captured image URI into the previous destination's SavedStateHandle
+     * before popping the camera screen from the navigation stack.
      */
     fun saveImageUriAndReturn(uri: Uri, navController: NavController) {
 

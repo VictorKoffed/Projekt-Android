@@ -42,7 +42,11 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.LiveBrewViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
-
+/**
+ * Screen presenting active telemetry and controls during a live brewing session.
+ * Manages scale data recording states, handles BLE disconnection fallback scenarios,
+ * and orchestrates final session persistence.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveBrewScreen(
@@ -51,7 +55,6 @@ fun LiveBrewScreen(
     scaleVm: ScaleViewModel,
     vm: LiveBrewViewModel
 ) {
-    // === Hämta sessions-state från LiveBrewViewModel ===
     val samples by vm.recordedSamplesFlow.collectAsState()
     val time by vm.recordingTimeMillis.collectAsState()
     val isRecording by vm.isRecording.collectAsState()
@@ -61,7 +64,6 @@ fun LiveBrewScreen(
     val countdown by vm.countdown.collectAsState()
     val error by vm.error.collectAsState()
 
-    // === Hämta globalt anslutnings/data-state från ScaleViewModel ===
     val liveMeasurement by scaleVm.measurement.collectAsState()
     val connectionState by scaleVm.connectionState.collectAsState(
         initial = scaleVm.connectionState.replayCache.lastOrNull() ?: BleConnectionState.Disconnected
@@ -74,27 +76,22 @@ fun LiveBrewScreen(
     var alertMessage by remember { mutableStateOf("The connection to the scale was lost.") }
     var alertTitle by remember { mutableStateOf("Connection Lost") }
 
-    // Visa fel från ViewModel (t.ex. om setup-data saknas)
     LaunchedEffect(error) {
         if (error != null) {
             alertTitle = "Error"
             alertMessage = error!!
-            showDisconnectedAlert = true // Återanvänder dialogen för fel
+            showDisconnectedAlert = true
             vm.clearError()
         }
     }
 
-
-    // Logik för att stoppa och spara
     val onStopAndSaveClick: () -> Unit = {
         scope.launch {
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Klickade 'Done'. Försöker spara.")
 
-            // Hämta data från vm
             val finalSamples = vm.recordedSamplesFlow.value
             val finalTime = vm.recordingTimeMillis.value
 
-            // Stoppa inspelningen
             vm.stopRecording()
 
             Log.d("LiveBrewScreen_DEBUG", "onStopAndSaveClick: Insamlat - Samples: ${finalSamples.size}, Tid: ${finalTime}ms.")
@@ -118,7 +115,6 @@ fun LiveBrewScreen(
         }
     }
 
-    // Logik: Hantera dialog vid oväntad frånkoppling
     LaunchedEffect(connectionState, isRecording, isPaused, isRecordingWhileDisconnected) {
         if ((connectionState is BleConnectionState.Disconnected || connectionState is BleConnectionState.Error) &&
             (isRecording) &&
@@ -130,22 +126,24 @@ fun LiveBrewScreen(
         }
     }
 
-    // Bestäm vad som faktiskt ska visas
     val displayMeasurement = remember(liveMeasurement, weightAtPause, isPaused, isRecordingWhileDisconnected, isRecording) {
         val lastKnownWeight = weightAtPause ?: 0f
 
         when {
-            // 1. Om vi är pausade eller frånkopplade, visa den frysta vikten.
+            /*
+             * Freezes the displayed weight during disconnection or intentional pauses
+             * to prevent erratic UI flickering while waiting for hardware command resolutions.
+             */
             isRecordingWhileDisconnected || isPaused -> {
                 ScaleMeasurement(lastKnownWeight, 0f)
             }
-            // 2. Om vi precis återupptagit inspelningen (isRecording=true) OCH
-            //    den nya live-vikten (0g) är LÄGRE än den pausade (200g),
-            //    fortsätt visa den pausade vikten (200g) tills vågen rapporterar ett högre värde.
+            /*
+             * Handles weight stabilization edge-cases upon resuming a paused session,
+             * overriding transient zero-readings until the physical scale catches up.
+             */
             isRecording && liveMeasurement.weightGrams < lastKnownWeight -> {
                 ScaleMeasurement(lastKnownWeight, liveMeasurement.flowRateGramsPerSecond)
             }
-            // 3. Annars (t.ex. live-vikten är > 200g), visa den nya live-vikten.
             else -> {
                 liveMeasurement
             }
@@ -230,13 +228,12 @@ fun LiveBrewScreen(
 
         if (showDisconnectedAlert) {
             AlertDialog(
-                onDismissRequest = { /* Låt den vara kvar */ },
+                onDismissRequest = { },
                 title = { Text(alertTitle) },
                 text = { Text(alertMessage) },
                 confirmButton = {
                     TextButton(onClick = {
                         showDisconnectedAlert = false
-                        // Om felet var pga setup-data, navigera tillbaka
                         if (error != null && error!!.contains("setup")) {
                             onNavigateBack()
                         }
@@ -245,7 +242,6 @@ fun LiveBrewScreen(
                     }
                 },
                 dismissButton = {
-                    // Visa bara "Stop & Save" om det inte är ett setup-fel
                     if (error == null) {
                         TextButton(onClick = {
                             showDisconnectedAlert = false

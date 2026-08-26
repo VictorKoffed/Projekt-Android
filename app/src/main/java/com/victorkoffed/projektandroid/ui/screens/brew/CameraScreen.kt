@@ -1,7 +1,7 @@
 /*
- * Referensnotering (AI-assistans): Upprättandet av CameraX-flödet (rättighetshantering,
- * PreviewView, image capture och fokuslogik) bygger på standardiserad Android-boilerplate
- * som implementerats med AI-assistans. Se README.md.
+ * Reference Note (AI Assistance): The implementation of the CameraX pipeline (permission handling,
+ * PreviewView, image capture, and focus logic) relies on standard Android boilerplate
+ * implemented with AI assistance. See README.md.
  */
 
 @file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
@@ -66,16 +66,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 /**
- * En helskärms-Composable som hanterar kamerarättigheter och visar kameravyn.
- *
- * @param navController NavController för att kunna navigera tillbaka.
- * @param onNavigateBack Callback för att stänga kameravyn (används fortfarande om rättighet nekas).
+ * Full-screen camera interface responsible for managing runtime camera permissions
+ * and orchestrating the underlying CameraX preview lifecycle.
  */
 @Composable
 fun CameraScreen(
     navController: NavController,
     onNavigateBack: () -> Unit,
-
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -87,7 +84,7 @@ fun CameraScreen(
             if (granted) {
                 hasCamPermission = true
             } else {
-                onNavigateBack() // Gå tillbaka om rättighet nekas
+                onNavigateBack()
             }
         }
     )
@@ -102,9 +99,9 @@ fun CameraScreen(
 
     if (hasCamPermission) {
         CameraCaptureScreen(
-            viewModel = viewModel, // Skicka in ViewModel
-            navController = navController, // Skicka in NavController
-            onNavigateBack = onNavigateBack // Behåll för tillbaka-knappen
+            viewModel = viewModel,
+            navController = navController,
+            onNavigateBack = onNavigateBack
         )
     } else {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -118,7 +115,6 @@ private fun CameraCaptureScreen(
     viewModel: CameraViewModel,
     navController: NavController,
     onNavigateBack: () -> Unit
-
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -190,7 +186,6 @@ private fun CameraCaptureScreen(
                             imageCapture = imageCapture,
                             executor = ContextCompat.getMainExecutor(context),
                             onImageCaptured = { uri ->
-                                // Anropa ViewModel för att hantera resultatet
                                 viewModel.saveImageUriAndReturn(uri, navController)
                             },
                             onError = { Log.e("CameraScreen", "Image capture error", it) }
@@ -201,7 +196,6 @@ private fun CameraCaptureScreen(
                     Icon(Icons.Default.PhotoCamera, contentDescription = "Take Picture", tint = Color.Black)
                 }
 
-                // Använd onNavigateBack för tillbaka-knappen
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
@@ -210,7 +204,6 @@ private fun CameraCaptureScreen(
     }
 }
 
-// takePhoto och getCameraProvider funktionerna förblir oförändrade
 private fun takePhoto(
     context: Context,
     imageCapture: ImageCapture,
@@ -226,17 +219,11 @@ private fun takePhoto(
     imageCapture.takePicture(outputOptions, executor, object : ImageCapture.OnImageSavedCallback {
         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
             val savedUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
-
-            // --- NY LOGGNING HÄR ---
-            Log.d("CameraScreen", "Foto sparat lokalt. URI: $savedUri")
-            // --- SLUT NY LOGGNING ---
-
+            Log.d("CameraScreen", "Photo saved locally. URI: $savedUri")
             onImageCaptured(savedUri)
         }
         override fun onError(exception: ImageCaptureException) {
-            // --- NY LOGGNING HÄR ---
-            Log.e("CameraScreen", "Misslyckades med att spara foto lokalt.", exception)
-            // --- SLUT NY LOGGNING ---
+            Log.e("CameraScreen", "Failed to save photo locally.", exception)
             onError(exception)
         }
     })

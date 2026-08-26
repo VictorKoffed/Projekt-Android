@@ -23,6 +23,10 @@ data class RecentBrewItem(
     val beanName: String?
 )
 
+/**
+ * ViewModel aggregating high-level dashboard metrics, recent brewing sessions,
+ * inventory aggregates, and global theme configuration state.
+ */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val brewRepository: BrewRepository,

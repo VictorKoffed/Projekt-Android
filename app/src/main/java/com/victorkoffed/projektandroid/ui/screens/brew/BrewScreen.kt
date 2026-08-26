@@ -49,14 +49,19 @@ import com.victorkoffed.projektandroid.ui.viewmodel.brew.BrewSetupViewModel
 import com.victorkoffed.projektandroid.ui.viewmodel.scale.ScaleViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * Screen presenting the configuration form for initiating a new coffee brewing session.
+ * Enforces business rules regarding hardware connectivity before starting live telemetry,
+ * offering fallback options to persist manual session records if a smart scale is absent.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrewScreen(
-    onStartBrewClick: (BrewSetupState) -> Unit, // Callback skickar nu data
+    onStartBrewClick: (BrewSetupState) -> Unit,
     onSaveWithoutGraph: (newBrewId: Long?) -> Unit,
     onNavigateToScale: () -> Unit,
     onNavigateBack: () -> Unit,
-    vm: BrewSetupViewModel, // Uppdaterad till BrewSetupViewModel
+    vm: BrewSetupViewModel,
     scaleVm: ScaleViewModel
 ) {
     val availableBeans by vm.availableBeans.collectAsState()
@@ -95,7 +100,6 @@ fun BrewScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            // --- Scrollbart Innehåll (Formuläret) ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,7 +108,6 @@ fun BrewScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Kontrollrad med funktionen "Ladda senaste inställningar"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -124,8 +127,6 @@ fun BrewScreen(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-
-                // --- Inställningsformulär ---
 
                 DropdownSelector(
                     label = "Bean *",
@@ -207,7 +208,6 @@ fun BrewScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // --- Fixerad Knapp (Alltid synlig) ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -218,7 +218,6 @@ fun BrewScreen(
                 Button(
                     onClick = {
                         if (scaleConnectionState is BleConnectionState.Connected) {
-                            // Skicka setup-datan till AppNavigationGraph
                             onStartBrewClick(vm.getCurrentSetup())
                         } else {
                             showConnectionAlert = true
@@ -235,10 +234,9 @@ fun BrewScreen(
         }
     }
 
-    // --- Alert Dialog vid frånkopplad våg ---
     if (showConnectionAlert) {
         AlertDialog(
-            onDismissRequest = { /* Låt den vara kvar tills ett val görs */ },
+            onDismissRequest = { },
             title = { Text("Scale Not Connected") },
             text = { Text("The scale is not connected. How do you want to proceed?") },
             confirmButton = {
@@ -267,7 +265,9 @@ fun BrewScreen(
     }
 }
 
-// --- DropdownSelector (Återanvändbar komponent) ---
+/**
+ * Reusable dropdown menu component utilizing Material 3 ExposedDropdownMenuBox.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> DropdownSelector(

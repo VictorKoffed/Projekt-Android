@@ -1,16 +1,14 @@
 package com.victorkoffed.projektandroid.domain.model
 
 /**
- * Representerar en enskild mätning i realtid från vågen under en bryggning.
+ * Represents a single real-time telemetry data point from the smart scale during an active brew session.
  *
- * @property weightGrams Den totala ackumulerade vikten i gram.
- * @property flowRateGramsPerSecond Den aktuella flödeshastigheten i gram per sekund.
- * @property timeMillis Tiden i millisekunder som rapporterats direkt från vågens interna timer (om tillgänglig).
- * @property batteryPercent Den rapporterade batterinivån i procent (om tillgänglig).
+ * @property timeMillis The elapsed time reported directly by the scale's internal hardware timer,
+ * ensuring precise synchronization independent of the mobile device's clock latency or state.
  */
 data class ScaleMeasurement(
     val weightGrams: Float,
     val flowRateGramsPerSecond: Float,
-    val timeMillis: Long? = null, // Tiden från vågen (nullable)
+    val timeMillis: Long? = null,
     val batteryPercent: Int? = null
 )
