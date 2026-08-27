@@ -39,7 +39,6 @@ The project was developed as an individual university project with a focus on An
 - [Testing](#-testing)
 - [Screenshots & Demo](#-screenshots--demo)
 - [Key Files](#-key-files)
-- [License](#-license)
 - [AI Assistance](#-ai-assistance)
 - [Project & Course Context](#-project--course-context)
 - [Future Development](#-future-development)
@@ -385,35 +384,6 @@ Here are some of the most important files and components in the project.
 - `ui/screens/brew/LiveBrewScreen.kt` – Responsible for the UI during an active brew.
 
 </details>
-
----
-
-## 📜 License
-
-MIT License
-
-Copyright (c) 2025 Coffee Journal
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-**Bookoo BLE Protocol:**  
-[https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md](https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md)
 
 ---
 
