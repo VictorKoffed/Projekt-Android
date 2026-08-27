@@ -385,6 +385,9 @@ Here are some of the most important files and components in the project.
 
 </details>
 
+**Bookoo BLE Protocol:**  
+[https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md](https://github.com/BooKooCode/OpenSource/blob/main/bookoo_mini_scale/protocols.md)
+
 ---
 
 ## 🤖 AI Assistance
